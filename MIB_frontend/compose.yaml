@@ -1,0 +1,14 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+      args:
+        MODE: dev
+    ports:
+      - "8099:5173"  # or whatever port your dev server uses
+    volumes:
+      - .:/app
+      - /app/node_modules  # Prevent overwriting node_modules
+    command: ["npm", "run", "dev", "--", "--host"]

@@ -1,0 +1,179 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Tribunal\TribunalCaseController;
+
+Route::post('/register', [\App\Http\Controllers\UserController::class, 'userRegister']);
+Route::post('/verify-email', [\App\Http\Controllers\UserController::class, 'verifyEmail']);
+Route::post('/login', [\App\Http\Controllers\UserController::class, 'userLogin']);
+Route::post('/password/reset', [\App\Http\Controllers\UserController::class, 'passwordResetLink']);
+Route::post('/password/reset/{token}', [\App\Http\Controllers\UserController::class, 'passwordReset']);
+Route::post('auth/google', [\App\Http\Controllers\GoogleController::class, 'callback']);
+Route::get('auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'callback']);
+
+
+ 
+
+ 
+Route::middleware('auth.token')->group(function () {
+    Route::get('/user', [\App\Http\Controllers\UserController::class, 'userCheck']);
+    Route::get('/user/profile', [\App\Http\Controllers\ProfileController::class, 'userProfile']);
+    Route::get('/users/{id}', [\App\Http\Controllers\ProfileController::class, 'show'])
+        ->whereNumber('id')
+        ->middleware('throttle:60,1');
+    Route::get('/categories', [\App\Http\Controllers\CategoryController::class, 'getCategories']); 
+    Route::get('/professions/{category_id}',[\App\Http\Controllers\CategoryController::class, 'getProfessions']);
+    Route::post('/insert-profile',[\App\Http\Controllers\ProfileController::class, 'insert']);
+    Route::get('/user-data', [\App\Http\Controllers\ProfileController::class, 'userData']);
+    Route::post('/edit-general-info',[\App\Http\Controllers\ProfileController::class,'editGeneralInfo']);
+    Route::get('/log-out',[\App\Http\Controllers\UserController::class, 'logOut']);
+    Route::get('/get-general-info',[\App\Http\Controllers\ProfileController::class,'gtGeneralInfo']);
+    Route::post('/add-work-experiance',[\App\Http\Controllers\ExperienceController::class,'store']);
+    Route::get('/get-work-experiances/{userSlug}',[\App\Http\Controllers\ExperienceController::class, 'index']);
+    Route::get('/get-details-experiance/{id}',[\App\Http\Controllers\ExperienceController::class,'show']);
+    Route::post('edit-details-experiance',[\App\Http\Controllers\ExperienceController::class,'update']);
+    Route::get('/delete-experiance/{id}',[\App\Http\Controllers\ExperienceController::class,'destroy']);
+    Route::post('/add-education-details',[\App\Http\Controllers\EducationController::class, 'store']);
+    Route::get('/get-education-details/{userSlug}',[\App\Http\Controllers\EducationController::class, 'index']);
+    Route::get('/get-education-detail/{id}',[\App\Http\Controllers\EducationController::class,'show']);
+    Route::get('/delete-education/{id}',[\App\Http\Controllers\EducationController::class,'destroy']);
+    Route::post('/edit-education-detail',[\App\Http\Controllers\EducationController::class, 'update']);
+    Route::post('/add-skill',[\App\Http\Controllers\ProfileController::class,'addSkill']);
+    Route::get('/get-skills',[\App\Http\Controllers\ProfileController::class,'getSkills']);
+    Route::get('/delete-skill/{id}',[\App\Http\Controllers\ProfileController::class,'deleteSkill']);
+    Route::post('/upload-profile-image',[\App\Http\Controllers\ProfileController::class,'uploadProfileImage']);
+    Route::post('/upload-cover-image',[\App\Http\Controllers\ProfileController::class,'uploadCoverImage']);
+    Route::get('/profile-completed-status',[\App\Http\Controllers\ProfileController::class,'checkProfileCompleted']);
+    Route::get('/get-user-summary',[\App\Http\Controllers\ProfileController::class,'basicInfo']);
+    Route::get('/profile-list',[\App\Http\Controllers\ProfileController::class,'profileList']);
+    Route::get('/request-today-question', [\App\Http\Controllers\QuestionController::class, 'getTodaySpecialQuestions']);
+    Route::get('/daily-question/today', [\App\Http\Controllers\DailyQuestionController::class, 'getTodayQuestion'])->middleware('throttle:60,1');
+    Route::post('/submit-daily-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
+    Route::post('/daily-questions/answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
+    Route::get('/daily-questions/history', [\App\Http\Controllers\DailyQuestionController::class, 'history'])->middleware('throttle:60,1');
+    Route::get('/learn/categories', [\App\Http\Controllers\LearnController::class, 'categories'])->middleware('throttle:60,1');
+    Route::get('/learn/questions/{category}', [\App\Http\Controllers\LearnController::class, 'questions'])
+        ->whereNumber('category')
+        ->middleware('throttle:60,1');
+    Route::get('/learn/active', [\App\Http\Controllers\LearnController::class, 'active'])->middleware('throttle:60,1');
+    Route::post('/learn/enroll', [\App\Http\Controllers\LearnController::class, 'enroll'])->middleware('throttle:10,1');
+    Route::post('/learn/next', [\App\Http\Controllers\LearnController::class, 'nextBatch'])->middleware('throttle:10,1');
+    Route::get('/exam/categories', [\App\Http\Controllers\ExamSessionController::class, 'categories'])->middleware('throttle:60,1');
+    Route::post('/exam/start', [\App\Http\Controllers\ExamSessionController::class, 'start'])->middleware('throttle:10,1');
+    Route::post('/exam/submit', [\App\Http\Controllers\ExamSessionController::class, 'submit'])->middleware('throttle:10,1');
+    Route::post('/generate-questions', [\App\Http\Controllers\QuestionController::class, 'generateQuestions']);
+    Route::post('/set-user-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
+    Route::post('/set-comment', [\App\Http\Controllers\CommentController::class, 'setComment']);
+    Route::get('/get-scores',[\App\Http\Controllers\ScoreController::class, 'getScores']);
+    Route::get('/scores/lci', [\App\Http\Controllers\UserScoreController::class, 'lci'])->middleware('throttle:60,1');
+
+    // Fixed Arm for Testament Management (FATM)
+    Route::prefix('testament')->middleware('throttle:30,1')->group(function () {
+        Route::get('/notes', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
+        Route::get('/public-feed', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
+        Route::post('/notes', [\App\Http\Controllers\TestamentController::class, 'createResourceNote']);
+        Route::get('/', [\App\Http\Controllers\TestamentController::class, 'show']);
+        Route::put('/', [\App\Http\Controllers\TestamentController::class, 'save']);
+        Route::post('/submit', [\App\Http\Controllers\TestamentController::class, 'submit']);
+        Route::post('/recall', [\App\Http\Controllers\TestamentController::class, 'recall']);
+        Route::post('/withdraw', [\App\Http\Controllers\TestamentController::class, 'withdraw']);
+        Route::get('/witness-requests', [\App\Http\Controllers\TestamentController::class, 'witnessRequests']);
+        Route::post('/witness-requests/{testament}/{decision}', [\App\Http\Controllers\TestamentController::class, 'witnessRespond'])
+            ->whereNumber('testament')
+            ->whereIn('decision', ['confirm', 'decline']);
+    });
+    Route::get('/get-comments', [\App\Http\Controllers\CommentController::class, 'getComments']);
+    Route::get('/notifications',[\App\Http\Controllers\NotificationsController::class,'getNotifications']);
+    Route::get('/allNotifications',[\App\Http\Controllers\NotificationsController::class,'getAll']);
+    Route::get('/topScores',[\App\Http\Controllers\ScoreController::class, 'topScores']);
+    Route::post('/search',[\App\Http\Controllers\ProfileController::class, 'search']);
+    Route::get('/profile-list-paginated/{page}',[\App\Http\Controllers\ProfileController::class,'profileListPaginated']);
+    Route::get('/get-user-infomations/{slug}',[\App\Http\Controllers\ProfileController::class,'getOtherProfileInfomations']);
+    Route::post('/create_exam',[\App\Http\Controllers\ExamController::class,'create']);
+    Route::get('/get_exams',[\App\Http\Controllers\ExamController::class,'getExams']);
+    Route::get('/categories_with_professions',[\App\Http\Controllers\CategoryController::class,'getformated']);
+    Route::post('/save_exam',[\App\Http\Controllers\ExamController::class,'saveExam']);
+    Route::get('/my_exams',[\App\Http\Controllers\ExamController::class,'getMyExams']);
+    Route::get('/my_caetgories',[\App\Http\Controllers\CategoryController::class,'getMyCategories']);
+    Route::get('/get_exam_data',[\App\Http\Controllers\ExamController::class,'getExamData']);
+    Route::post('/submit_answers',[\App\Http\Controllers\ExamController::class,'submitAnswers']);
+    Route::post('/check_answer',[\App\Http\Controllers\ExamController::class,'checkAnswer']);
+    Route::get('/get-exam-summary/{examId}',[\App\Http\Controllers\ExamController::class,'getSummary']);
+    Route::get('/add-category-user/{categoryId}',[\App\Http\Controllers\CategoryController::class,'addUserCategory']);
+    Route::get('/delete-account',[\App\Http\Controllers\UserController::class,'DeleteUser']);
+    Route::post('/set_settings',[\App\Http\Controllers\UserSettingsController::class,'setSettings']);
+    Route::get('/get_settings',[\App\Http\Controllers\UserSettingsController::class,'getSettings']);
+    Route::post('/submit-complains',[\App\Http\Controllers\ProfileController::class,'submitComplains']);
+    Route::get('/get-complains/{status}',[\App\Http\Controllers\ProfileController::class,'getComplains']);
+
+    Route::prefix('tribunal')->group(function () {
+        Route::get('/me', \App\Http\Controllers\Tribunal\TribunalMeController::class);
+        Route::post('/cases', [TribunalCaseController::class, 'store']);
+        Route::get('/cases', [TribunalCaseController::class, 'index']);
+        Route::get('/cases/{tribunalCase}', [TribunalCaseController::class, 'show']);
+        Route::post('/cases/{tribunalCase}/acknowledge', [TribunalCaseController::class, 'acknowledge']);
+        Route::post('/cases/{tribunalCase}/response', [TribunalCaseController::class, 'submitResponse']);
+
+        // Evidence Management
+        Route::get('/cases/{tribunalCase}/evidence', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'index']);
+        Route::post('/cases/{tribunalCase}/evidence', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'store']);
+        Route::get('/cases/{tribunalCase}/evidence/{evidence}', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'show']);
+        Route::get('/cases/{tribunalCase}/evidence/{evidence}/download', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'download']);
+        Route::post('/cases/{tribunalCase}/evidence/{evidence}/challenge', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'challenge']);
+
+        // Jury / Adjudicator System
+        Route::get('/jury/cases', [\App\Http\Controllers\Tribunal\TribunalJuryController::class, 'jurorCases']);
+        Route::post('/cases/{tribunalCase}/jury/select', [\App\Http\Controllers\Tribunal\TribunalJuryController::class, 'select']);
+        Route::post('/cases/{tribunalCase}/jury/conflict', [\App\Http\Controllers\Tribunal\TribunalJuryController::class, 'declareConflict']);
+        Route::post('/cases/{tribunalCase}/jury/accept', [\App\Http\Controllers\Tribunal\TribunalJuryController::class, 'accept']);
+        Route::post('/cases/{tribunalCase}/jury/recuse', [\App\Http\Controllers\Tribunal\TribunalJuryController::class, 'recuse']);
+
+        // Legal Representation & Verified Representatives
+        Route::get('/representatives', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'representatives']);
+        Route::post('/cases/{tribunalCase}/representation-requests', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'storeRequest']);
+        Route::get('/representation-requests', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'lawyerRequests']);
+        Route::post('/representation-requests/{representationRequest}/accept', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'accept']);
+        Route::post('/representation-requests/{representationRequest}/decline', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'decline']);
+        Route::post('/cases/{tribunalCase}/representation/end', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'end']);
+        Route::get('/represented-cases', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'representedCases']);
+        Route::get('/cases/{tribunalCase}/representation', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'caseRepresentation']);
+
+        // Private Client-Representative Conversations
+        Route::get('/cases/{tribunalCase}/representative-conversation', [\App\Http\Controllers\Tribunal\TribunalConversationController::class, 'showForCase']);
+        Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Tribunal\TribunalConversationController::class, 'messages']);
+        Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\Tribunal\TribunalConversationController::class, 'sendMessage']);
+
+        // Shared Tribunal Case Room & Procedural Communication (Batch 5)
+        Route::get('/cases/{tribunalCase}/case-room', [\App\Http\Controllers\Tribunal\TribunalCaseRoomController::class, 'show']);
+        Route::get('/cases/{tribunalCase}/case-room/messages', [\App\Http\Controllers\Tribunal\TribunalCaseRoomController::class, 'messages']);
+        Route::post('/cases/{tribunalCase}/case-room/messages', [\App\Http\Controllers\Tribunal\TribunalCaseRoomController::class, 'sendMessage']);
+        Route::post('/cases/{tribunalCase}/case-room/procedural-notices', [\App\Http\Controllers\Tribunal\TribunalCaseRoomController::class, 'postProceduralNotice']);
+        Route::post('/cases/{tribunalCase}/case-room/questions', [\App\Http\Controllers\Tribunal\TribunalCaseRoomController::class, 'askQuestion']);
+        Route::post('/cases/{tribunalCase}/case-room/questions/{question}/responses', [\App\Http\Controllers\Tribunal\TribunalCaseRoomController::class, 'respondToQuestion']);
+
+        // Structured Mediation & Settlement (Batch 5)
+        Route::get('/cases/{tribunalCase}/mediation', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'showForCase']);
+        Route::post('/cases/{tribunalCase}/mediation/request', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'requestMediation']);
+        Route::post('/cases/{tribunalCase}/mediation/offer', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'offerMediation']);
+        Route::post('/mediations/{mediation}/respond', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'respond']);
+        Route::post('/mediations/{mediation}/end', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'endMediation']);
+        Route::post('/mediations/{mediation}/proposals', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'createProposal']);
+        Route::post('/mediations/{mediation}/proposals/{proposal}/counter', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'counterProposal']);
+        Route::post('/settlement-proposals/{proposal}/accept', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'acceptProposal']);
+        Route::post('/settlement-proposals/{proposal}/reject', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'rejectProposal']);
+    });
+
+    // Professional Verifications (User)
+    Route::post('/professional-verifications', [\App\Http\Controllers\Professional\ProfessionalVerificationController::class, 'apply']);
+    Route::get('/professional-verifications/me', [\App\Http\Controllers\Professional\ProfessionalVerificationController::class, 'myVerification']);
+
+    // Professional Verifications (Admin / Reviewer)
+    Route::middleware('admin')->prefix('admin/professional-verifications')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'index']);
+        Route::get('/{verification}', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'show']);
+        Route::post('/{verification}/approve', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'approve']);
+        Route::post('/{verification}/reject', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'reject']);
+        Route::post('/{verification}/suspend', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'suspend']);
+        Route::get('/{verification}/documents/{documentType}', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'downloadDocument']);
+    });
+});
