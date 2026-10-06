@@ -1157,3 +1157,13 @@ export interface TribunalReportVerifyResponse {
     confirmation_statement?: string;
   } | null;
 }
+
+export interface TribunalRespondentSearchResult {
+  id: number;
+  name: string;
+  username: string;
+  profile_photo_url: string | null;
+  public_subtitle: string;
+  profile_url: string | null;
+  is_verified_lawyer: boolean;
+}

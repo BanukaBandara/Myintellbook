@@ -77,6 +77,10 @@ Route::middleware('auth.token')->group(function () {
 
     Route::prefix('tribunal')->group(function () {
         Route::get('/me', \App\Http\Controllers\Tribunal\TribunalMeController::class);
+
+        // Respondent Search for Case Filing
+        Route::middleware('throttle:30,1')->get('/respondents/search', [\App\Http\Controllers\Tribunal\TribunalRespondentSearchController::class, 'search']);
+
         Route::post('/cases', [TribunalCaseController::class, 'store']);
         Route::get('/cases', [TribunalCaseController::class, 'index']);
         Route::get('/cases/{tribunalCase}', [TribunalCaseController::class, 'show']);

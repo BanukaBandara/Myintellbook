@@ -16,9 +16,17 @@ import type {
   UpdateTribunalJuryPanelPayload,
   TribunalJuryPanelListResponse,
   TribunalJuryPanelResponse,
+  TribunalRespondentSearchResult,
 } from '@/types/tribunal';
 
 export const tribunalService = {
+  async searchRespondents(query: string): Promise<{ data: TribunalRespondentSearchResult[] }> {
+    const response = await api.get<{ data: TribunalRespondentSearchResult[] }>('/tribunal/respondents/search', {
+      params: { q: query },
+    });
+    return response.data;
+  },
+
   async createCase(
     payload: CreateTribunalCasePayload
   ): Promise<TribunalCaseResponse> {
