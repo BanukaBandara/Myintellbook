@@ -13,12 +13,6 @@ use App\Models\Skill;
 use App\Observers\SkillObserver;
 use App\Observers\ExamObserver;
 use App\Models\Exam;
-use App\Models\Achievement;
-use App\Models\TribunalReport;
-use App\Models\ProfessionalVerification;
-use App\Observers\AchievementObserver;
-use App\Observers\TribunalReportObserver;
-use App\Observers\ProfessionalVerificationScoreObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,8 +34,5 @@ class AppServiceProvider extends ServiceProvider
        Education::observe(EducationObserver::class);
        Skill::observe(SkillObserver::class);
        Exam::observe(ExamObserver::class);
-       Achievement::observe(AchievementObserver::class);
-       TribunalReport::observe(TribunalReportObserver::class);
-       ProfessionalVerification::observe(ProfessionalVerificationScoreObserver::class);
     }
 }

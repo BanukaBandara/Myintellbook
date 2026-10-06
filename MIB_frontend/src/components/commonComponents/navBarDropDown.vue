@@ -1,12 +1,9 @@
 <template>
-    <div class="navbar-user-trigger d-flex justify-content-center align-items-center cursor-pointer gap-2" @click="toggle">
+    <div class="d-flex justify-content-center align-items-center cursor-pointer flex-column" @click="toggle">
         <Avatar :image="(basicInfo.profile_image)? basicInfo.profile_image : userPng" shape="circle" class="m-0"/>
-        <span class="d-flex flex-column text-start">
-            <strong class="navbar-user-name">{{ basicInfo.full_name || 'My account' }}</strong>
         <span style="font-size:12px;" class="opacity-50 d-flex flex-row align-items-center">
             Me
             <i class="pi pi-chevron-down ms-1" style="font-size: 0.8rem;"></i>
-        </span>
         </span>
     </div>
     <TieredMenu ref="menu" id="overlay_menu" :model="sidebar" :popup="true">
@@ -145,6 +142,11 @@ const sidebar = computed(() => {
             label: 'Professional Verification Reviews',
             icon: 'pi pi-shield',
             command: () => { router.push('/admin/professional-verifications'); }
+        });
+        items.push({
+            label: 'Jury Panel Management',
+            icon: 'pi pi-users',
+            command: () => { router.push('/admin/tribunal/jury-panels'); }
         });
     }
 

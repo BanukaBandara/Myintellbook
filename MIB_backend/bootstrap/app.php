@@ -17,11 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.token' => \App\Http\Middleware\ApiTokenAuthMiddleware::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'jury.panel' => \App\Http\Middleware\EnsureJuryPanel::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {
-        // Runs first so DailyPost sees yesterday's evaluated answers.
-        $schedule->command(\App\Console\Commands\EvaluateDailyQuestions::class)->dailyAt('00:00')->withoutOverlapping();
         $schedule->command(\App\Console\Commands\AssignQuestionsForUsers::class)->dailyAt('00:00');
         $schedule->command(\App\Console\Commands\DailyPost::class)->dailyAt('00:00');
         $schedule->command(\App\Console\Commands\CalculateExperienceScore::class)->yearly();

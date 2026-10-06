@@ -1,12 +1,14 @@
 <template>
-<Card class="dashboard-widget-card mb-3">
+<Card class="mb-3" :pt="{
+        root:'w-75'
+    }">
     <template #title>
         <div class="d-flex justify-content-between">
             <span class="fw-semibold fs-5">
             Latest Updates
         </span>
          <Button asChild v-slot="slotProps" variant="link"  label="see all">
-            <RouterLink to="/allUpdates" class="dashboard-link text-decoration-none">See all</RouterLink>
+            <RouterLink to="/allUpdates" class="text-decoration-none" style="font-size:15px;">See all</RouterLink>
         </Button>
         </div>
     </template>

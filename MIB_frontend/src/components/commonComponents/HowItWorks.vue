@@ -1,131 +1,128 @@
 <template>
-  <InfoPageShell
-    icon="bi-question-circle"
-    eyebrow="See how it works"
-    title="From daily learning to a verified ranking"
-    subtitle="Walk through each stage of the MyIntellibook evaluation model."
-  >
-    <FeatureWalkthrough :steps="steps" label="How MyIntellibook works">
-      <template #step-overview>
+  <div class="row flex-grow-1 overflow-auto m-0 justify-content-center mb-3 gap-1">
+    <div class="col-md-1"></div>
+    <div class="col-md-2 mt-3 d-none d-md-block">
+      <ProfileDetails />
+      <addSiteDeails />
+    </div>
+    <div class="col-md-4 mt-3">
+      <section class="about-container">
+        <h1>See How It Works</h1>
+
         <p>
           MyIntellibook is an intelligent evaluation and ranking platform that integrates the Human Intelligence Portfolio (HIP), Tribunal Evaluation, and Testament Management into a unified, transparent, and ethical framework. The HIP Score is derived from Holistic Index Points (HIP Values) that represent intellectual ability, ethical reasoning, and social responsibility. This model connects knowledge with accountability and transforms learning into measurable impact.
         </p>
-      </template>
 
-      <template #step-hip>
-        <p>The HIP algorithm evaluates participants through daily and cumulative performance indicators. It combines several core elements:</p>
-        <ul class="element-list">
-          <li><i class="bi bi-newspaper" aria-hidden="true"></i><span><strong>Current Affairs Daily Question Score</strong> – Measures awareness and understanding of current global and national issues.</span></li>
-          <li><i class="bi bi-person-check" aria-hidden="true"></i><span><strong>Self-Evaluation Score (Personal Reflection Score)</strong> – Reflects an individual’s ability to assess reasoning, responsibility, and ethical decision-making.</span></li>
-          <li><i class="bi bi-dash-circle" aria-hidden="true"></i><span><strong>Negative Scoring</strong> – Applied when a participant engages in socially or ethically negative behavior, ensuring HIP promotes ethical conduct, discipline, and positive social behavior.</span></li>
+        <p><strong>1. HIP Calculation (Human Intelligence Portfolio)</strong><br/>
+        The HIP algorithm evaluates participants through daily and cumulative performance indicators. It combines several core elements:
+        </p>
+        <ul>
+          <li>Current Affairs Daily Question Score – Measures awareness and understanding of current global and national issues.</li>
+          <li>Self-Evaluation Score (Personal Reflection Score) – Reflects an individual’s ability to assess reasoning, responsibility, and ethical decision-making.</li>
+          <li>Negative Scoring – Applied when a participant engages in socially or ethically negative behavior, ensuring HIP promotes ethical conduct, discipline, and positive social behavior.</li>
         </ul>
 
-        <p class="scale-heading">Answer score scale</p>
-        <ol class="score-scale">
-          <li v-for="item in scale" :key="item.score" :style="{ '--level': item.score }">
-            <span class="score-chip">{{ item.score }}</span>
-            <span class="score-meaning">{{ item.meaning }}</span>
-          </li>
-        </ol>
-      </template>
+        <table>
+          <thead>
+            <tr>
+              <th>Score</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>0</td><td>No Understanding / Incorrect Response</td></tr>
+            <tr><td>1</td><td>Very Low Clarity or Effort</td></tr>
+            <tr><td>2</td><td>Basic Awareness with Limited Accuracy</td></tr>
+            <tr><td>3</td><td>Moderate Understanding with Logical Reasoning</td></tr>
+            <tr><td>4</td><td>Strong Analytical and Ethical Reasoning</td></tr>
+            <tr><td>5</td><td>Excellent Insight, Reasoning, and Application</td></tr>
+          </tbody>
+        </table>
 
-      <template #step-tribunal>
-        <p>The MyIntellibook Tribunal operates as a dual-level mechanism ensuring fairness, validation, and social responsibility:</p>
-        <div class="tribunal-grid">
-          <div class="mini-card">
-            <i class="bi bi-shield-check" aria-hidden="true"></i>
-            <p><em>Internal Tribunal</em> – Validates HIP Scores, verifies data integrity, ensures transparency, and detects anomalies.</p>
-          </div>
-          <div class="mini-card">
-            <i class="bi bi-people" aria-hidden="true"></i>
-            <p><em>External Tribunal</em> – Resolves external issues, promotes harmony, and offers ethical guidance.</p>
-          </div>
-        </div>
-      </template>
-
-      <template #step-testament>
-        <p>
-          The Testament Management module engages senior citizens and experienced professionals to contribute wisdom and mentorship. A Fixed Arm — composed of Legal and Quality divisions — oversees ethical and transparent administration of testamentary activities, ensuring alignment with MyIntellibook’s standards while supporting the elderly community.
+        <p><strong>2. Tribunal Evaluation</strong><br/>
+        The MyIntellibook Tribunal operates as a dual-level mechanism ensuring fairness, validation, and social responsibility:
         </p>
-      </template>
+        <ul>
+          <li><em>Internal Tribunal</em> – Validates HIP Scores, verifies data integrity, ensures transparency, and detects anomalies.</li>
+          <li><em>External Tribunal</em> – Resolves external issues, promotes harmony, and offers ethical guidance.</li>
+        </ul>
 
-      <template #step-ranking>
-        <p>
-          Once verified, HIP, Tribunal, and Traditional metrics are combined to produce a comprehensive performance ranking. Results are displayed in an interactive dashboard highlighting leadership indicators, learning capacity, and community impact.
+        <p><strong>3. Testament Management</strong><br/>
+        The Testament Management module engages senior citizens and experienced professionals to contribute wisdom and mentorship. A Fixed Arm — composed of Legal and Quality divisions — oversees ethical and transparent administration of testamentary activities, ensuring alignment with MyIntellibook’s standards while supporting the elderly community.
         </p>
-        <RouterLink to="/scores" class="inline-link">Open your score dashboard <i class="bi bi-arrow-right" aria-hidden="true"></i></RouterLink>
-      </template>
 
-      <template #step-security>
-        <p>
-          All participant data is securely handled under MyIntellibook’s confidentiality and data protection policies. Manual intervention in results is strictly prohibited, ensuring complete trust, accuracy, and traceability.
+        <p><strong>4. Final Ranking</strong><br/>
+        Once verified, HIP, Tribunal, and Traditional metrics are combined to produce a comprehensive performance ranking. Results are displayed in an interactive dashboard highlighting leadership indicators, learning capacity, and community impact.
         </p>
-        <blockquote class="essence">
-          <em>In essence, MyIntellibook transforms evaluation into a life mission — building a Human Intelligence Portfolio that measures not only knowledge but also ethical responsibility, compassion, and social contribution.</em>
-        </blockquote>
-      </template>
-    </FeatureWalkthrough>
-  </InfoPageShell>
+
+        <p><strong>5. Transparency and Security</strong><br/>
+        All participant data is securely handled under MyIntellibook’s confidentiality and data protection policies. Manual intervention in results is strictly prohibited, ensuring complete trust, accuracy, and traceability.
+        </p>
+
+        <p><em>In essence, MyIntellibook transforms evaluation into a life mission — building a Human Intelligence Portfolio that measures not only knowledge but also ethical responsibility, compassion, and social contribution.</em></p>
+      </section>
+    </div>
+    <div class="col-md-3 mt-3 d-none d-md-block">
+      <latestUpdates />
+      <Divider class="w-75"/>
+      <Divider class="w-75" />
+      <Divider class="w-75" />
+      <ProfileList />
+    </div>
+    <div class="col-md-2"></div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import InfoPageShell from '@/components/infoPages/InfoPageShell.vue';
-import FeatureWalkthrough, { type WalkthroughStep } from '@/components/infoPages/FeatureWalkthrough.vue';
-
-const steps: WalkthroughStep[] = [
-  { id: 'overview', title: 'Overview', icon: 'bi-compass' },
-  { id: 'hip', title: 'HIP Calculation', icon: 'bi-calculator' },
-  { id: 'tribunal', title: 'Tribunal Evaluation', icon: 'bi-bank' },
-  { id: 'testament', title: 'Testament Management', icon: 'bi-journal-bookmark' },
-  { id: 'ranking', title: 'Final Ranking', icon: 'bi-trophy' },
-  { id: 'security', title: 'Transparency & Security', icon: 'bi-shield-lock' },
-];
-
-const scale = [
-  { score: 0, meaning: 'No Understanding / Incorrect Response' },
-  { score: 1, meaning: 'Very Low Clarity or Effort' },
-  { score: 2, meaning: 'Basic Awareness with Limited Accuracy' },
-  { score: 3, meaning: 'Moderate Understanding with Logical Reasoning' },
-  { score: 4, meaning: 'Strong Analytical and Ethical Reasoning' },
-  { score: 5, meaning: 'Excellent Insight, Reasoning, and Application' },
-];
+import { defineAsyncComponent } from 'vue';
+const addSiteDeails = defineAsyncComponent(() => import('../../components/commonComponents/addSiteDeails.vue'));
+const latestUpdates = defineAsyncComponent(() => import('../../components/commonComponents/latestUpdates.vue'));
+const userProfile = defineAsyncComponent(() => import('../../stores/User/userProfile'));
+import Divider from 'primevue/divider';
 </script>
 
 <style scoped>
-.element-list { display: grid; gap: 8px; margin: 0 0 16px !important; padding: 0 !important; list-style: none; }
-.element-list li { display: flex; gap: 10px; margin: 0 !important; padding: 10px 12px; background: #fff; border: 1px solid var(--ds-surface-muted); border-radius: 12px; }
-.element-list li > i { flex: 0 0 auto; margin-top: 2px; color: var(--ds-primary); font-size: 16px; }
-.element-list strong { color: var(--ds-text) !important; }
-
-.scale-heading { margin: 0 0 8px !important; color: var(--ds-text-muted); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.score-scale { display: grid; gap: 6px; margin: 0 !important; padding: 0 !important; list-style: none; }
-.score-scale li { display: flex; align-items: center; gap: 10px; margin: 0 !important; }
-
-/* Chip colour deepens with the score: grey at 0 to strong green at 5. */
-.score-chip {
-  display: grid;
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 800;
-  place-items: center;
-  background: color-mix(in srgb, var(--ds-success) calc(var(--level) * 20%), var(--ds-text-subtle));
-  border-radius: 10px;
+.about-container {
+  max-width: 800px;
+  padding: 1rem 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  line-height: 1.6;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
 }
 
-.score-meaning { font-size: 13.5px; line-height: 1.4; }
+.about-container h1 {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
 
-.tribunal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-.mini-card { padding: 14px; background: #fff; border: 1px solid var(--ds-surface-muted); border-radius: 14px; }
-.mini-card > i { display: inline-grid; width: 34px; height: 34px; margin-bottom: 8px; color: var(--ds-primary); font-size: 16px; place-items: center; background: var(--ds-primary-soft); border-radius: 10px; }
-.mini-card p { margin: 0 !important; font-size: 13.5px; }
-.mini-card em { color: var(--ds-text); font-style: normal; font-weight: 700; }
+.about-container p {
+  margin-bottom: 1rem;
+  color: #333;
+}
 
-.inline-link { display: inline-flex; align-items: center; gap: 6px; color: var(--ds-primary); font-size: 13.5px; font-weight: 700; text-decoration: none; }
-.inline-link:hover { text-decoration: underline; }
-.inline-link:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; border-radius: 4px; }
+.about-container strong {
+  color: #A03829;
+}
 
-.essence { margin: 4px 0 0; padding: 14px 16px; color: #4c0519; background: var(--ds-primary-soft); border-left: 3px solid var(--ds-primary); border-radius: 0 12px 12px 0; }
+.about-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.about-container table th,
+.about-container table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.about-container table th {
+  background-color: #f0f0f0;
+  color: #2c3e50;
+}
 </style>

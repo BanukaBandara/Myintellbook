@@ -31,7 +31,7 @@
                     
                     <p class="mt-3"> Enter your details to get started.</p>
 
-                    <Button :label="DetailsButtonLabel" class="w-100" style="background-color:var(--ds-primary-hover);" size="normal" @click="submitUserData" id="submitDetails">
+                    <Button :label="DetailsButtonLabel" class="w-100" style="background-color:#a03829;" size="normal" @click="submitUserData" id="submitDetails">
                         <template #icon>
                             <i class="pi pi-spin pi-spinner" style="font-size: 1rem" v-if="submitData"></i>
                         </template>
@@ -171,6 +171,6 @@ onMounted(() => {
 <style scoped>
 .image-section{
     background-color:#ebe5d4;
-    color:var(--ds-primary-hover);
+    color:#a03829;
 }
 </style>

@@ -137,7 +137,7 @@ const deleteAccount = async() => {
 </script>
 <style scope>
 .hover-bg-light:hover {
-  background-color: var(--ds-surface-subtle);
+  background-color: #f8f9fa;
   transition: background-color 0.2s ease;
 }
 

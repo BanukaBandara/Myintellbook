@@ -1,16 +1,16 @@
 <template>
   <IconField
     :pt="{
-      root: 'navbar-search mx-2',
-      icon: 'bg-transparent border-0 p-1',
+      root: 'w-75 w-md-75 w-lg-50 mx-2 h-md-100',
+      icon: 'bg-white border-0 p-1',
       input: 'w-75'
     }"
   >
     <InputIcon class="pi pi-search" />
     <InputText
       placeholder="Search..."
-      class="navbar-search-input w-100"
-      style="height: 40px; font-size: 0.9rem;"
+      class="w-100 w-md-75"
+      style="border-radius: 20px; height: 35px; font-size: 0.85rem;"
       @keyup="searchProfile"
     />
 
@@ -31,7 +31,7 @@
           <div
             v-for="(profile, index) in profileList.slice(0, showLength)"
             :key="index"
-            class="dashboard-profile-row d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between p-2 rounded-4 mb-2 border bg-white gap-2"
+            class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between p-2 rounded mb-2 border bg-light-subtle gap-2"
           >
             <div class="d-flex align-items-center gap-2 gap-md-3 w-100">
               <small class="text-secondary fw-semibold">#{{ profile.rank }}</small>
@@ -39,7 +39,7 @@
               <div class="flex-grow-1">
                 <div class="fw-semibold text-truncate">{{ profile.full_name }}</div>
                 <small class="text-muted d-block">{{ profile.profession || '' }}</small>
-                <small class="dashboard-verified-pill">HIP {{ Number(profile.hip_score ?? 0).toLocaleString() }}</small>
+                <small class="text-warning">⭐ {{ profile.points }} pts</small>
               </div>
             </div>
             <Button
@@ -47,8 +47,8 @@
               size="small"
               severity="primary"
               outlined
-              class="dashboard-action-button w-100 w-md-auto"
-              @click="() => router.push({ name: 'showUserProfile', params: { id: profile.id } })"
+              class="w-100 w-md-auto"
+              @click="() => router.push(`/showUserProfile/${profile.profile_url}`)"
             />
           </div>
         </div>
@@ -167,22 +167,6 @@ const openCategory = (name:string,follow:boolean) =>{
   max-width: 580px;         /* Laptop/Desktop: clean readable width */
   min-width: 320px;         /* Prevent too small */
 }
-.navbar-search {
-  width: clamp(13rem, 24vw, 22rem);
-}
-.navbar-search-input {
-  height: 40px;
-  border: 1px solid transparent;
-  border-radius: 0.85rem;
-  background: rgb(243 244 246 / 84%);
-  padding: 0.55rem 0.85rem 0.55rem 2.45rem;
-  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-}
-.navbar-search-input:enabled:focus {
-  border-color: var(--ds-primary);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgb(239 68 68 / 10%);
-}
 .exam-description {
   display: -webkit-box;
   -webkit-line-clamp: 2;     /* limit to 2 lines */
@@ -190,7 +174,7 @@ const openCategory = (name:string,follow:boolean) =>{
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  color: var(--ds-text-muted);
+  color: #6c757d;
   font-size: 0.85rem;
   line-height: 1.2rem;
 }

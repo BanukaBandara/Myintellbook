@@ -1,174 +1,196 @@
 <template>
-  <InfoPageShell
-    icon="bi-shield-check"
-    eyebrow="Security"
-    title="Encryption and Data Security"
-    subtitle="The cryptographic and access-control layers protecting HIP, Tribunal and Testament data."
-    :badges="['TLS 1.3', 'AES-256-GCM', 'PBKDF2-SHA512', 'HSM key management']"
-    printable
-  >
-    <InfoAccordion label="Encryption sections" :default-open="['e1', 'e2']">
-      <InfoAccordionItem id="e1" number="1" title="Purpose">
-        <p>
-          MyIntellibook implements multi-layer encryption and access-control mechanisms to ensure the confidentiality, integrity, and availability of all user data processed within the platform. All HIP (Human Intelligence Portfolio), Tribunal, and Testament Management information is protected by industry-standard cryptographic technologies during storage, transmission, and processing.
+  <div class="row flex-grow-1 overflow-auto m-0 justify-content-center mb-3 gap-1">
+    <div class="col-md-1"></div>
+    <div class="col-md-2 mt-3 d-none d-md-block">
+      <ProfileDetails />
+      <addSiteDeails />
+    </div>
+    <div class="col-md-4 mt-3">
+      <section class="about-container">
+        <h1>Encryption and Data Security</h1>
+
+        <p><strong>1. Purpose</strong><br/>
+        MyIntellibook implements multi-layer encryption and access-control mechanisms to ensure the confidentiality, integrity, and availability of all user data processed within the platform. All HIP (Human Intelligence Portfolio), Tribunal, and Testament Management information is protected by industry-standard cryptographic technologies during storage, transmission, and processing.
         </p>
-      </InfoAccordionItem>
 
-      <InfoAccordionItem id="e2" number="2" title="Encryption Framework Overview">
-        <ol class="layer-stack">
-          <li v-for="layer in layers" :key="layer.layer" class="layer-card">
-            <span class="layer-icon" aria-hidden="true"><i :class="['bi', layer.icon]"></i></span>
-            <div class="layer-body">
-              <h3 class="layer-name">{{ layer.layer }}</h3>
-              <p class="layer-purpose">{{ layer.purpose }}</p>
-              <dl class="layer-meta">
-                <div><dt>Technique</dt><dd>{{ layer.technique }}</dd></div>
-                <div><dt>Standard / Algorithm</dt><dd>{{ layer.standard }}</dd></div>
-              </dl>
-            </div>
-          </li>
-        </ol>
-      </InfoAccordionItem>
+        <p><strong>2. Encryption Framework Overview</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Technique</th>
+              <th>Standard / Algorithm</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Data Transmission</td>
+              <td>TLS 1.3 with AES-256 bit encryption</td>
+              <td>Transport Layer Security (TLS 1.3)</td>
+              <td>Encrypts communication between clients and servers to prevent interception.</td>
+            </tr>
+            <tr>
+              <td>Data Storage (At Rest)</td>
+              <td>AES-256 encryption in GCM mode</td>
+              <td>Advanced Encryption Standard (AES)</td>
+              <td>Encrypts stored data (HIP scores, profiles, testament files) so only authorized systems can decrypt.</td>
+            </tr>
+            <tr>
+              <td>Password Protection</td>
+              <td>PBKDF2 with SHA-512 + unique salt, &gt;100,000 iterations</td>
+              <td>FIPS 140-2 compliant</td>
+              <td>Secures passwords via one-way hashing to resist dictionary and rainbow-table attacks.</td>
+            </tr>
+            <tr>
+              <td>API Key &amp; Token Security</td>
+              <td>HMAC-SHA256 signatures with JWT</td>
+              <td>JSON Web Token (JWT) framework</td>
+              <td>Protects session authentication and integrations from tampering or replay attacks.</td>
+            </tr>
+            <tr>
+              <td>Database Field-Level Encryption</td>
+              <td>AES-256 per-field keys</td>
+              <td>ISO/IEC 19790 &amp; ISO/IEC 27018</td>
+              <td>Encrypts sensitive columns (national ID, contact number, legal documents).</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <InfoAccordionItem id="e3" number="3" title="Key Management">
-        <ul>
-          <li>Keys generated and managed via HSM or secure key vault.</li>
-          <li>Rotated every 12 months or after security events.</li>
-          <li>Access restricted to DPO/admins under MFA.</li>
-          <li>All operations audited and logged.</li>
-        </ul>
-      </InfoAccordionItem>
+        <p><strong>3. Key Management</strong><br/>
+        - Keys generated and managed via HSM or secure key vault.<br/>
+        - Rotated every 12 months or after security events.<br/>
+        - Access restricted to DPO/admins under MFA.<br/>
+        - All operations audited and logged.
+        </p>
 
-      <InfoAccordionItem id="e4" number="4" title="Data Segregation and Access Control">
-        <ul>
-          <li>User data segregated by account ID/module.</li>
-          <li>RBAC ensures authorized access.</li>
-          <li>Queries/admin access require encrypted API tokens.</li>
-          <li>Staff trained and cleared before privileges.</li>
-        </ul>
-      </InfoAccordionItem>
+        <p><strong>4. Data Segregation and Access Control</strong><br/>
+        - User data segregated by account ID/module.<br/>
+        - RBAC ensures authorized access.<br/>
+        - Queries/admin access require encrypted API tokens.<br/>
+        - Staff trained and cleared before privileges.
+        </p>
 
-      <InfoAccordionItem id="e5" number="5" title="Backup and Recovery Encryption">
-        <ul>
-          <li>Daily backups encrypted with AES-256.</li>
-          <li>Transmission secured with TLS 1.3 + mutual auth.</li>
-          <li>Disaster recovery servers follow same encryption standards.</li>
-        </ul>
-      </InfoAccordionItem>
+        <p><strong>5. Backup and Recovery Encryption</strong><br/>
+        - Daily backups encrypted with AES-256.<br/>
+        - Transmission secured with TLS 1.3 + mutual auth.<br/>
+        - Disaster recovery servers follow same encryption standards.
+        </p>
 
-      <InfoAccordionItem id="e6" number="6" title="End-to-End Confidentiality">
-        <p>All sensitive data encrypted in transit and at rest. Decryption only occurs at runtime in secure memory; plaintext is never written to disk.</p>
-      </InfoAccordionItem>
+        <p><strong>6. End-to-End Confidentiality</strong><br/>
+        All sensitive data encrypted in transit and at rest. Decryption only occurs at runtime in secure memory; plaintext is never written to disk.
+        </p>
 
-      <InfoAccordionItem id="e7" number="7" title="Compliance and Auditing">
-        <p>MyIntellibook follows:</p>
-        <ul class="standard-badges">
-          <li><i class="bi bi-patch-check-fill" aria-hidden="true"></i> ISO/IEC 27001 – Information Security Management</li>
-          <li><i class="bi bi-patch-check-fill" aria-hidden="true"></i> ISO/IEC 27701 – Privacy Information Management</li>
-          <li><i class="bi bi-patch-check-fill" aria-hidden="true"></i> GDPR Articles 32 &amp; 33</li>
-          <li><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Sri Lanka ICTA Data Protection Act (2022)</li>
-        </ul>
-        <p>Regular vulnerability assessments and annual penetration testing ensure compliance.</p>
-      </InfoAccordionItem>
+        <p><strong>7. Compliance and Auditing</strong><br/>
+        MyIntellibook follows:<br/>
+        - ISO/IEC 27001 – Information Security Management<br/>
+        - ISO/IEC 27701 – Privacy Information Management<br/>
+        - GDPR Articles 32 &amp; 33<br/>
+        - Sri Lanka ICTA Data Protection Act (2022)<br/>
+        Regular vulnerability assessments and annual penetration testing ensure compliance.
+        </p>
 
-      <InfoAccordionItem id="e8" number="8" title="Encryption Responsibility">
-        <dl class="role-list">
-          <div v-for="role in roles" :key="role.role">
-            <dt><i class="bi bi-person-gear" aria-hidden="true"></i> {{ role.role }}</dt>
-            <dd>{{ role.responsibility }}</dd>
-          </div>
-        </dl>
-      </InfoAccordionItem>
+        <p><strong>8. Encryption Responsibility</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Responsibility</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Data Protection Officer (DPO)</td>
+              <td>Oversees encryption policies, key management, incident reporting.</td>
+            </tr>
+            <tr>
+              <td>System Administrator</td>
+              <td>Implements and maintains server-level encryption configurations.</td>
+            </tr>
+            <tr>
+              <td>Software Developers</td>
+              <td>Ensure code adheres to encryption and sanitization guidelines.</td>
+            </tr>
+            <tr>
+              <td>Auditor / External Reviewer</td>
+              <td>Verifies compliance with ISO and data-protection standards.</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <InfoAccordionItem id="e9" number="9" title="Breach Response">
-        <ol class="response-timeline">
-          <li><span>Revoke compromised keys.</span></li>
-          <li><span>Incident Response Team activated within 2 hours.</span></li>
-          <li><span>Impact analysis + user notification within 72 hours.</span></li>
-          <li><span>Independent audit review for corrective actions.</span></li>
-        </ol>
-      </InfoAccordionItem>
+        <p><strong>9. Breach Response</strong><br/>
+        - Revoke compromised keys.<br/>
+        - Incident Response Team activated within 2 hours.<br/>
+        - Impact analysis + user notification within 72 hours.<br/>
+        - Independent audit review for corrective actions.
+        </p>
 
-      <InfoAccordionItem id="e10" number="10" title="Summary">
-        <p>MyIntellibook employs comprehensive, end-to-end encryption and secure key-management practices to ensure your personal, academic, and legal data remain protected under the highest international standards.</p>
-      </InfoAccordionItem>
-    </InfoAccordion>
-  </InfoPageShell>
+        <p><strong>10. Summary</strong><br/>
+        MyIntellibook employs comprehensive, end-to-end encryption and secure key-management practices to ensure your personal, academic, and legal data remain protected under the highest international standards.
+        </p>
+      </section>
+    </div>
+    <div class="col-md-3 mt-3 d-none d-md-block">
+      <latestUpdates />
+      <Divider class="w-75"/>
+      <Divider class="w-75" />
+      <Divider class="w-75" />
+      <ProfileList />
+    </div>
+    <div class="col-md-2"></div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import InfoPageShell from '@/components/infoPages/InfoPageShell.vue';
-import InfoAccordion from '@/components/infoPages/InfoAccordion.vue';
-import InfoAccordionItem from '@/components/infoPages/InfoAccordionItem.vue';
-
-const layers = [
-  {
-    layer: 'Data Transmission',
-    icon: 'bi-arrow-left-right',
-    technique: 'TLS 1.3 with AES-256 bit encryption',
-    standard: 'Transport Layer Security (TLS 1.3)',
-    purpose: 'Encrypts communication between clients and servers to prevent interception.',
-  },
-  {
-    layer: 'Data Storage (At Rest)',
-    icon: 'bi-hdd-stack',
-    technique: 'AES-256 encryption in GCM mode',
-    standard: 'Advanced Encryption Standard (AES)',
-    purpose: 'Encrypts stored data (HIP scores, profiles, testament files) so only authorized systems can decrypt.',
-  },
-  {
-    layer: 'Password Protection',
-    icon: 'bi-key',
-    technique: 'PBKDF2 with SHA-512 + unique salt, >100,000 iterations',
-    standard: 'FIPS 140-2 compliant',
-    purpose: 'Secures passwords via one-way hashing to resist dictionary and rainbow-table attacks.',
-  },
-  {
-    layer: 'API Key & Token Security',
-    icon: 'bi-fingerprint',
-    technique: 'HMAC-SHA256 signatures with JWT',
-    standard: 'JSON Web Token (JWT) framework',
-    purpose: 'Protects session authentication and integrations from tampering or replay attacks.',
-  },
-  {
-    layer: 'Database Field-Level Encryption',
-    icon: 'bi-table',
-    technique: 'AES-256 per-field keys',
-    standard: 'ISO/IEC 19790 & ISO/IEC 27018',
-    purpose: 'Encrypts sensitive columns (national ID, contact number, legal documents).',
-  },
-];
-
-const roles = [
-  { role: 'Data Protection Officer (DPO)', responsibility: 'Oversees encryption policies, key management, incident reporting.' },
-  { role: 'System Administrator', responsibility: 'Implements and maintains server-level encryption configurations.' },
-  { role: 'Software Developers', responsibility: 'Ensure code adheres to encryption and sanitization guidelines.' },
-  { role: 'Auditor / External Reviewer', responsibility: 'Verifies compliance with ISO and data-protection standards.' },
-];
+import { defineAsyncComponent } from 'vue';
+const addSiteDeails = defineAsyncComponent(() => import('../../components/commonComponents/addSiteDeails.vue'));
+const latestUpdates = defineAsyncComponent(() => import('../../components/commonComponents/latestUpdates.vue'));
+const userProfile = defineAsyncComponent(() => import('../../stores/User/userProfile'));
+import Divider from 'primevue/divider';
 </script>
 
 <style scoped>
-.layer-stack { display: grid; gap: 8px; margin: 0 !important; padding: 0 !important; list-style: none; }
-.layer-card { display: flex; gap: 12px; margin: 0 !important; padding: 14px; background: #fff; border: 1px solid var(--ds-surface-muted); border-radius: 14px; }
-.layer-icon { display: grid; flex: 0 0 38px; width: 38px; height: 38px; color: var(--ds-success-text); font-size: 17px; place-items: center; background: var(--ds-success-soft); border-radius: 11px; }
-.layer-body { min-width: 0; }
-.layer-name { margin: 0; color: var(--ds-text); font-size: 14.5px; font-weight: 750; }
-.layer-purpose { margin: 2px 0 8px !important; color: var(--ds-text-secondary); font-size: 13.5px; }
-.layer-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 6px 14px; margin: 0; }
-.layer-meta dt { color: var(--ds-text-subtle); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.layer-meta dd { margin: 0; color: var(--ds-text); font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
+.about-container {
+  max-width: 800px;
+  padding: 1rem 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  line-height: 1.6;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
 
-.standard-badges { display: grid; gap: 6px; padding: 0 !important; list-style: none; }
-.standard-badges li { display: flex; align-items: center; gap: 8px; margin: 0 !important; padding: 8px 12px; color: var(--ds-success-text); font-size: 13px; font-weight: 600; background: var(--ds-success-soft); border-radius: 10px; }
+.about-container h1 {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
 
-.role-list { display: grid; gap: 8px; margin: 0; }
-.role-list > div { padding: 10px 12px; background: #fff; border: 1px solid var(--ds-surface-muted); border-radius: 12px; }
-.role-list dt { color: var(--ds-text); font-size: 13.5px; font-weight: 700; }
-.role-list dt i { color: var(--ds-primary); }
-.role-list dd { margin: 2px 0 0; color: var(--ds-text-secondary); font-size: 13px; }
+.about-container p {
+  margin-bottom: 1rem;
+  color: #333;
+}
 
-.response-timeline { position: relative; margin: 0 !important; padding: 0 0 0 26px !important; list-style: none; counter-reset: step; }
-.response-timeline::before { position: absolute; top: 8px; bottom: 8px; left: 9px; width: 2px; content: ''; background: var(--ds-primary-200); }
-.response-timeline li { position: relative; margin: 0 0 10px !important; counter-increment: step; }
-.response-timeline li::before { position: absolute; top: 1px; left: -26px; display: grid; width: 20px; height: 20px; color: #fff; font-size: 11px; font-weight: 800; content: counter(step); place-items: center; background: var(--ds-primary); border-radius: 50%; }
+.about-container strong {
+  color: #A03829;
+}
+
+.about-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.about-container table th,
+.about-container table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.about-container table th {
+  background-color: #f0f0f0;
+  color: #2c3e50;
+}
 </style>

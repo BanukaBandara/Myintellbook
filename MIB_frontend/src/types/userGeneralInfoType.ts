@@ -8,8 +8,6 @@ id?: number | string,
  cover_image:string,
  school:string,
  total_points?:number
- hip_score?:number
- Hip?:number
  rank?:number
  posts?:[],
  visibility:{

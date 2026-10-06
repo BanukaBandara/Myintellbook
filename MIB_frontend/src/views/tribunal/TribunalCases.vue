@@ -66,6 +66,8 @@ const getPartyName = (
 };
 
 const formatStatus = (status: string): string => {
+  if (!status) return '-';
+  if (status === 'jury_selection') return 'Awaiting Jury Panel Assignment';
   return status
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char: string) => char.toUpperCase());
@@ -166,6 +168,15 @@ onMounted(async () => {
         >
           <i class="bi bi-shield-check me-1" />
           Review Verifications
+        </button>
+        <button
+          v-if="tribunalStore.capabilities?.is_admin_reviewer"
+          type="button"
+          class="btn btn-outline-info shadow-sm px-3"
+          @click="router.push('/admin/tribunal/jury-panels')"
+        >
+          <i class="bi bi-people me-1" />
+          Manage Jury Panels
         </button>
         <button
           type="button"
@@ -396,7 +407,7 @@ onMounted(async () => {
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--ds-text-muted);
+  color: #6c757d;
   white-space: nowrap;
 }
 

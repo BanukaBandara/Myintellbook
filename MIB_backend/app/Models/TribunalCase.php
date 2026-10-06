@@ -74,6 +74,38 @@ class TribunalCase extends Model
             ->latestOfMany();
     }
 
+    public function juryPanelAssignments(): HasMany
+    {
+        return $this->hasMany(TribunalJuryPanelAssignment::class, 'tribunal_case_id');
+    }
+
+    public function currentJuryPanelAssignment(): HasOne
+    {
+        return $this->hasOne(TribunalJuryPanelAssignment::class, 'tribunal_case_id')
+            ->where('status', \App\Enums\TribunalJuryPanelAssignmentStatus::Active);
+    }
+
+    public function isAssignedJuryPanelUser(int $userId): bool
+    {
+        if ($this->relationLoaded('currentJuryPanelAssignment')) {
+            $assignment = $this->currentJuryPanelAssignment;
+            if (!$assignment || !$assignment->isActive()) {
+                return false;
+            }
+            $panel = $assignment->relationLoaded('juryPanel') 
+                ? $assignment->juryPanel 
+                : $assignment->juryPanel()->first();
+            return $panel && $panel->isActive() && $panel->login_user_id === $userId;
+        }
+
+        return $this->currentJuryPanelAssignment()
+            ->whereHas('juryPanel', function ($query) use ($userId) {
+                $query->where('login_user_id', $userId)
+                      ->where('status', \App\Enums\TribunalJuryPanelStatus::Active);
+            })
+            ->exists();
+    }
+
     public function isComplainant(int $userId): bool
     {
         return $this->parties()
@@ -194,6 +226,69 @@ class TribunalCase extends Model
         return $this->hasOne(TribunalSettlementAgreement::class, 'tribunal_case_id')->latestOfMany();
     }
 
+    public function hearings(): HasMany
+    {
+        return $this->hasMany(TribunalHearing::class, 'tribunal_case_id')->orderBy('created_at', 'desc');
+    }
+
+    public function activeHearing(): HasOne
+    {
+        return $this->hasOne(TribunalHearing::class, 'tribunal_case_id')
+            ->whereIn('status', [
+                \App\Enums\TribunalHearingStatus::Scheduled,
+                \App\Enums\TribunalHearingStatus::Active,
+                \App\Enums\TribunalHearingStatus::Recessed,
+            ])
+            ->latestOfMany();
+    }
+
+    public function witnesses(): HasMany
+    {
+        return $this->hasMany(TribunalWitness::class, 'tribunal_case_id')->orderBy('created_at', 'desc');
+    }
+
+    public function deliberations(): HasMany
+    {
+        return $this->hasMany(TribunalDeliberation::class, 'tribunal_case_id');
+    }
+
+    public function deliberation(): HasOne
+    {
+        return $this->hasOne(TribunalDeliberation::class, 'tribunal_case_id')->latestOfMany();
+    }
+
+    public function findings(): HasMany
+    {
+        return $this->hasMany(TribunalFinding::class, 'tribunal_case_id')->orderBy('display_order', 'asc');
+    }
+
+    public function decisions(): HasMany
+    {
+        return $this->hasMany(TribunalDecision::class, 'tribunal_case_id');
+    }
+
+    public function responses(): HasMany
+    {
+        return $this->hasMany(TribunalCaseResponse::class, 'tribunal_case_id');
+    }
+
+    public function caseResponse(): HasOne
+    {
+        return $this->hasOne(TribunalCaseResponse::class, 'tribunal_case_id')->latestOfMany();
+    }
+
+    public function decision(): HasOne
+    {
+        return $this->hasOne(TribunalDecision::class, 'tribunal_case_id')->latestOfMany();
+    }
+
+    public function finalDecision(): HasOne
+    {
+        return $this->hasOne(TribunalDecision::class, 'tribunal_case_id')
+            ->where('status', \App\Enums\TribunalDecisionStatus::Final)
+            ->latestOfMany();
+    }
+
     public function getUserCaseRole(int $userId): ?string
     {
         if ($this->isComplainant($userId)) {
@@ -202,7 +297,16 @@ class TribunalCase extends Model
         if ($this->isRespondent($userId)) {
             return 'respondent';
         }
-        if ($this->isAcceptedAdjudicator($userId)) {
+        if ($this->isAssignedJuryPanelUser($userId)) {
+            return 'jury_panel';
+        }
+
+        // For new Jury Panel-assigned cases, old individual adjudicators do NOT gain authority!
+        $hasJuryPanel = $this->relationLoaded('currentJuryPanelAssignment')
+            ? ($this->currentJuryPanelAssignment !== null)
+            : $this->currentJuryPanelAssignment()->exists();
+
+        if (!$hasJuryPanel && $this->isAcceptedAdjudicator($userId)) {
             return 'adjudicator';
         }
 
@@ -238,6 +342,7 @@ class TribunalCase extends Model
     {
         return $this->isParticipant($userId) 
             || $this->isAcceptedJuror($userId) 
-            || $this->isAcceptedRepresentative($userId);
+            || $this->isAcceptedRepresentative($userId)
+            || $this->isAssignedJuryPanelUser($userId);
     }
 }

@@ -14,20 +14,27 @@ class TribunalCaseMessageResource extends JsonResource
         $msg = $this->resource;
 
         $sender = $msg->sender;
-        $senderName = $sender?->profile?->first_name
-            ? "{$sender->profile->first_name} {$sender->profile->last_name}"
-            : ($sender?->email ?? 'Participant');
+        $panel = $sender?->juryPanel;
+        $isMe = $request->user()?->id === $msg->sender_id;
 
-        $isMe = auth()->id() === $msg->sender_id;
+        if ($panel || $msg->sender_case_role === 'jury_panel') {
+            $senderName = $panel ? "{$panel->panel_code} — {$panel->panel_name}" : 'Tribunal Jury Panel';
+            $roleLabel = 'Tribunal Jury Panel';
+        } else {
+            $senderName = $sender?->profile?->first_name
+                ? "{$sender->profile->first_name} {$sender->profile->last_name}"
+                : ($sender?->email ?? 'Participant');
 
-        $roleLabel = match ($msg->sender_case_role) {
-            'complainant' => 'Complainant',
-            'respondent' => 'Respondent',
-            'complainant_representative' => 'Complainant Counsel',
-            'respondent_representative' => 'Respondent Counsel',
-            'adjudicator' => 'Tribunal Adjudicator',
-            default => ucfirst(str_replace('_', ' ', $msg->sender_case_role ?? 'Participant')),
-        };
+            $roleLabel = match ($msg->sender_case_role) {
+                'complainant' => 'Complainant',
+                'respondent' => 'Respondent',
+                'complainant_representative' => 'Complainant Counsel',
+                'respondent_representative' => 'Respondent Counsel',
+                'jury_panel' => 'Tribunal Jury Panel',
+                'adjudicator' => 'Tribunal Adjudicator',
+                default => ucfirst(str_replace('_', ' ', $msg->sender_case_role ?? 'Participant')),
+            };
+        }
 
         $evidence = null;
         if ($msg->relatedEvidence) {

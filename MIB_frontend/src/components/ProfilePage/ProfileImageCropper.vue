@@ -35,8 +35,6 @@
       </div>
     </div>
 
-    <p v-if="imageError" class="upload-error" role="alert">{{ imageError }}</p>
-
     <button v-if="imageSrc && from === 'profilePhoto'" @click="cropImage" class="crop-button">Crop</button>
     <button v-if="imageSrc" @click="() => { imageSrc = null; croppedImage = null }" class="crop-button">Cancel</button>
   </div>
@@ -51,7 +49,6 @@ const props = defineProps({ from: { type: String, default: "profilePhoto" } });
 const from = computed(() => props.from);
 const imageSrc = ref<string | null>(null);
 const croppedImage = ref<string | null>(null);
-const imageError = ref('');
 
 const cropperRef = ref<HTMLDivElement | null>(null);
 
@@ -72,90 +69,34 @@ let initialSize = { width: 0, height: 0 };
 function onFileChange(e: Event) {
   const target = e.target as HTMLInputElement;
   if (target.files?.[0]) {
-    void processImage(target.files[0]);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      imageSrc.value = ev.target?.result as string;
+      croppedImage.value = null;
+      cropBoxPos.left = 0;
+      cropBoxPos.top = 0;
+      cropBoxSize.width = 200;
+      cropBoxSize.height = 200;
+      if (from.value === 'coverPhoto') emit('coverPhoto', imageSrc.value);
+    };
+    reader.readAsDataURL(target.files[0]);
   }
 }
 
 function onDrop(e: DragEvent) {
   if (!e.dataTransfer?.files.length) return;
-  void processImage(e.dataTransfer.files[0]);
-  e.dataTransfer.clearData();
-}
-
-async function processImage(file: File): Promise<void> {
-  imageError.value = '';
-  if (!file.type.startsWith('image/')) {
-    imageError.value = 'Choose a valid image file.';
-    return;
-  }
-
-  try {
-    if (from.value === 'coverPhoto') {
-      const image = await loadImage(file);
-      imageSrc.value = compressCoverImage(image);
-      emit('coverPhoto', imageSrc.value);
-    } else {
-      imageSrc.value = await readAsDataUrl(file);
-    }
-
-    croppedImage.value = null;
-    cropBoxPos.left = 0;
-    cropBoxPos.top = 0;
-    cropBoxSize.width = 200;
-    cropBoxSize.height = 200;
-  } catch {
-    imageError.value = 'This image could not be prepared. Try a smaller image.';
-  }
-}
-
-function loadImage(file: File): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const objectUrl = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(image);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error('Image decode failed'));
-    };
-    image.src = objectUrl;
-  });
-}
-
-function compressCoverImage(image: HTMLImageElement): string {
-  const maxDataUrlLength = 4_500_000;
-  const maxDimension = 1920;
-  let scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Canvas is unavailable');
-
-  for (let attempt = 0; attempt < 8; attempt++) {
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    const quality = Math.max(0.5, 0.82 - attempt * 0.05);
-    const dataUrl = canvas.toDataURL('image/jpeg', quality);
-    if (dataUrl.length <= maxDataUrlLength) return dataUrl;
-
-    scale *= 0.82;
-  }
-
-  throw new Error('Image exceeds upload limit after compression');
-}
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+  const file = e.dataTransfer.files[0];
+  if (file.type.startsWith("image/")) {
     const reader = new FileReader();
-    reader.onload = () => typeof reader.result === 'string'
-      ? resolve(reader.result)
-      : reject(new Error('Image read failed'));
-    reader.onerror = () => reject(new Error('Image read failed'));
+    reader.onload = (ev) => {
+      imageSrc.value = ev.target?.result as string;
+      croppedImage.value = null;
+      cropBoxPos.left = 0;
+      cropBoxPos.top = 0;
+    };
     reader.readAsDataURL(file);
-  });
+  }
+  e.dataTransfer.clearData();
 }
 
 function startDrag(event: MouseEvent | TouchEvent) {
@@ -272,11 +213,11 @@ function cropImage() {
 }
 
 .file-dropzone {
-  border: 2px dashed var(--ds-info);
+  border: 2px dashed #2196f3;
   border-radius: 8px;
   padding: 2rem 1rem;
   text-align: center;
-  color: var(--ds-info);
+  color: #2196f3;
   cursor: pointer;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
@@ -299,17 +240,11 @@ function cropImage() {
   font-weight: 500;
 }
 
-.upload-error {
-  margin: 0.75rem 0 0;
-  color: var(--ds-primary-hover);
-  font-size: 0.875rem;
-}
-
 .image-cropper {
   position: relative;
   margin-top: 1rem;
   max-width: 400px;
-  border: 1px solid var(--ds-border-strong);
+  border: 1px solid #ccc;
   overflow: hidden;
   border-radius: 8px;
 }
@@ -324,7 +259,7 @@ function cropImage() {
 
 .crop-box {
   position: absolute;
-  border: 2px solid var(--ds-info);
+  border: 2px solid #2196f3;
   background: rgba(33, 150, 243, 0.2);
   border-radius: 6px;
   cursor: move;
@@ -336,7 +271,7 @@ function cropImage() {
   height: 16px;
   right: -8px;
   bottom: -8px;
-  background: var(--ds-info);
+  background: #2196f3;
   border-radius: 50%;
   cursor: se-resize;
 }
@@ -348,7 +283,7 @@ function cropImage() {
 
 .cropped-preview img {
   border-radius: 50%;
-  border: 2px solid var(--ds-info);
+  border: 2px solid #2196f3;
   width: 200px;
   height: 200px;
   object-fit: cover;
@@ -356,7 +291,7 @@ function cropImage() {
 
 .crop-button {
   margin-top: 1rem;
-  background-color: var(--ds-info);
+  background-color: #2196f3;
   color: white;
   padding: 0.6rem 1.2rem;
   border: none;

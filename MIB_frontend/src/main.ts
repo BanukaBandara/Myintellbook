@@ -2,7 +2,7 @@ import './assets/main.css'
 // main.js or main.ts
 import 'bootstrap/dist/css/bootstrap.min.css';
 import PrimeVue from 'primevue/config';
-import MibPreset from './assets/primevuePreset';
+import Aura from '@primeuix/themes/aura';
 import GoogleLogin from 'vue3-google-login'
 
 
@@ -13,8 +13,6 @@ import App from './App.vue'
 import router from './router'
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'primeicons/primeicons.css';
-// Loaded after Bootstrap so the shared design tokens win the cascade.
-import './assets/design-system.css';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
 // import Echo from "laravel-echo";
@@ -32,7 +30,7 @@ const app = createApp(App)
 app.use(PrimeVue, {
     // Default theme configuration
     theme: {
-        preset: MibPreset,
+        preset: Aura,
         options: {
             prefix: 'p',
             darkModeSelector: 'false',

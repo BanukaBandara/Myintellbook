@@ -87,6 +87,25 @@ class TribunalCaseResource extends JsonResource
 
     private function resolveJurySummary(): array
     {
+        $panelAssignment = $this->relationLoaded('currentJuryPanelAssignment')
+            ? $this->currentJuryPanelAssignment
+            : $this->currentJuryPanelAssignment()->with('juryPanel')->first();
+
+        if ($panelAssignment && $panelAssignment->juryPanel) {
+            $panel = $panelAssignment->juryPanel;
+            return [
+                'status' => 'assigned',
+                'type' => 'jury_panel',
+                'label' => 'Jury Panel Assigned',
+                'role' => 'Jury Panel',
+                'juror_name' => "{$panel->panel_code} — {$panel->panel_name}",
+                'panel_id' => $panel->id,
+                'panel_code' => $panel->panel_code,
+                'panel_name' => $panel->panel_name,
+                'assigned_at' => $panelAssignment->assigned_at,
+            ];
+        }
+
         $acceptedAssignment = $this->relationLoaded('acceptedJuryAssignment')
             ? $this->acceptedJuryAssignment
             : $this->acceptedJuryAssignment()->with('juror.profile')->first();
@@ -98,6 +117,7 @@ class TribunalCaseResource extends JsonResource
 
             return [
                 'status' => 'assigned',
+                'type' => 'adjudicator',
                 'label' => 'Tribunal Member Assigned',
                 'juror_name' => $name ?: ('Member #' . $acceptedAssignment->juror_id),
                 'role' => $acceptedAssignment->role instanceof \BackedEnum ? $acceptedAssignment->role->value : $acceptedAssignment->role,
@@ -113,16 +133,17 @@ class TribunalCaseResource extends JsonResource
         if ($currentAssignment) {
             return [
                 'status' => 'selection_in_progress',
-                'label' => 'Jury selection in progress',
+                'label' => 'Awaiting Jury Panel Assignment',
                 'juror_name' => null,
                 'role' => null,
             ];
         }
 
-        if ($this->response && $this->response->submitted_at !== null) {
+        $statusValue = $this->status instanceof \BackedEnum ? $this->status->value : $this->status;
+        if ($statusValue === \App\Enums\TribunalCaseStatus::JurySelection->value || ($this->response && $this->response->submitted_at !== null)) {
             return [
                 'status' => 'awaiting_assignment',
-                'label' => 'Awaiting jury assignment',
+                'label' => 'Awaiting Jury Panel Assignment',
                 'juror_name' => null,
                 'role' => null,
             ];
@@ -144,6 +165,7 @@ class TribunalCaseResource extends JsonResource
         if ($this->isRespondent($userId)) return 'respondent';
         if ($this->isAcceptedRepresentative($userId)) return 'representative';
         if ($this->isAcceptedJuror($userId)) return 'juror';
+        if ($this->isAssignedJuryPanelUser($userId)) return 'jury_panel';
 
         return 'none';
     }

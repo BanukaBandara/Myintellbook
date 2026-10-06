@@ -19,6 +19,8 @@ import type {
   TribunalSettlementProposal,
   TribunalSettlementAgreement,
 } from '@/types/tribunal';
+import PartyHearingTab from '@/components/tribunal/PartyHearingTab.vue';
+import PartyDecisionTab from '@/components/tribunal/PartyDecisionTab.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -56,7 +58,7 @@ const requestMessage = ref('');
 const submittingRequest = ref(false);
 
 // Batch 5: Tab Navigation state
-const activeTab = ref<'overview' | 'evidence' | 'case_room' | 'mediation' | 'representation'>('overview');
+const activeTab = ref<'overview' | 'evidence' | 'case_room' | 'mediation' | 'hearing' | 'representation' | 'decision'>('overview');
 
 // Batch 5: Shared Case Room state
 const caseRoomMessageBody = ref('');
@@ -156,6 +158,7 @@ const evidenceList = computed<TribunalEvidence[]>(() => {
 
 const formatStatus = (status?: string): string => {
   if (!status) return '-';
+  if (status === 'jury_selection') return 'Awaiting Jury Panel Assignment';
   return status
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char: string) => char.toUpperCase());
@@ -464,7 +467,7 @@ const loadCase = async () => {
       tribunalStore.fetchCaseRoomMessages(id).catch(() => {});
       tribunalStore.fetchMediation(id).catch(() => {});
 
-      if (route.query.tab && ['overview', 'evidence', 'case_room', 'mediation', 'representation'].includes(route.query.tab as string)) {
+      if (route.query.tab && ['overview', 'evidence', 'case_room', 'mediation', 'hearing', 'representation'].includes(route.query.tab as string)) {
         activeTab.value = route.query.tab as any;
       }
     }
@@ -496,6 +499,27 @@ const pendingRequest = computed(() => {
 
 const representativesList = computed(() => {
   return tribunalStore.representatives || [];
+});
+
+const userCaseRole = computed(() => {
+  if (isComplainant.value) return 'complainant';
+  if (isRespondent.value) return 'respondent';
+  if (isRepresentative.value) {
+    return caseData.value?.representation?.my_represented_party === 'complainant'
+      ? 'complainant_representative'
+      : 'respondent_representative';
+  }
+  return undefined;
+});
+
+const userCaseSide = computed(() => {
+  if (isComplainant.value || caseData.value?.representation?.my_represented_party === 'complainant') {
+    return 'complainant';
+  }
+  if (isRespondent.value || caseData.value?.representation?.my_represented_party === 'respondent') {
+    return 'respondent';
+  }
+  return undefined;
 });
 
 const openDirectoryModal = async () => {
@@ -1156,6 +1180,16 @@ onMounted(async () => {
             </li>
             <li class="nav-item">
               <button
+                class="nav-link rounded-3 py-2 px-3 fw-semibold text-start text-sm-center position-relative"
+                :class="{ active: activeTab === 'hearing' }"
+                @click="activeTab = 'hearing'"
+              >
+                <i class="bi bi-mic me-1" />
+                Hearing
+              </button>
+            </li>
+            <li class="nav-item">
+              <button
                 class="nav-link rounded-3 py-2 px-3 fw-semibold text-start text-sm-center"
                 :class="{ active: activeTab === 'representation' }"
                 @click="activeTab = 'representation'"
@@ -1163,6 +1197,16 @@ onMounted(async () => {
                 <i class="bi bi-briefcase-fill me-1" />
                 Representation
                 <span v-if="hasActiveRepresentation" class="badge bg-success-subtle text-success ms-1">Active</span>
+              </button>
+            </li>
+            <li class="nav-item">
+              <button
+                class="nav-link rounded-3 py-2 px-3 fw-semibold text-start text-sm-center"
+                :class="{ active: activeTab === 'decision' }"
+                @click="activeTab = 'decision'"
+              >
+                <i class="bi bi-file-earmark-check me-1" />
+                Decision
               </button>
             </li>
           </ul>
@@ -1723,7 +1767,7 @@ onMounted(async () => {
                     <span class="badge bg-success rounded-pill px-3 py-1">Active</span>
                   </div>
                   <p class="text-muted small mb-0 mt-1">
-                    Official immutable procedural record. Messages, questions, and notices are visible to both parties, legal counsel, and the assigned Adjudicator.
+                    Official immutable procedural record. Messages, questions, and notices are visible to both parties, legal counsel, and the presiding Tribunal Jury Panel.
                   </p>
                 </div>
               </div>
@@ -1871,7 +1915,7 @@ onMounted(async () => {
                   </span>
                   <span v-else-if="msg.message_type === 'adjudicator_question'" class="badge bg-info text-dark rounded-pill">
                     <i class="bi bi-question-circle-fill me-1" />
-                    Adjudicator Question
+                    {{ msg.sender_case_role === 'jury_panel' ? 'Jury Panel Question' : 'Adjudicator Question' }}
                   </span>
                 </div>
 
@@ -1935,7 +1979,7 @@ onMounted(async () => {
                 <div v-if="canRespondToQuestion(msg)">
                   <div v-if="replyingToQuestionId === msg.id" class="ms-3 bg-white p-3 border rounded-3 shadow-sm">
                     <label class="form-label fw-bold small text-dark mb-1">
-                      Your Formal Response to Adjudicator
+                      {{ msg.sender_case_role === 'jury_panel' ? 'Your Formal Response to Tribunal Jury Panel' : 'Your Formal Response to Adjudicator' }}
                     </label>
                     <textarea
                       v-model="replyBody"
@@ -2164,7 +2208,7 @@ onMounted(async () => {
                     Active Mediation Workspace
                   </h5>
                   <small class="text-muted">
-                    Structured settlement negotiations are active. Adjudicator observes procedurally.
+                    Structured settlement negotiations are active. Tribunal Jury Panel observes procedurally.
                   </small>
                 </div>
               </div>
@@ -2323,6 +2367,18 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- TAB: FORMAL HEARING (Step 5) -->
+      <div v-show="activeTab === 'hearing'">
+        <PartyHearingTab
+          :case-id="caseData.id"
+          :case-status="caseData.status"
+          :case-number="caseData.case_number"
+          :user-role="userCaseRole"
+          :user-side="userCaseSide"
+          @case-updated="tribunalStore.fetchCase(caseData.id)"
+        />
+      </div>
+
       <!-- TAB 5: REPRESENTATION WORKSPACE -->
       <div v-show="activeTab === 'representation'">
         <div class="card border-0 shadow-sm rounded-4 mb-4">
@@ -2412,6 +2468,14 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- TAB 6: DECISION (Step 6) -->
+      <div v-show="activeTab === 'decision'">
+        <PartyDecisionTab
+          :case-id="caseData.id"
+          :case-status="caseData.status"
+        />
       </div>
     </div>
 
@@ -3204,7 +3268,7 @@ onMounted(async () => {
 }
 
 .hover-card:hover {
-  border-color: var(--ds-info) !important;
+  border-color: #0d6efd !important;
 }
 
 .transition {

@@ -143,7 +143,7 @@ const filteredUsers = ref([]);
 
 <style scoped>
 .text-muted {
-  color: var(--ds-text-muted);
+  color: #6c757d;
 }
 .space-y-3 > * + * {
   margin-top: 0.75rem;
