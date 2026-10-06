@@ -2,36 +2,32 @@
 
 namespace App\Imports;
 
-use App\Models\profession;
-use Maatwebsite\Excel\Concerns\WithMultipleSheets;
-use RuntimeException;
+use App\Models\Question;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 
-class QuestionsImport implements WithMultipleSheets
+class QuestionsImport implements ToModel, WithHeadingRow, SkipsEmptyRows
 {
-    public function sheets(): array
+    /**
+    * @param array $row
+    *
+    * @return \Illuminate\Database\Eloquent\Model|null
+    */
+    public function model(array $row)
     {
-        $professionId = profession::query()
-            ->where('name', 'today special questions')
-            ->value('id');
-
-        if (!$professionId) {
-            throw new RuntimeException('Seed professions before importing the question bank.');
-        }
-
-        $sheets = [
-            '1 Core_Intelligence_Self_Awaren' => 'Core Intelligence',
-            'Emotional Intelligence & Empath' => 'Emotional Intelligence',
-            '3 Civic_Social_Awareness_Quiz_' => 'Civic Awareness',
-            '4 Leadership & Decision-Making' => 'Leadership',
-            '5 Cultural & Global Awareness' => 'Cultural Awareness',
-            '6 Quality Management System(QMS' => 'QMS',
-        ];
-
-        $imports = [];
-        foreach ($sheets as $sheetName => $category) {
-            $imports[$sheetName] = new QuestionSheetImport($category, $professionId);
-        }
-
-        return $imports;
+         return new Question([
+            'question'   => $row['question'],
+            'options'    => json_encode([
+                'A' => $row['option_a'],
+                'B' => $row['option_b'],
+                'C' => $row['option_c'],
+                'D' => $row['option_d'],
+            ]),
+            'answer'     => $row['answer'],
+            'difficulty_level' => $row['difficulty_level'],
+            'profession_id'   => $row['category'],
+            'is_used'    => $row['is_used'] ?? false, // Default to false if not provided
+        ]);
     }
 }

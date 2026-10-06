@@ -15,7 +15,7 @@
         </template>
         <InputText  v-model="userEmail" placeholder="Email" size="normal" id="userEmail" class="w-100 mt-3"/>
         <p class="mt-3">We’ll send a verification link to this email if it matches an existing account.</p>
-         <Button :label="passwordResetButtonLabel" class="w-100" style="background-color:var(--ds-primary-hover);" size="normal" @click="sentPasswordResetLink" id="passwordReset">
+         <Button :label="passwordResetButtonLabel" class="w-100" style="background-color:#a03829;" size="normal" @click="sentPasswordResetLink" id="passwordReset">
             <template #icon>
                 <i class="pi pi-spin pi-spinner" style="font-size: 1rem" v-if="submitData"></i>
             </template>
@@ -93,6 +93,6 @@ onMounted(()=>{
 <style scoped>
 .image-section{
     background-color:#ebe5d4;
-    color:var(--ds-primary-hover);
+    color:#a03829;
 }
 </style>

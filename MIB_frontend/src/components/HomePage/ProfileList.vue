@@ -1,16 +1,19 @@
 <template>
-    <Card class="dashboard-widget-card profiles-widget">
+    <Card :pt="{
+                    content:'pt-3',
+                    root:'w-75'
+                }">
         <template #title>
             
             <div class="d-flex justify-content-between align-items-center">
                 Profiles
                 <Button asChild v-slot="slotProps" variant="link"  label="see all">
-                    <RouterLink to="/profiles" class="dashboard-link text-decoration-none">See all</RouterLink>
+                    <RouterLink to="/profiles" class="text-decoration-none" style="font-size:15px;">See all</RouterLink>
                 </Button>
             </div>
         </template>
         <template #content>
-            <div v-for="(profile, index) in userProfiles.slice(0,showLength)" :key="index" class="dashboard-profile-row d-flex align-items-center justify-content-between py-2 px-2 border-bottom w-100">
+            <div v-for="(profile, index) in userProfiles.slice(0,showLength)" :key="index" class="d-flex align-items-center justify-content-between py-2 px-2 rounded hover-bg border-bottom w-100">
                             
                 <div class="d-flex align-items-center gap-3 w-100">
                         <small class="text-500 fw-semibold" style="font-size:15px;">
@@ -26,12 +29,12 @@
                             {{ (profile.profession) ? profile.profession : '' }}
                         </small>
                         <small>
-                            <span class="dashboard-verified-pill">HIP {{ Number(profile.hip_score ?? 0).toLocaleString() }}</span>
+                            ⭐ {{ profile.points }} pts
                         </small>
                     
                     </div>
                 </div>
-                <Button label="View" size="small" severity="primary" outlined class="dashboard-action-button" @click="router.push({ name: 'showUserProfile', params: { id: profile.id } })" />
+                <Button label="View" size="small" severity="primary" outlined @click="()=>{router.push(`/showUserProfile/${profile.profile_url}`)}" />
                  
             </div> 
             <!-- <div class="d-flex flex-column" v-for="(profile, index) in userProfiles.slice(0,showLength)" :key="index" v-if="userProfiles.length > 0">
@@ -62,6 +65,7 @@
 import { computed, ref, watch } from 'vue';
 import Card from 'primevue/card';
 import Avatar from 'primevue/avatar';
+import Divider from 'primevue/divider';
 import Button from 'primevue/button';
 import { useUserProfile} from '../../stores/User/userProfile';
 import userPng from '../../assets/user.png';
@@ -78,5 +82,5 @@ watch(userProfiles, (newValue, oldValue) => {
   }else{
     showLength.value = 3
   }
-}, { immediate: true });
+});
 </script>

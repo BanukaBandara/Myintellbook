@@ -1,10 +1,10 @@
 <template>
     <div class="row flex-grow-1 m-0 overflow-auto">
         <div class="col-md-2"></div>
-        <div class="col-md-5 mt-3">
+        <div class="col-md-5">
             <div v-if="loading"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
              <userUpperSection :userGeneralInfo="userGeneralInfo"/>
-            <div class="d-flex flex-row align-items-center menuBar gap-4 mx-4 mt-3">
+            <div class="d-flex flex-row align-items-center menuBar gap-4 mx-4 mt-md-5">
                <!-- <div @click="() => {showTimeLine = true; showProfile = false; }" :class="(showTimeLine) ? 'underline': ''">Timeline</div> -->
                 <div @click="()=>{showProfile = true; showTimeLine = false;}"  :class="(showProfile) ? 'underline': ''">Profile</div>
                 <div @click="()=>{showProfile = false; showTimeLine = true;}"  :class="(showTimeLine) ? 'underline': ''">Exams</div>

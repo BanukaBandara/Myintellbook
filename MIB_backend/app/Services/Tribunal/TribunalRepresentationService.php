@@ -30,6 +30,7 @@ class TribunalRepresentationService
     public function getVerifiedRepresentatives(?TribunalCase $case = null, ?string $search = null): Collection
     {
         $query = User::query()
+            ->whereDoesntHave('juryPanel')
             ->whereHas('latestProfessionalVerification', function ($q) {
                 $q->where('verification_status', ProfessionalVerificationStatus::Verified)
                   ->where('profession_type', ProfessionalType::AttorneyAtLaw)

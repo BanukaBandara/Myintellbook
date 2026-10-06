@@ -9,15 +9,8 @@ class Answer extends Model
     protected $fillable = [
         'user_id',
         'question_id',
-        'selected_option_index',
         'answer',
         'answer_status', // 'correct' or 'incorrect'
-        'score',
-    ];
-
-    protected $casts = [
-        'selected_option_index' => 'integer',
-        'score' => 'float',
     ];
 
     public function user()

@@ -98,6 +98,7 @@ class TribunalMeController extends Controller
             'has_cases_as_complainant' => $hasComplainantCases,
             'has_cases_as_respondent' => $hasRespondentCases,
             'is_admin_reviewer' => $user->isAdmin(),
+            'is_jury_panel' => $user->isJuryPanelAccount(),
             'can_act_as_representative' => $isRepEligible,
             'professional_verification' => $profVerificationData,
             'adjudicator' => $adjudicatorData,

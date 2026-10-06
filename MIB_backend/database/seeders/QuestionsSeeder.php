@@ -14,16 +14,6 @@ class QuestionsSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            CategorySeeder::class,
-            ProfessionSeeder::class,
-        ]);
-
-        $path = storage_path('app/imports/MyIntellibook_Question_Bank_v2.0.xlsx');
-        if (!is_file($path)) {
-            throw new \RuntimeException("Question bank file not found: {$path}");
-        }
-
-        Excel::import(new QuestionsImport(), $path);
+         Excel::import(new QuestionsImport, storage_path('app/questions.xlsx'));
     }
 }

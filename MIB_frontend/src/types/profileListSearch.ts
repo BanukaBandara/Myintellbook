@@ -1,10 +1,8 @@
 export interface profileListSearch {
-    id: number;
     full_name:string;
     profile_image: string;
     profile_url?:string;
     profession?:string;
-    points?:string | number;
-    hip_score?:number;
+    points:string;
     rank:string | number;
 }
