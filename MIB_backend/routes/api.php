@@ -17,10 +17,6 @@ Route::get('auth/google/callback', [\App\Http\Controllers\GoogleController::clas
  
 Route::middleware('auth.token')->group(function () {
     Route::get('/user', [\App\Http\Controllers\UserController::class, 'userCheck']);
-    Route::get('/user/profile', [\App\Http\Controllers\ProfileController::class, 'userProfile']);
-    Route::get('/users/{id}', [\App\Http\Controllers\ProfileController::class, 'show'])
-        ->whereNumber('id')
-        ->middleware('throttle:60,1');
     Route::get('/categories', [\App\Http\Controllers\CategoryController::class, 'getCategories']); 
     Route::get('/professions/{category_id}',[\App\Http\Controllers\CategoryController::class, 'getProfessions']);
     Route::post('/insert-profile',[\App\Http\Controllers\ProfileController::class, 'insert']);
@@ -28,16 +24,16 @@ Route::middleware('auth.token')->group(function () {
     Route::post('/edit-general-info',[\App\Http\Controllers\ProfileController::class,'editGeneralInfo']);
     Route::get('/log-out',[\App\Http\Controllers\UserController::class, 'logOut']);
     Route::get('/get-general-info',[\App\Http\Controllers\ProfileController::class,'gtGeneralInfo']);
-    Route::post('/add-work-experiance',[\App\Http\Controllers\ExperienceController::class,'store']);
-    Route::get('/get-work-experiances/{userSlug}',[\App\Http\Controllers\ExperienceController::class, 'index']);
-    Route::get('/get-details-experiance/{id}',[\App\Http\Controllers\ExperienceController::class,'show']);
-    Route::post('edit-details-experiance',[\App\Http\Controllers\ExperienceController::class,'update']);
-    Route::get('/delete-experiance/{id}',[\App\Http\Controllers\ExperienceController::class,'destroy']);
-    Route::post('/add-education-details',[\App\Http\Controllers\EducationController::class, 'store']);
-    Route::get('/get-education-details/{userSlug}',[\App\Http\Controllers\EducationController::class, 'index']);
-    Route::get('/get-education-detail/{id}',[\App\Http\Controllers\EducationController::class,'show']);
-    Route::get('/delete-education/{id}',[\App\Http\Controllers\EducationController::class,'destroy']);
-    Route::post('/edit-education-detail',[\App\Http\Controllers\EducationController::class, 'update']);
+    Route::post('/add-work-experiance',[\App\Http\Controllers\ProfileController::class,'addWorkExperiance']);
+    Route::get('/get-work-experiances/{userSlug}',[\App\Http\Controllers\ProfileController::class, 'getExperiances']);
+    Route::get('/get-details-experiance/{id}',[\App\Http\Controllers\ProfileController::class,'getExperianceDetails']);
+    Route::post('edit-details-experiance',[\App\Http\Controllers\ProfileController::class,'editExperianceDetails']);
+    Route::get('/delete-experiance/{id}',[\App\Http\Controllers\ProfileController::class,'deleteExperiance']);
+    Route::post('/add-education-details',[\App\Http\Controllers\ProfileController::class, 'addEducation']);
+    Route::get('/get-education-details/{userSlug}',[\App\Http\Controllers\ProfileController::class, 'getEducationDetails']);
+    Route::get('/get-education-detail/{id}',[\App\Http\Controllers\ProfileController::class,'getEducationDetail']);
+    Route::get('/delete-education/{id}',[\App\Http\Controllers\ProfileController::class,'deleteEducation']);
+    Route::post('/edit-education-detail',[\App\Http\Controllers\ProfileController::class, 'editEducation']);
     Route::post('/add-skill',[\App\Http\Controllers\ProfileController::class,'addSkill']);
     Route::get('/get-skills',[\App\Http\Controllers\ProfileController::class,'getSkills']);
     Route::get('/delete-skill/{id}',[\App\Http\Controllers\ProfileController::class,'deleteSkill']);
@@ -47,41 +43,10 @@ Route::middleware('auth.token')->group(function () {
     Route::get('/get-user-summary',[\App\Http\Controllers\ProfileController::class,'basicInfo']);
     Route::get('/profile-list',[\App\Http\Controllers\ProfileController::class,'profileList']);
     Route::get('/request-today-question', [\App\Http\Controllers\QuestionController::class, 'getTodaySpecialQuestions']);
-    Route::get('/daily-question/today', [\App\Http\Controllers\DailyQuestionController::class, 'getTodayQuestion'])->middleware('throttle:60,1');
-    Route::post('/submit-daily-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
-    Route::post('/daily-questions/answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
-    Route::get('/daily-questions/history', [\App\Http\Controllers\DailyQuestionController::class, 'history'])->middleware('throttle:60,1');
-    Route::get('/learn/categories', [\App\Http\Controllers\LearnController::class, 'categories'])->middleware('throttle:60,1');
-    Route::get('/learn/questions/{category}', [\App\Http\Controllers\LearnController::class, 'questions'])
-        ->whereNumber('category')
-        ->middleware('throttle:60,1');
-    Route::get('/learn/active', [\App\Http\Controllers\LearnController::class, 'active'])->middleware('throttle:60,1');
-    Route::post('/learn/enroll', [\App\Http\Controllers\LearnController::class, 'enroll'])->middleware('throttle:10,1');
-    Route::post('/learn/next', [\App\Http\Controllers\LearnController::class, 'nextBatch'])->middleware('throttle:10,1');
-    Route::get('/exam/categories', [\App\Http\Controllers\ExamSessionController::class, 'categories'])->middleware('throttle:60,1');
-    Route::post('/exam/start', [\App\Http\Controllers\ExamSessionController::class, 'start'])->middleware('throttle:10,1');
-    Route::post('/exam/submit', [\App\Http\Controllers\ExamSessionController::class, 'submit'])->middleware('throttle:10,1');
     Route::post('/generate-questions', [\App\Http\Controllers\QuestionController::class, 'generateQuestions']);
-    Route::post('/set-user-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
+    Route::post('/set-user-answer', [\App\Http\Controllers\QuestionController::class, 'setUserAnswer']);
     Route::post('/set-comment', [\App\Http\Controllers\CommentController::class, 'setComment']);
     Route::get('/get-scores',[\App\Http\Controllers\ScoreController::class, 'getScores']);
-    Route::get('/scores/lci', [\App\Http\Controllers\UserScoreController::class, 'lci'])->middleware('throttle:60,1');
-
-    // Fixed Arm for Testament Management (FATM)
-    Route::prefix('testament')->middleware('throttle:30,1')->group(function () {
-        Route::get('/notes', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
-        Route::get('/public-feed', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
-        Route::post('/notes', [\App\Http\Controllers\TestamentController::class, 'createResourceNote']);
-        Route::get('/', [\App\Http\Controllers\TestamentController::class, 'show']);
-        Route::put('/', [\App\Http\Controllers\TestamentController::class, 'save']);
-        Route::post('/submit', [\App\Http\Controllers\TestamentController::class, 'submit']);
-        Route::post('/recall', [\App\Http\Controllers\TestamentController::class, 'recall']);
-        Route::post('/withdraw', [\App\Http\Controllers\TestamentController::class, 'withdraw']);
-        Route::get('/witness-requests', [\App\Http\Controllers\TestamentController::class, 'witnessRequests']);
-        Route::post('/witness-requests/{testament}/{decision}', [\App\Http\Controllers\TestamentController::class, 'witnessRespond'])
-            ->whereNumber('testament')
-            ->whereIn('decision', ['confirm', 'decline']);
-    });
     Route::get('/get-comments', [\App\Http\Controllers\CommentController::class, 'getComments']);
     Route::get('/notifications',[\App\Http\Controllers\NotificationsController::class,'getNotifications']);
     Route::get('/allNotifications',[\App\Http\Controllers\NotificationsController::class,'getAll']);
@@ -161,6 +126,18 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/mediations/{mediation}/proposals/{proposal}/counter', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'counterProposal']);
         Route::post('/settlement-proposals/{proposal}/accept', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'acceptProposal']);
         Route::post('/settlement-proposals/{proposal}/reject', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'rejectProposal']);
+
+        // Formal Hearing & Witnesses (Step 5)
+        Route::get('/cases/{tribunalCase}/hearings', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'index']);
+        Route::get('/hearings/{hearing}', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'show']);
+        Route::post('/cases/{tribunalCase}/witnesses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'proposeWitness']);
+        Route::get('/cases/{tribunalCase}/witnesses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'witnesses']);
+        Route::post('/hearings/{hearing}/entries', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'addEntry']);
+        Route::post('/hearings/{hearing}/questions/{question}/responses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'respondToQuestion']);
+        Route::post('/hearings/{hearing}/witnesses/{witness}/testimony', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'recordTestimony']);
+
+        // Final Decision & Outcomes (Step 6)
+        Route::get('/cases/{tribunalCase}/decision', [\App\Http\Controllers\Tribunal\TribunalDecisionController::class, 'show']);
     });
 
     // Professional Verifications (User)
@@ -176,4 +153,66 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/{verification}/suspend', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'suspend']);
         Route::get('/{verification}/documents/{documentType}', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'downloadDocument']);
     });
+
+    // Jury Panel Management (Super Admin)
+    Route::middleware('admin')->prefix('admin/tribunal/jury-panels')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'store']);
+        Route::get('/{juryPanel}', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'show']);
+        Route::patch('/{juryPanel}', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'update']);
+        Route::post('/{juryPanel}/activate', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'activate']);
+        Route::post('/{juryPanel}/deactivate', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'deactivate']);
+    });
+
+    // Dedicated Jury Panel Portal (Step 2, Step 3, Step 4, Step 5, Step 6)
+    Route::middleware('jury.panel')->prefix('jury')->group(function () {
+        Route::get('/me', [\App\Http\Controllers\Jury\JuryPortalController::class, 'me']);
+        Route::get('/cases', [\App\Http\Controllers\Jury\JuryPortalController::class, 'cases']);
+        Route::get('/cases/{id}', [\App\Http\Controllers\Jury\JuryPortalController::class, 'showCase']);
+
+        // Case Room endpoints for assigned Jury Panel (Step 4)
+        Route::get('/cases/{id}/case-room/messages', [\App\Http\Controllers\Jury\JuryPortalController::class, 'caseRoomMessages']);
+        Route::post('/cases/{id}/case-room/messages', [\App\Http\Controllers\Jury\JuryPortalController::class, 'sendCaseRoomMessage']);
+        Route::post('/cases/{id}/case-room/procedural-notices', [\App\Http\Controllers\Jury\JuryPortalController::class, 'postProceduralNotice']);
+        Route::post('/cases/{id}/case-room/questions', [\App\Http\Controllers\Jury\JuryPortalController::class, 'askQuestion']);
+
+        // Mediation Oversight endpoints for assigned Jury Panel (Step 4)
+        Route::get('/cases/{id}/mediation', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationShow']);
+        Route::post('/cases/{id}/mediation/offer', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationOffer']);
+        Route::post('/cases/{id}/mediation/end', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationEnd']);
+
+        // Hearing & Witness Management for assigned Jury Panel (Step 5)
+        Route::get('/cases/{id}/hearings', [\App\Http\Controllers\Jury\JuryHearingController::class, 'index']);
+        Route::post('/cases/{id}/hearings', [\App\Http\Controllers\Jury\JuryHearingController::class, 'schedule']);
+        Route::get('/hearings/{hearing}', [\App\Http\Controllers\Jury\JuryHearingController::class, 'show']);
+        Route::post('/hearings/{hearing}/start', [\App\Http\Controllers\Jury\JuryHearingController::class, 'start']);
+        Route::post('/hearings/{hearing}/recess', [\App\Http\Controllers\Jury\JuryHearingController::class, 'recess']);
+        Route::post('/hearings/{hearing}/resume', [\App\Http\Controllers\Jury\JuryHearingController::class, 'resume']);
+        Route::post('/hearings/{hearing}/close', [\App\Http\Controllers\Jury\JuryHearingController::class, 'close']);
+        Route::get('/cases/{id}/witnesses', [\App\Http\Controllers\Jury\JuryHearingController::class, 'witnesses']);
+        Route::post('/cases/{id}/witnesses/{witness}/approve', [\App\Http\Controllers\Jury\JuryHearingController::class, 'approveWitness']);
+        Route::post('/cases/{id}/witnesses/{witness}/reject', [\App\Http\Controllers\Jury\JuryHearingController::class, 'rejectWitness']);
+        Route::post('/hearings/{hearing}/entries', [\App\Http\Controllers\Jury\JuryHearingController::class, 'addEntry']);
+        Route::post('/hearings/{hearing}/questions', [\App\Http\Controllers\Jury\JuryHearingController::class, 'askQuestion']);
+        Route::post('/hearings/{hearing}/witnesses/{witness}/testimony', [\App\Http\Controllers\Jury\JuryHearingController::class, 'recordTestimony']);
+
+        // Deliberation, Findings & Final Decision for assigned Jury Panel (Step 6)
+        Route::get('/cases/{id}/deliberation', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'show']);
+        Route::post('/cases/{id}/deliberation/notes', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'addNote']);
+        Route::patch('/cases/{id}/deliberation/notes/{note}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateNote']);
+        Route::delete('/cases/{id}/deliberation/notes/{note}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'deleteNote']);
+
+        Route::post('/cases/{id}/findings', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'addFinding']);
+        Route::patch('/cases/{id}/findings/{finding}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateFinding']);
+        Route::delete('/cases/{id}/findings/{finding}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'deleteFinding']);
+
+        Route::get('/cases/{id}/decision', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'getDecision']);
+        Route::post('/cases/{id}/decision', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateDecision']);
+        Route::patch('/cases/{id}/decision', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateDecision']);
+        Route::post('/cases/{id}/decision/orders', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'addOrder']);
+        Route::patch('/cases/{id}/decision/orders/{order}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateOrder']);
+        Route::delete('/cases/{id}/decision/orders/{order}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'deleteOrder']);
+        Route::post('/cases/{id}/decision/publish', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'publish']);
+    });
 });
+

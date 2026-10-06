@@ -28,8 +28,10 @@ class TribunalProceduralNoticeNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
+        $issuer = $this->adjudicator->isJuryPanelAccount() ? 'Tribunal Jury Panel' : 'Tribunal Adjudicator';
+
         return [
-            'message' => "Procedural notice issued in Case {$this->tribunalCase->case_number}.",
+            'message' => "Procedural notice issued by {$issuer} in Case {$this->tribunalCase->case_number}.",
             'case_id' => $this->tribunalCase->id,
             'case_number' => $this->tribunalCase->case_number,
             'case_message_id' => $this->notice->id,
@@ -51,9 +53,11 @@ class TribunalProceduralNoticeNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $issuer = $this->adjudicator->isJuryPanelAccount() ? 'Tribunal Jury Panel' : 'Tribunal Adjudicator';
+
         return (new MailMessage)
             ->subject("Procedural Notice: Case {$this->tribunalCase->case_number}")
-            ->line("The Tribunal Adjudicator has issued a formal procedural notice in Case {$this->tribunalCase->case_number}.")
+            ->line("The {$issuer} has issued a formal procedural notice in Case {$this->tribunalCase->case_number}.")
             ->action('View Notice', url("/tribunal/cases/{$this->tribunalCase->id}"));
     }
 }

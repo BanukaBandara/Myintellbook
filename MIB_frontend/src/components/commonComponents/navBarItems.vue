@@ -1,6 +1,6 @@
 <template>
     <ul class="nav-list d-flex align-items-center gap-2 m-0 p-0 list-unstyled w-auto">
-        <li v-for="(item, index) in items" :key="index" class="nav-item d-flex flex-column justify-content-center align-items-center" :class="{ 'is-active': isActive(item.label) }" @click="item.command">
+        <li v-for="(item, index) in items" :key="index" class="nav-item d-flex flex-column justify-content-center align-items-center" @click="item.command">
             <OverlayBadge value="2" size="small" v-if="item.label == 'Notifications'" :pt="{
                 root: 'mx-2',
                 badge: 'bg-danger text-white rounded-circle d-flex justify-content-center align-items-center',
@@ -19,7 +19,7 @@
                 <i class="pi" :class="item.icon" style="font-size: 1.2rem;"></i>
             </OverlayBadge>
             <i class="pi" v-else :class="item.icon" style="font-size: 1.2rem; margin-right: 0.5rem;"></i>
-            <span class="nav-label">{{item.label}}</span>
+            <span class="nav-label" @click="item.command">{{item.label}}</span>
             <!-- <Button :label="item.label" :icon="item.icon" class="nav-button" @click="item.command" /> -->
         </li>
     </ul>
@@ -38,14 +38,13 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import Popover from 'primevue/popover';
 import OverlayBadge from 'primevue/overlaybadge';
 import Notifications from '../../components/commonComponents/Notifications.vue';
 import { useTribunalStore } from '@/stores/tribunal';
 
 const router = useRouter();
-const route = useRoute();
 const tribunalStore = useTribunalStore();
 const op = ref< InstanceType<typeof Popover> | null>(null);
 
@@ -93,12 +92,12 @@ const items = computed(() => {
        {
            label: 'learn',
            icon: `pi-book`,
-           command: () => {router.push('/learn-module');}
+           command: () => {router.push('/learn');}
        },
        {
            label: 'Exam',
            icon: 'pi pi-bars',
-           command: () => {router.push('/exam-module');}
+           command: () => {router.push('/exams');}
        },
        {
            label: 'Score',
@@ -114,18 +113,6 @@ const items = computed(() => {
 
     return list;
 });
-
-const isActive = (label: string): boolean => {
-    const path = route.path;
-    if (label === 'Home') return path === '/home';
-    if (label === 'Profile') return path === '/profile' || path.startsWith('/showUserProfile/');
-    if (label === 'Tribunal' || label === 'Adjudicator Assignments') return path.startsWith('/tribunal') || path === '/submit_case';
-    if (label === 'learn') return path.startsWith('/learn');
-    if (label === 'Exam') return path.startsWith('/exam-module') || path.startsWith('/exams') || path.startsWith('/openExamQuestions/');
-    if (label === 'Score') return path === '/scores';
-    if (label === 'Testament') return path === '/testament';
-    return false;
-};
 
 const showNotifications = (event:any) =>
 {

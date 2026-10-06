@@ -104,16 +104,32 @@ class TribunalCaseRoomService
             'procedural' => false,
         ]);
 
-        TribunalCaseEventService::log(
-            $case,
-            'case_room_message_posted',
-            $userId,
-            [
-                'message_id' => $message->id,
-                'sender_case_role' => $senderRole,
-                'related_evidence_id' => $relatedEvidenceId,
-            ]
-        );
+        if ($senderRole === 'jury_panel') {
+            $panel = User::find($userId)?->juryPanel;
+            TribunalCaseEventService::log(
+                $case,
+                'jury_panel_case_room_message_posted',
+                $userId,
+                [
+                    'jury_panel_id' => $panel?->id,
+                    'panel_code' => $panel?->panel_code,
+                    'message_id' => $message->id,
+                    'sender_case_role' => $senderRole,
+                    'related_evidence_id' => $relatedEvidenceId,
+                ]
+            );
+        } else {
+            TribunalCaseEventService::log(
+                $case,
+                'case_room_message_posted',
+                $userId,
+                [
+                    'message_id' => $message->id,
+                    'sender_case_role' => $senderRole,
+                    'related_evidence_id' => $relatedEvidenceId,
+                ]
+            );
+        }
 
         $sender = User::find($userId);
         $recipients = $this->getCaseParticipants($case, $userId);
@@ -125,14 +141,14 @@ class TribunalCaseRoomService
     }
 
     /**
-     * Post a procedural notice (Adjudicator only).
+     * Post a procedural notice (Jury Panel or Adjudicator only).
      */
     public function postProceduralNotice(TribunalCase $case, int $userId, string $body): TribunalCaseMessage
     {
         $senderRole = $this->ensureAuthorized($case, $userId);
 
-        if ($senderRole !== 'adjudicator') {
-            abort(403, 'Only the active Tribunal Adjudicator can post procedural notices.');
+        if ($senderRole !== 'jury_panel' && $senderRole !== 'adjudicator') {
+            abort(403, 'Only the active Tribunal Jury Panel can post procedural notices.');
         }
 
         $room = $this->getOrCreateRoom($case, $userId);
@@ -141,21 +157,36 @@ class TribunalCaseRoomService
             'tribunal_case_room_id' => $room->id,
             'tribunal_case_id' => $case->id,
             'sender_id' => $userId,
-            'sender_case_role' => 'adjudicator',
+            'sender_case_role' => $senderRole,
             'message_type' => TribunalCaseMessageType::ProceduralNotice,
             'body' => $body,
             'procedural' => true,
         ]);
 
-        TribunalCaseEventService::log(
-            $case,
-            'procedural_notice_posted',
-            $userId,
-            [
-                'message_id' => $message->id,
-                'procedural' => true,
-            ]
-        );
+        if ($senderRole === 'jury_panel') {
+            $panel = User::find($userId)?->juryPanel;
+            TribunalCaseEventService::log(
+                $case,
+                'jury_panel_procedural_notice_posted',
+                $userId,
+                [
+                    'jury_panel_id' => $panel?->id,
+                    'panel_code' => $panel?->panel_code,
+                    'message_id' => $message->id,
+                    'procedural' => true,
+                ]
+            );
+        } else {
+            TribunalCaseEventService::log(
+                $case,
+                'procedural_notice_posted',
+                $userId,
+                [
+                    'message_id' => $message->id,
+                    'procedural' => true,
+                ]
+            );
+        }
 
         $sender = User::find($userId);
         $recipients = $this->getCaseParticipants($case, $userId);
@@ -167,7 +198,7 @@ class TribunalCaseRoomService
     }
 
     /**
-     * Post an adjudicator question (Adjudicator only).
+     * Post an adjudicator / jury panel question.
      */
     public function askQuestion(
         TribunalCase $case,
@@ -177,8 +208,8 @@ class TribunalCaseRoomService
     ): TribunalCaseMessage {
         $senderRole = $this->ensureAuthorized($case, $userId);
 
-        if ($senderRole !== 'adjudicator') {
-            abort(403, 'Only the active Tribunal Adjudicator can ask procedural questions.');
+        if ($senderRole !== 'jury_panel' && $senderRole !== 'adjudicator') {
+            abort(403, 'Only the active Tribunal Jury Panel can ask procedural questions.');
         }
 
         if (!in_array($targetSide, ['complainant', 'respondent', 'both'])) {
@@ -191,25 +222,40 @@ class TribunalCaseRoomService
             'tribunal_case_room_id' => $room->id,
             'tribunal_case_id' => $case->id,
             'sender_id' => $userId,
-            'sender_case_role' => 'adjudicator',
+            'sender_case_role' => $senderRole,
             'message_type' => TribunalCaseMessageType::AdjudicatorQuestion,
             'body' => $body,
             'target_side' => $targetSide,
             'procedural' => true,
         ]);
 
-        TribunalCaseEventService::log(
-            $case,
-            'adjudicator_question_posted',
-            $userId,
-            [
-                'message_id' => $message->id,
-                'target_side' => $targetSide,
-            ]
-        );
+        if ($senderRole === 'jury_panel') {
+            $panel = User::find($userId)?->juryPanel;
+            TribunalCaseEventService::log(
+                $case,
+                'jury_panel_question_posted',
+                $userId,
+                [
+                    'jury_panel_id' => $panel?->id,
+                    'panel_code' => $panel?->panel_code,
+                    'message_id' => $message->id,
+                    'target_side' => $targetSide,
+                ]
+            );
+        } else {
+            TribunalCaseEventService::log(
+                $case,
+                'adjudicator_question_posted',
+                $userId,
+                [
+                    'message_id' => $message->id,
+                    'target_side' => $targetSide,
+                ]
+            );
+        }
 
         $sender = User::find($userId);
-        $recipients = $this->getCaseParticipants($case, $userId);
+        $recipients = $this->getTargetedQuestionRecipients($case, $targetSide, $userId);
         if (!empty($recipients)) {
             Notification::send($recipients, new TribunalAdjudicatorQuestionNotification($case, $message, $sender));
         }
@@ -237,8 +283,8 @@ class TribunalCaseRoomService
             abort(422, 'The referenced message is not an adjudicator question.');
         }
 
-        if ($senderRole === 'adjudicator') {
-            abort(422, 'The adjudicator cannot respond to their own question.');
+        if ($senderRole === 'adjudicator' || $senderRole === 'jury_panel') {
+            abort(422, 'The Tribunal Jury Panel cannot respond to their own question.');
         }
 
         // Verify target side matches user's side
@@ -281,7 +327,45 @@ class TribunalCaseRoomService
     }
 
     /**
-     * Get all active case participants (complainant, respondent, active representatives, accepted adjudicator).
+     * Get targeted recipients for a question (complainant/respondent + active representatives).
+     *
+     * @return User[]
+     */
+    public function getTargetedQuestionRecipients(TribunalCase $case, string $targetSide, ?int $excludeUserId = null): array
+    {
+        $userIds = [];
+
+        if ($targetSide === 'complainant' || $targetSide === 'both') {
+            $compParty = $case->parties()->where('role', 'complainant')->first();
+            if ($compParty) {
+                $userIds[] = $compParty->user_id;
+            }
+            $compReps = $case->activeRepresentativeAssignments()
+                ->where('side', 'complainant')
+                ->pluck('representative_user_id')
+                ->all();
+            $userIds = array_merge($userIds, $compReps);
+        }
+
+        if ($targetSide === 'respondent' || $targetSide === 'both') {
+            $respParty = $case->parties()->where('role', 'respondent')->first();
+            if ($respParty) {
+                $userIds[] = $respParty->user_id;
+            }
+            $respReps = $case->activeRepresentativeAssignments()
+                ->where('side', 'respondent')
+                ->pluck('representative_user_id')
+                ->all();
+            $userIds = array_merge($userIds, $respReps);
+        }
+
+        $userIds = array_values(array_unique(array_filter($userIds, fn ($id) => $id && $id !== $excludeUserId)));
+
+        return User::whereIn('id', $userIds)->get()->all();
+    }
+
+    /**
+     * Get all active case participants (complainant, respondent, active representatives, active jury panel / accepted adjudicator).
      *
      * @return User[]
      */
@@ -300,10 +384,17 @@ class TribunalCaseRoomService
             $userIds[] = $rep->representative_user_id;
         }
 
-        // Accepted adjudicator
-        $adj = $case->acceptedJuryAssignment;
-        if ($adj) {
-            $userIds[] = $adj->juror_id;
+        // Jury Panel (if assigned) OR legacy accepted adjudicator (only if no panel assigned)
+        $panelAssignment = $case->currentJuryPanelAssignment;
+        if ($panelAssignment && $panelAssignment->status === \App\Enums\TribunalJuryPanelAssignmentStatus::Active) {
+            if ($panelAssignment->juryPanel?->login_user_id) {
+                $userIds[] = $panelAssignment->juryPanel->login_user_id;
+            }
+        } else {
+            $adj = $case->acceptedJuryAssignment;
+            if ($adj) {
+                $userIds[] = $adj->juror_id;
+            }
         }
 
         $userIds = array_values(array_unique(array_filter($userIds, fn ($id) => $id && $id !== $excludeUserId)));

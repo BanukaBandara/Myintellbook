@@ -35,9 +35,11 @@ const userGeneralInfo = ref<userGeneralInfoType>({
     slug:''
 });
 
+const isJuryRoute = computed(() => route.path.startsWith('/jury'));
+
 watch(isLoading,async()=>
 {
-  if(isLoading.value)
+  if(isLoading.value && !isJuryRoute.value)
   {
      await BasicInfo();
      await profileCompliation();
@@ -84,34 +86,17 @@ const getProfileList = async() =>{
 </script>
 
 <template>
-  <div class="app-shell">
-    <navBar />
+  <div class="h-100 d-flex flex-column" style="background-color:#e6e6e6;">
+    <navBar v-if="!isJuryRoute" />
     <div v-if="loadingStore.isLoadingState" class="loader-overlay">
       <div class="spinner"></div>
     </div>
-
-    <main class="app-content-scroll">
-      <router-view />
-      <FAQ v-if="isLogged"/>
-    </main>
+    
+    <router-view />
+    <FAQ v-if="isLogged && !isJuryRoute"/>
   </div>
 </template>
 <style>
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
-}
-.app-content-scroll {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
 .loader-overlay {
   position: fixed;
   top: 0;
@@ -127,8 +112,8 @@ const getProfileList = async() =>{
 .spinner {
   width: 50px;
   height: 50px;
-  border: 5px solid var(--ds-border-strong);
-  border-top-color: var(--ds-info);
+  border: 5px solid #ccc;
+  border-top-color: #1d3f72;
   border-radius: 50%;
   animation: spin 1s infinite linear;
 }
@@ -138,3 +123,4 @@ const getProfileList = async() =>{
   }
 }
 </style>
+

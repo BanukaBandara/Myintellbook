@@ -6,7 +6,6 @@ import type {educationType} from '../../types/educationType';
 import type {profileCompleteType} from '../../types/profileCompleteType';
 import instance from '@/assets/axios';
 import { text } from '@primeuix/themes/aura/inlinemessage';
-import axios from 'axios';
 // import {useApiService} from '../apiStore';
 
 export const useUserProfile = defineStore('userProfile', {
@@ -39,7 +38,7 @@ export const useUserProfile = defineStore('userProfile', {
         },
         answer: {
             question_id: number,
-            selected_option_index: number,
+            answer: string,
         },
         isAnswered:boolean,
         SearchKey:string,
@@ -139,7 +138,7 @@ export const useUserProfile = defineStore('userProfile', {
          },
          answer: {
             question_id: 0,
-                selected_option_index: 0,
+            answer: '',
          },
          isAnswered:false,
          SearchKey:'',
@@ -516,9 +515,7 @@ export const useUserProfile = defineStore('userProfile', {
                  console.error("Error in uploading profile image data", e);
                   return {
                       code: 500,
-                      message: axios.isAxiosError(e)
-                          ? e.response?.data?.errors?.image?.[0] ?? e.response?.data?.message ?? "Profile photo upload failed."
-                          : "Profile photo upload failed.",
+                      message: "uploading profile image fail",
                   };
             } 
         },
@@ -537,9 +534,7 @@ export const useUserProfile = defineStore('userProfile', {
                  console.error("Error in uploading cover image data", e);
                   return {
                       code: 500,
-                      message: axios.isAxiosError(e)
-                          ? e.response?.data?.errors?.image?.[0] ?? e.response?.data?.message ?? "Cover photo upload failed."
-                          : "Cover photo upload failed.",
+                      message: "uploading cover image fail",
                   };
             } 
         },
@@ -760,22 +755,6 @@ export const useUserProfile = defineStore('userProfile', {
                       code: 500,
                       message: "getting user data fail",
                   };
-            }
-        },
-
-        async getUserById(id: string | number) {
-            try {
-                const response = await instance.get(`/users/${encodeURIComponent(String(id))}`);
-                return {
-                    code: 200,
-                    user: response.data.user,
-                };
-            } catch (e) {
-                console.error("Error in getting user profile by ID", e);
-                return {
-                    code: 500,
-                    message: "Getting user profile failed",
-                };
             }
         },
 

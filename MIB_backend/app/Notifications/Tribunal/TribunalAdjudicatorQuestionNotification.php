@@ -29,9 +29,10 @@ class TribunalAdjudicatorQuestionNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         $target = $this->question->target_side ? ucfirst($this->question->target_side) : 'Parties';
+        $senderLabel = $this->adjudicator->isJuryPanelAccount() ? 'Jury Panel' : 'Adjudicator';
 
         return [
-            'message' => "Adjudicator question posed to {$target} in Case {$this->tribunalCase->case_number}.",
+            'message' => "{$senderLabel} question posed to {$target} in Case {$this->tribunalCase->case_number}.",
             'case_id' => $this->tribunalCase->id,
             'case_number' => $this->tribunalCase->case_number,
             'case_message_id' => $this->question->id,
@@ -54,9 +55,11 @@ class TribunalAdjudicatorQuestionNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $senderLabel = $this->adjudicator->isJuryPanelAccount() ? 'Tribunal Jury Panel' : 'Tribunal Adjudicator';
+
         return (new MailMessage)
-            ->subject("Adjudicator Question: Case {$this->tribunalCase->case_number}")
-            ->line("The Tribunal Adjudicator has posed a question in Case {$this->tribunalCase->case_number}.")
+            ->subject("Question: Case {$this->tribunalCase->case_number}")
+            ->line("The {$senderLabel} has posed a question in Case {$this->tribunalCase->case_number}.")
             ->action('Respond to Question', url("/tribunal/cases/{$this->tribunalCase->id}"));
     }
 }

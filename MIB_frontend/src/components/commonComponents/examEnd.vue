@@ -103,6 +103,6 @@ onMounted(async()=>{
   color: #28a745;
 }
 .text-danger {
-  color: var(--ds-danger);
+  color: #dc3545;
 }
 </style>

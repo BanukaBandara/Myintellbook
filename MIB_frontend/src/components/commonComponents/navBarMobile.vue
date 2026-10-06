@@ -1,9 +1,6 @@
 <template>
-    <div class="app-navbar nav-mobile d-flex d-xl-none justify-content-between align-items-center px-3 py-2" v-if="!routeParam">
-         <RouterLink to="/home" class="navbar-brand-lockup text-decoration-none">
-           <img :src="webIcon" alt="MyIntelliBook" class="logo" />
-           <span>MyIntelli<span>Book</span></span>
-         </RouterLink>
+    <div class="d-flex d-xl-none justify-content-between align-items-center p-2 bg-white border-bottom-1 border" v-if="!routeParam">
+         <img :src="webIcon" alt="Logo" class="logo" style="width:45px; " />
           <navBarSearch />
          <Button icon="pi pi-bars"
         severity="secondary"
@@ -12,7 +9,7 @@
         @click="toggleMobileMenu" />
     </div>
 
-    <div v-if="mobileMenuVisible" class="mobile-dropdown d-xl-none bg-white border-top p-3 w-100 shadow-sm">
+    <div v-if="mobileMenuVisible" class="mobile-dropdown d-xl-none bg-white border-top p-3 w-100">
         <ul class="list-unstyled mb-2">
             <li v-for="(item, index) in items" :key="'m-' + index" class="mb-2 d-flex align-items-center gap-2" @click="item.command">
             <i :class="`pi ${item.icon}`"></i>
@@ -96,12 +93,12 @@ const items = computed(() => {
         {
             label: 'learn',
             icon: `pi-book`,
-            command: () => {router.push('/learn-module');}
+            command: () => {router.push('/learn');}
         },
         {
             label: 'Exam',
             icon: 'pi-bars',
-            command: () => {router.push('/exam-module');}
+            command: () => {router.push('/exams');}
         },
         {
             label: 'Score',
@@ -115,6 +112,11 @@ const items = computed(() => {
             label: 'Professional Verification Reviews',
             icon: 'pi-shield',
             command: () => { router.push('/admin/professional-verifications'); }
+        });
+        list.push({
+            label: 'Jury Panel Management',
+            icon: 'pi-users',
+            command: () => { router.push('/admin/tribunal/jury-panels'); }
         });
     }
 

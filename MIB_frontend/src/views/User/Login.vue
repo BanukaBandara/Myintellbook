@@ -1,10 +1,9 @@
 <template>
-<div class="login-page-wrapper d-flex align-items-center justify-content-center min-vh-100 py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-md-10 col-lg-8">
-                <formComponent />
-            </div>
+<div class="flex-grow-1 overflow-auto">
+    <div class="row h-100 me-0 mx-0 d-flex justify-content-center align-items-center">
+
+        <div class="align-content-center col-md-6">
+          <formComponent />
         </div>
     </div>
 </div>
@@ -13,11 +12,21 @@
 import formComponent from '@/components/userLogin/formComponent.vue';
 </script>
 <style scoped>
-.login-page-wrapper {
-    background-color: var(--ds-surface-subtle);
-    background-image: 
-        radial-gradient(at 0% 0%, rgba(160, 56, 41, 0.05) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(160, 56, 41, 0.03) 0px, transparent 50%);
+.image-section{
+    background-color:#ebe5d4;
+    color:#a03829;
+}
+@media screen {
+    @media (min-width: 768px) {
+        .image-section{
+            display:none;
+        }
+    }
+    /* @media (min-width: 768px) {
+        .image-section{
+            display:none;
+        }
+    } */
 }
 body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-shown) {
     height: 100% !important;

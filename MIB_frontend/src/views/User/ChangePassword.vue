@@ -22,7 +22,7 @@
         <p class="mt-3">Enter a Strong Password.</p>
        <PasswordValidation :password="userRegister.password"  ref="ChangePassword"/>
         
-         <Button :label="passwordResetButtonLabel" class="w-100" style="background-color:var(--ds-primary-hover);" size="normal" @click="changePassword" id="changePassword">
+         <Button :label="passwordResetButtonLabel" class="w-100" style="background-color:#a03829;" size="normal" @click="changePassword" id="changePassword">
             <template #icon>
                 <i class="pi pi-spin pi-spinner" style="font-size: 1rem" v-if="submitData"></i>
             </template>
@@ -143,7 +143,7 @@ const changePassword = async() => {
 <style scoped>
 .image-section{
     background-color:#ebe5d4;
-    color:var(--ds-primary-hover);
+    color:#a03829;
 }
 @media screen {
     /* @media (min-width: 768px) {

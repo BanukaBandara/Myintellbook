@@ -50,7 +50,7 @@ const toggleFaq = (index: number) => {
 </script>
 <style scoped>
 .faq-item {
-  border-bottom: 1px solid var(--ds-border-strong);
+  border-bottom: 1px solid #ccc;
   padding: 8px 0;
 }
 
@@ -59,12 +59,12 @@ const toggleFaq = (index: number) => {
   display: flex;
   justify-content: space-between;
   font-weight: bold;
-  color: var(--ds-info);
+  color: #1d3f72;
 }
 
 .faq-answer {
   padding: 5px 0 5px 10px;
-  color: var(--ds-text-secondary);
+  color: #333;
 }
 
 .help-button {

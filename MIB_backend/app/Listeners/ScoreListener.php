@@ -8,7 +8,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use App\Services\ScoreCalculatorService;
 use App\Models\ScoringItem;
 use App\Models\UserScore;
-use Illuminate\Support\Facades\Log;
 
 class ScoreListener
 {
@@ -25,17 +24,7 @@ class ScoreListener
      */
     public function handle(ScoreEvent $event): void
     {
-        $item = ScoringItem::find($event->itemId);
-        if (!$item) {
-            Log::warning('Score event ignored because its scoring item is not configured.', [
-                'scoring_item_id' => $event->itemId,
-                'user_id' => $event->userId,
-                'source_type' => $event->sourceType,
-                'source_id' => $event->sourceId,
-            ]);
-
-            return;
-        }
+         $item = ScoringItem::find($event->itemId);
 
         $service = new ScoreCalculatorService();
 

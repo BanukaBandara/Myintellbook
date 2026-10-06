@@ -34,15 +34,11 @@ class GoogleController extends Controller
 
              $apiToken = new \App\Models\ApiToken();
             $token = $apiToken->tokenGenerate($user);
-            $user->load('profile');
 
             return response()->json([
                 'code' => 200,
                 'token' => $token,
-                'user'  => [
-                    ...$user->toArray(),
-                    'is_profile_completed' => $user->isProfileCompleted(),
-                ],
+                'user'  => $user,
             ]);
         }
 

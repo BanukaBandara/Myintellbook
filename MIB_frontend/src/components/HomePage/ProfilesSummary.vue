@@ -13,13 +13,13 @@
                     <p class="mt-2 fw-semibold">#{{ profileDeatils.rank }} in Top Users</p>
                     <p class="m-0 mt-3 fw-semibold">{{profileDeatils.full_name}}</p>
                     <p class="text-secondary m-0">{{profileDeatils.profession}} </p>
-                    <p>⭐ HIP {{ Number(profileDeatils.hip_score ?? 0).toLocaleString() }}</p>
+                    <p>⭐ {{ profileDeatils.points }} pts</p>
                 
                 </div>
             </template>
             <template #footer>
                 <div>
-                    <Button label="View Profile" class="w-100 mb-6 " size="small" severity="secondary" @click="router.push({ name: 'showUserProfile', params: { id: profileDeatils.id } })" />
+                    <Button label="View Profile" class="w-100 mb-6 " size="small" severity="secondary" @click="()=>{router.push(`/showUserProfile/${profileDeatils.profile_url}`)}" />
                 </div>
                
             </template>
