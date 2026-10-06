@@ -289,6 +289,23 @@ class TribunalCase extends Model
             ->latestOfMany();
     }
 
+    public function reports(): HasMany
+    {
+        return $this->hasMany(TribunalCaseReport::class, 'tribunal_case_id')->orderBy('version', 'desc');
+    }
+
+    public function latestReport(): HasOne
+    {
+        return $this->hasOne(TribunalCaseReport::class, 'tribunal_case_id')->latestOfMany('version');
+    }
+
+    public function activeReport(): HasOne
+    {
+        return $this->hasOne(TribunalCaseReport::class, 'tribunal_case_id')
+            ->where('status', 'generated')
+            ->latestOfMany('version');
+    }
+
     public function getUserCaseRole(int $userId): ?string
     {
         if ($this->isComplainant($userId)) {

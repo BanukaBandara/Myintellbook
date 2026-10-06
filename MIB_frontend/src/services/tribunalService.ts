@@ -766,5 +766,53 @@ export const tribunalService = {
     const response = await api.get(`/tribunal/cases/${caseId}/decision`);
     return response.data;
   },
+
+  // Official Tribunal Case Reports & Verification
+  async getCaseReports(caseId: number): Promise<any> {
+    const response = await api.get(`/tribunal/cases/${caseId}/reports`);
+    return response.data;
+  },
+
+  async generateFinalCaseReport(caseId: number, regenerate: boolean = false): Promise<any> {
+    const response = await api.post(`/tribunal/cases/${caseId}/reports/final`, { regenerate });
+    return response.data;
+  },
+
+  async getReportDetails(reportId: number): Promise<any> {
+    const response = await api.get(`/tribunal/reports/${reportId}`);
+    return response.data;
+  },
+
+  async downloadReportPdf(reportId: number, filename?: string): Promise<void> {
+    const response = await api.get(`/tribunal/reports/${reportId}/download`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename || `MIB-RPT-${reportId}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  async verifyReportCode(code: string): Promise<any> {
+    const response = await api.get(`/tribunal/reports/verify/${encodeURIComponent(code)}`);
+    return response.data;
+  },
+
+  async verifyReportFile(file: File, code?: string): Promise<any> {
+    const formData = new FormData();
+    formData.append('report_file', file);
+    if (code) {
+      formData.append('verification_code', code);
+    }
+    const response = await api.post('/tribunal/reports/verify-file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 };
 

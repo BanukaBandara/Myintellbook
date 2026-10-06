@@ -165,6 +165,8 @@ export interface TribunalCase {
     agreement_number: string;
     finalized_at: string;
   } | null;
+  decision?: Record<string, any> | null;
+  reports?: TribunalCaseReport[];
 }
 
 export interface CreateTribunalCasePayload {
@@ -1108,6 +1110,50 @@ export interface JuryDeliberationData {
   };
 }
 
+export interface TribunalCaseReport {
+  id: number;
+  tribunal_case_id: number;
+  case_number?: string;
+  tribunal_decision_id: number;
+  decision_number?: string;
+  report_number: string;
+  verification_code: string;
+  report_type: string;
+  status: 'generated' | 'superseded' | 'revoked';
+  version: number;
+  file_hash: string;
+  issued_at: string;
+  generated_at: string;
+  last_downloaded_at: string | null;
+  download_count: number;
+  download_url: string;
+  verify_url: string;
+}
 
+export interface TribunalReportListResponse {
+  case_id: number;
+  case_number: string;
+  reports: TribunalCaseReport[];
+  active_report: TribunalCaseReport | null;
+  has_final_decision: boolean;
+}
 
-
+export interface TribunalReportVerifyResponse {
+  valid: boolean;
+  message: string;
+  details: {
+    report_number: string;
+    case_number: string;
+    report_type: string;
+    issued_at: string;
+    issued_at_formatted?: string;
+    decision_number: string;
+    decision_published_at: string;
+    adjudicated_by?: string;
+    status: string;
+    version: number;
+    file_hash: string;
+    authenticity_confirmed: boolean;
+    confirmation_statement?: string;
+  } | null;
+}

@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 
 import api from '@/assets/axios';
 import { useTribunalStore } from '@/stores/tribunal';
+import { tribunalService } from '@/services/tribunalService';
 import TribunalClientChatModal from '@/components/tribunal/TribunalClientChatModal.vue';
 import type {
   TribunalCase,
@@ -18,6 +19,7 @@ import type {
   TribunalMediation,
   TribunalSettlementProposal,
   TribunalSettlementAgreement,
+  TribunalCaseReport,
 } from '@/types/tribunal';
 import PartyHearingTab from '@/components/tribunal/PartyHearingTab.vue';
 import PartyDecisionTab from '@/components/tribunal/PartyDecisionTab.vue';
@@ -470,6 +472,8 @@ const loadCase = async () => {
       if (route.query.tab && ['overview', 'evidence', 'case_room', 'mediation', 'hearing', 'representation'].includes(route.query.tab as string)) {
         activeTab.value = route.query.tab as any;
       }
+
+      loadSidebarReport().catch(() => {});
     }
   } catch (err: any) {
     if (err?.response?.status === 403) {
@@ -521,6 +525,91 @@ const userCaseSide = computed(() => {
   }
   return undefined;
 });
+
+// Official Case Report (Sidebar) state and actions
+const sidebarActiveReport = ref<TribunalCaseReport | null>(null);
+const sidebarLoadingReport = ref(false);
+const sidebarGeneratingReport = ref(false);
+const sidebarDownloadingReport = ref(false);
+
+const canAccessOfficialReport = computed(() => {
+  return isComplainant.value || isRespondent.value || isRepresentative.value;
+});
+
+const hasFinalDecision = computed(() => {
+  if (!caseData.value) return false;
+  return (
+    ['appeal_window', 'appealed', 'closed', 'decided'].includes(caseData.value.status) ||
+    !!caseData.value.decision
+  );
+});
+
+const loadSidebarReport = async () => {
+  if (!caseData.value || !canAccessOfficialReport.value || !hasFinalDecision.value) return;
+  sidebarLoadingReport.value = true;
+  try {
+    const res = await tribunalService.getCaseReports(caseData.value.id);
+    if (res.data?.reports && res.data.reports.length > 0) {
+      sidebarActiveReport.value = res.data.reports[0];
+    }
+  } catch {
+    // Silent fail if unauthorized or no reports yet
+  } finally {
+    sidebarLoadingReport.value = false;
+  }
+};
+
+const handleSidebarGenerateReport = async () => {
+  if (!caseData.value) return;
+  sidebarGeneratingReport.value = true;
+  try {
+    const res = await tribunalService.generateFinalCaseReport(caseData.value.id);
+    sidebarActiveReport.value = res.data.report;
+    await Swal.fire({
+      icon: 'success',
+      title: 'Official Report Generated',
+      text: `Tribunal Report ${res.data.report.report_number} (v${res.data.report.version}) is now ready for secure download.`,
+    });
+  } catch (err: any) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Generation Failed',
+      text: err?.response?.data?.message || 'Failed to generate official Tribunal report.',
+    });
+  } finally {
+    sidebarGeneratingReport.value = false;
+  }
+};
+
+const handleSidebarDownloadReport = async () => {
+  if (!sidebarActiveReport.value) return;
+  sidebarDownloadingReport.value = true;
+  try {
+    await tribunalService.downloadReportPdf(
+      sidebarActiveReport.value.id,
+      `${sidebarActiveReport.value.report_number}.pdf`
+    );
+    if (sidebarActiveReport.value.download_count !== undefined) {
+      sidebarActiveReport.value.download_count++;
+    }
+  } catch (err: any) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Download Failed',
+      text: err?.response?.data?.message || 'Failed to download official case report.',
+    });
+  } finally {
+    sidebarDownloadingReport.value = false;
+  }
+};
+
+const handleSidebarVerifyReport = () => {
+  if (!sidebarActiveReport.value) {
+    router.push('/tribunal/report/verify');
+    return;
+  }
+  router.push(`/tribunal/reports/verify/${sidebarActiveReport.value.verification_code}`);
+};
 
 const openDirectoryModal = async () => {
   if (!caseData.value) return;
@@ -2672,6 +2761,108 @@ onMounted(async () => {
             <div>
               <small class="text-muted d-block">Severity Level</small>
               <span class="text-capitalize">{{ caseData.severity }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Official Case Report Sidebar Card -->
+        <div v-if="canAccessOfficialReport" class="card shadow-sm border-0 rounded-4 mb-4">
+          <div class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+              <i class="bi bi-file-earmark-lock-fill me-2 text-danger" />
+              Official Tribunal Report
+            </h6>
+            <span v-if="sidebarActiveReport" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
+              v{{ sidebarActiveReport.version }}
+            </span>
+          </div>
+
+          <div class="card-body p-4">
+            <!-- If Final Decision Not Yet Issued -->
+            <div v-if="!hasFinalDecision" class="text-muted small">
+              <div class="p-3 bg-light rounded-3 border">
+                <i class="bi bi-info-circle text-primary me-1" />
+                Official report becomes available after the Tribunal publishes its final decision.
+              </div>
+            </div>
+
+            <!-- If Final Decision Issued -->
+            <div v-else>
+              <!-- Loading -->
+              <div v-if="sidebarLoadingReport" class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status" />
+                <div class="small text-muted mt-2">Checking report records...</div>
+              </div>
+
+              <!-- Report Exists -->
+              <div v-else-if="sidebarActiveReport">
+                <div class="mb-2">
+                  <small class="text-muted d-block">Report Number</small>
+                  <strong class="font-monospace text-dark small">{{ sidebarActiveReport.report_number }}</strong>
+                </div>
+
+                <div class="mb-2">
+                  <small class="text-muted d-block">Verification Code</small>
+                  <span class="badge bg-secondary-subtle text-secondary font-monospace border">
+                    {{ sidebarActiveReport.verification_code }}
+                  </span>
+                </div>
+
+                <div class="mb-3">
+                  <small class="text-muted d-block">Issued Date</small>
+                  <span class="small">{{ formatDateTime(sidebarActiveReport.issued_at) }}</span>
+                </div>
+
+                <div class="d-grid gap-2">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm rounded-pill d-flex align-items-center justify-content-center gap-2"
+                    :disabled="sidebarDownloadingReport"
+                    @click="handleSidebarDownloadReport"
+                  >
+                    <span v-if="sidebarDownloadingReport" class="spinner-border spinner-border-sm" role="status" />
+                    <i v-else class="bi bi-download" />
+                    Download PDF
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm rounded-pill d-flex align-items-center justify-content-center gap-2"
+                    @click="handleSidebarVerifyReport"
+                  >
+                    <i class="bi bi-shield-check text-success" />
+                    Verify Authenticity
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn btn-link btn-sm text-muted text-decoration-none mt-1"
+                    :disabled="sidebarGeneratingReport"
+                    @click="handleSidebarGenerateReport"
+                  >
+                    <span v-if="sidebarGeneratingReport" class="spinner-border spinner-border-sm me-1" role="status" />
+                    <i v-else class="bi bi-arrow-clockwise me-1" />
+                    Re-generate / Update
+                  </button>
+                </div>
+              </div>
+
+              <!-- Report Not Yet Generated -->
+              <div v-else class="text-center py-2">
+                <p class="small text-muted mb-3">
+                  A final decision has been rendered. You may generate the official verifiable case dossier.
+                </p>
+                <button
+                  type="button"
+                  class="btn btn-danger btn-sm rounded-pill w-100 d-flex align-items-center justify-content-center gap-2"
+                  :disabled="sidebarGeneratingReport"
+                  @click="handleSidebarGenerateReport"
+                >
+                  <span v-if="sidebarGeneratingReport" class="spinner-border spinner-border-sm" role="status" />
+                  <i v-else class="bi bi-file-earmark-pdf-fill" />
+                  Generate Official Report
+                </button>
+              </div>
             </div>
           </div>
         </div>

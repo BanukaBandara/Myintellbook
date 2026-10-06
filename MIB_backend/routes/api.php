@@ -11,6 +11,10 @@ Route::post('/password/reset/{token}', [\App\Http\Controllers\UserController::cl
 Route::post('auth/google', [\App\Http\Controllers\GoogleController::class, 'callback']);
 Route::get('auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'callback']);
 
+// Public Tribunal Report Authenticity Verification (Rate limited)
+Route::middleware('throttle:60,1')->get('/tribunal/reports/verify/{verificationCode}', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'verifyCode']);
+Route::middleware('throttle:30,1')->post('/tribunal/reports/verify-file', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'verifyFile']);
+
 
  
 
@@ -138,6 +142,12 @@ Route::middleware('auth.token')->group(function () {
 
         // Final Decision & Outcomes (Step 6)
         Route::get('/cases/{tribunalCase}/decision', [\App\Http\Controllers\Tribunal\TribunalDecisionController::class, 'show']);
+
+        // Official Tribunal Reports & Downloads
+        Route::get('/cases/{tribunalCase}/reports', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'index']);
+        Route::middleware('throttle:10,1')->post('/cases/{tribunalCase}/reports/final', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'generateFinalReport']);
+        Route::get('/reports/{report}', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'show']);
+        Route::get('/reports/{report}/download', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'download']);
     });
 
     // Professional Verifications (User)

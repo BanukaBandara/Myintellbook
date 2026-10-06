@@ -457,6 +457,17 @@ const router = createRouter({
       },
     },
     {
+      path: '/tribunal/reports/verify/:verificationCode?',
+      alias: '/tribunal/report/verify/:verificationCode?',
+      name: 'tribunal-report-verify',
+      component: () => import('@/views/tribunal/TribunalReportVerification.vue'),
+      meta: {
+        requiresAuth: false,
+        hideNavBar: false,
+        title: 'Tribunal Report Authenticity Verification'
+      },
+    },
+    {
       path: '/tribunal/jury',
       name: 'tribunal-jury',
       component: TribunalJuryCases,
