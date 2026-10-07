@@ -7,6 +7,7 @@ use App\Models\ApiToken;
 use App\Models\Category;
 use App\Models\Question;
 use App\Models\User;
+use App\Models\UserAnswer;
 use App\Models\profession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -97,6 +98,104 @@ class DailyQuestionControllerTest extends TestCase
             ->assertJsonPath('user_score_today', null)
             ->assertJsonPath('question.id', $expectedQuestion->id)
             ->assertJsonPath('question.options', ['Only option']);
+    }
+
+    #[Test]
+    public function answers_stay_pending_and_editable_until_the_midnight_evaluation(): void
+    {
+        $user = $this->createUserWithToken();
+        $question = Question::create([
+            'profession_id' => $this->createProfession()->id,
+            'category' => 'Core Intelligence',
+            'question' => 'Which choice is best?',
+            'options' => [
+                ['text' => 'Option A', 'score' => 5],
+                ['text' => 'Option B', 'score' => 0],
+            ],
+            'scheduled_date' => today(),
+            'is_used' => true,
+        ]);
+
+        $this->withHeaders($this->authHeaders)
+            ->postJson('/api/daily-questions/answer', ['question_id' => $question->id, 'selected_option_index' => 1])
+            ->assertOk()
+            ->assertJsonPath('answer_status', UserAnswer::STATUS_PENDING)
+            ->assertJsonPath('points', null)
+            ->assertJsonPath('is_correct', null);
+
+        // Re-submitting before midnight overwrites the same attempt.
+        $this->withHeaders($this->authHeaders)
+            ->postJson('/api/daily-questions/answer', ['question_id' => $question->id, 'selected_option_index' => 0])
+            ->assertOk()
+            ->assertJsonPath('answer_status', UserAnswer::STATUS_PENDING);
+
+        $this->withHeaders($this->authHeaders)
+            ->getJson('/api/daily-question/today')
+            ->assertOk()
+            ->assertJsonPath('answer_status', UserAnswer::STATUS_PENDING)
+            ->assertJsonPath('can_update', true)
+            ->assertJsonPath('selected_option_index', 0)
+            ->assertJsonPath('user_score_today', null);
+
+        $answer = UserAnswer::query()->where('user_id', $user->id)->sole();
+        $this->assertSame(0, $answer->selected_option_index);
+        $this->assertSame(0.0, (float) $user->fresh()->total_points);
+
+        // Midnight: the evaluation run scores the final choice from the previous day.
+        $this->travelTo(today()->addDay()->startOfDay());
+        $this->artisan('app:evaluate-daily-questions')->assertSuccessful();
+
+        $answer->refresh();
+        $this->assertSame(UserAnswer::STATUS_EVALUATED, $answer->status);
+        $this->assertTrue($answer->is_correct);
+        $this->assertSame(5.0, $answer->score);
+        $this->assertSame(5.0, (float) $user->fresh()->total_points);
+    }
+
+    #[Test]
+    public function instantly_scored_answers_from_today_can_be_reopened(): void
+    {
+        $user = $this->createUserWithToken();
+        $user->update(['total_points' => 12]);
+        $question = Question::create([
+            'profession_id' => $this->createProfession()->id,
+            'question' => 'Which choice is best?',
+            'options' => [['text' => 'Option A', 'score' => 5]],
+            'scheduled_date' => today(),
+            'is_used' => true,
+        ]);
+        $answer = UserAnswer::create([
+            'user_id' => $user->id,
+            'question_id' => $question->id,
+            'selected_option_index' => 0,
+            'answer_date' => today(),
+            'score' => 5,
+            'is_correct' => true,
+            'status' => UserAnswer::STATUS_EVALUATED,
+            'evaluated_at' => now(),
+        ]);
+        Answer::create([
+            'user_id' => $user->id,
+            'question_id' => $question->id,
+            'answer' => 'Option A',
+            'answer_status' => 'correct',
+            'score' => 5,
+        ]);
+
+        $this->artisan('app:reopen-instant-scored-daily-answers')->assertSuccessful();
+
+        $answer->refresh();
+        $this->assertSame(UserAnswer::STATUS_PENDING, $answer->status);
+        $this->assertNull($answer->is_correct);
+        $this->assertSame(7.0, (float) $user->fresh()->total_points);
+        $this->assertFalse(Answer::query()->where('question_id', $question->id)->exists());
+
+        $this->withHeaders($this->authHeaders)
+            ->getJson('/api/daily-question/today')
+            ->assertJsonPath('answer_status', UserAnswer::STATUS_PENDING)
+            ->assertJsonPath('can_update', true)
+            ->assertJsonPath('user_score_today', null)
+            ->assertJsonPath('is_correct', null);
     }
 
     #[Test]

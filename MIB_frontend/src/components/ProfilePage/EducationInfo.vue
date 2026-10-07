@@ -1,44 +1,62 @@
 <template>
-        <div class="row gap-4 p-4 bg-card mt-4 flex-grow-1 overflow-auto rounded-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5>Education Information</h5>
-                <Button icon="pi pi-trash" severity="danger" size="small" class="fw-semibold col-md-3" v-if="showDelete" @click="confirmDelete"/>
-            </div>
-            
-            <FloatLabel variant="on" class="p-0 col-md-5">
-                <InputText  inputId="School"  v-model="educationDetails.school" id="FirstName" size="small" class="w-100"/>
-                <label for="School">School</label>
-            </FloatLabel>
-             <FloatLabel variant="on" class="p-0 col-md-6">
-                <Select
-                    v-model="educationDetails.degree_category"
-                    :options="degreeCategories"
-                    optionLabel="label"
-                    optionValue="value"
-                    class="w-100"
-                    inputId="degreeCategory"
-                    size="small"
-                />
-                <label for="degreeCategory">Degree Category</label>
-            </FloatLabel>
-            <FloatLabel variant="on" class="p-0 col-md-5">
-                <InputText inputId="Degree" v-model="educationDetails.degree" class="w-100" size="small" />
-                <label for="Degree">Degree</label>
-            </FloatLabel>
-            <FloatLabel variant="on" class="p-0 col-md-6">
-                <InputText inputId="study" v-model="educationDetails.field_of_study" class="w-100" size="small" />
-                <label for="study">Field Of Study</label>
-            </FloatLabel>
-                <Button label="Save" icon="pi pi-save" severity="secondary" size="small" class="fw-semibold col-md-3" @click="submitData">
-                    <i class="pi pi-spin pi-spinner" v-if="(btnName == 'Please wait .....')" />
-                    <i class="pi pi-save" v-else />
-                    <label class="fw-semibold">{{btnName}}</label>
+        <section class="pe-card">
+            <header class="pe-card-header">
+                <div>
+                    <h2 class="pe-title">Education Information</h2>
+                    <p class="pe-subtitle">Add a school, degree or qualification.</p>
+                </div>
+                <Button v-if="showDelete" class="pe-delete" aria-label="Delete this education entry" @click="confirmDelete">
+                    <Trash2 :size="16" aria-hidden="true" />
                 </Button>
-        </div> 
+            </header>
+
+            <div class="pe-grid">
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="educationDetails.school" id="School" size="small" class="w-100"/>
+                        <label for="School">School</label>
+                    </FloatLabel>
+                </div>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <Select
+                            v-model="educationDetails.degree_category"
+                            :options="degreeCategories"
+                            optionLabel="label"
+                            optionValue="value"
+                            class="w-100"
+                            inputId="degreeCategory"
+                            size="small"
+                        />
+                        <label for="degreeCategory">Degree Category</label>
+                    </FloatLabel>
+                </div>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="educationDetails.degree" id="Degree" size="small" class="w-100" />
+                        <label for="Degree">Degree</label>
+                    </FloatLabel>
+                </div>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="educationDetails.field_of_study" id="study" size="small" class="w-100" />
+                        <label for="study">Field of Study</label>
+                    </FloatLabel>
+                </div>
+            </div>
+
+            <footer class="pe-actions">
+                <Button class="pe-save" @click="submitData">
+                    <Loader2 v-if="btnName == 'Please wait .....'" :size="16" class="pe-spin" aria-hidden="true" />
+                    <Save v-else :size="16" aria-hidden="true" />
+                    <label>{{ btnName }}</label>
+                </Button>
+            </footer>
+        </section>
 </template>
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue';
-import DatePicker from 'primevue/datepicker';
+import { Loader2, Save, Trash2 } from 'lucide-vue-next';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';

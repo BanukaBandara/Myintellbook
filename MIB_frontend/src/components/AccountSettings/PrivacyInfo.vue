@@ -39,7 +39,7 @@
                     </div>
             </div>
             <div class="border row p-4">
-                    <h6>Work Experiance</h6>
+                    <h6>Work Experience</h6>
                     <div class="row">
                         <div class="p-2 d-flex align-items-center col-md-6">
                             Title

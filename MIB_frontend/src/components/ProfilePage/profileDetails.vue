@@ -23,7 +23,7 @@
                 <template #content>
                     <div class="d-flex flex-row align-items-center justify-content-between">
                             <div class="d-flex flex-row align-items-center justify-content-between">
-                                <h5>Experiance</h5>
+                                <h5>Experience</h5>
                                 <Button v-if="isEditable" icon="pi pi-fw pi-plus" severity="secondary"  label="Add" text size="small" class="fw-semibol" @click="()=>{userProfile.showExperianceEdit = true;router.push('/profileEdit/workExperience');}"/>
                             </div>
                             <Button variant="link"  label="see all" @click="()=>{router.push(`/allExperiances/${generalInfo.profile_url}`)}"/>

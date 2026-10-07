@@ -1,25 +1,34 @@
 <template>
-        <div class="row p-4 bg-card rounded-4 mt-4">
-            <h5>{{inputPlaceholder}} Information</h5>
+        <section class="pe-card">
+            <header class="pe-card-header">
+                <div>
+                    <h2 class="pe-title">{{ sectionTitle }}</h2>
+                    <p class="pe-subtitle">{{ message }}</p>
+                </div>
+            </header>
 
-            <informationShow :message="message"  bgClass="bg-primary" borderClass="border-primary" class="mb-4 mt-2"/>
-            <FloatLabel variant="on" class="p-0 col-md-9">
-                <InputText  inputId="skill" id="FirstName" size="small" class="w-100" v-model="skillDetails.skill"/>
-                <label for="skill">{{ inputPlaceholder }}</label>
-            </FloatLabel>
-                <Button label="Save" icon="pi pi-save" severity="secondary" size="small" class="fw-semibold col-md-3" @click="submitSkill" >
-                   <i class="pi pi-spin pi-spinner" v-if="(btnName == 'Please wait .....')" />
-                    <i class="pi pi-save" v-else />
-                    <label class="fw-semibold">{{ btnName }}</label>
+            <div class="pe-field">
+                <FloatLabel variant="on">
+                    <InputText id="skill" size="small" class="w-100" v-model="skillDetails.skill"/>
+                    <label for="skill">{{ fieldLabel }}</label>
+                </FloatLabel>
+            </div>
+
+            <footer class="pe-actions">
+                <Button class="pe-save" @click="submitSkill">
+                    <Loader2 v-if="btnName == 'Please wait .....'" :size="16" class="pe-spin" aria-hidden="true" />
+                    <Save v-else :size="16" aria-hidden="true" />
+                    <label>{{ btnName }}</label>
                 </Button>
-        </div> 
+            </footer>
+        </section>
 </template>
 <script lang="ts" setup>
 import { ref, watch, computed, onMounted } from 'vue';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import FloatLabel from 'primevue/floatlabel';
-import informationShow from '../../components/commonComponents/infomationShow.vue';
+import { Loader2, Save } from 'lucide-vue-next';
 import { useUserProfile } from '@/stores/User/userProfile';
 import showAlert from '@/composables/showAlert';
 import {useRouter, useRoute} from 'vue-router';
@@ -35,6 +44,8 @@ const btnName = ref<string>('Save');
 const inputPlaceholder = ref<string>('skills');
 const slug = ref('');
 const message = ref<string>('You can add new Licensed profession');
+const fieldLabel = computed(() => inputPlaceholder.value.charAt(0).toUpperCase() + inputPlaceholder.value.slice(1));
+const sectionTitle = computed(() => slug.value === '1' || slug.value === '2' ? inputPlaceholder.value : 'Skills Information');
 
 watch(slug,(oldValue,newValue)=>{
 
@@ -75,6 +86,7 @@ const submitSkill = async() =>
 
 }
 onMounted(()=>{
-    slug.value = route.params.slug[0]
+    // Optional param: may be absent on /profileEdit/skillsInfo.
+    slug.value = String(route.params.slug ?? '').charAt(0)
 })
 </script>

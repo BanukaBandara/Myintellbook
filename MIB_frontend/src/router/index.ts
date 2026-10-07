@@ -113,38 +113,44 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         hideNavBar:false,
-        title:'ProfileEdit'
+        title:'Edit Profile'
       },
        children: [
         {
           path:'/profileEdit/generalInfo',
           name:'generalInfo',
           component: () => import('../components/ProfilePage/GeneralInfo.vue'),
+          meta: { title:'General Information' },
         },
         {
           path:'/profileEdit/workExperience/:id?',
           name:'workExperience',
-          component: () => import('../components/ProfilePage/WorkExperiance.vue'),
+          component: () => import('../components/ProfilePage/WorkExperience.vue'),
+          meta: { title:'Work Experience' },
         },
         {
           path:'/profileEdit/educationInfo/:id?',
           name:'education',
           component: () => import('../components/ProfilePage/EducationInfo.vue'),
+          meta: { title:'Education Information' },
         },
         {
           path:'/profileEdit/skillsInfo/:slug?',
           name:'skillsInfo',
           component: () => import('../components/ProfilePage/SkillsInfo.vue'),
+          meta: { title:'Skills Information' },
         },
         {
           path:'/profileEdit/addProfileImage',
           name:'addProfileImage',
           component: () => import('../components/ProfilePage/profilePohoto.vue'),
+          meta: { title:'Profile Photo' },
         },
         {
           path:'/profileEdit/addCoverImage',
           name:'addCoverImage',
           component: () => import('../components/ProfilePage/coverPhoto.vue'),
+          meta: { title:'Cover Photo' },
         }
     ]
     },
@@ -227,7 +233,7 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         hideNavBar:false,
-        title:'AllExperiances'
+        title:'All Experiences'
       }
     },
     {

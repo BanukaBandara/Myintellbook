@@ -1,112 +1,107 @@
 <template>
-   
-        <div class="row gap-4 p-4 bg-card mt-4 flex-grow-1 overflow-auto rounded-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5>Work Experiance</h5>
-                <Button icon="pi pi-trash" severity="danger" size="small" class="fw-semibold col-md-3" v-if="showDelete" @click="confirmDelete"/>
-            </div>
-           
-            <div class="p-0 d-flex flex-row align-items-center gap-2">
-                 <ToggleSwitch v-model="currentlyWorking" @change="setCurrentlyWork">
-                    <template #handle="{ checked }">
-                        <i :class="['!text-xs pi', { 'pi-check': checked, 'pi-times': !checked }]" />
-                    </template>
-                </ToggleSwitch>
-                <label for="ingredient1"> I am currently working in this role </label>
-            </div>
-            <div class="d-flex flex-row gap-2">
-                <div class="col-md-6">
-                    <FloatLabel variant="on" class="p-0 w-100">
-                    <InputText v-model="workExperiance.title" inputId="Title" id="FirstName" size="small" class="w-100"/>
-                    <label for="Title">Title</label>
+        <section class="pe-card">
+            <header class="pe-card-header">
+                <div>
+                    <h2 class="pe-title">Work Experience</h2>
+                    <p class="pe-subtitle">Add a role you hold or have held.</p>
+                </div>
+                <Button v-if="showDelete" class="pe-delete" aria-label="Delete this work experience" @click="confirmDelete">
+                    <Trash2 :size="16" aria-hidden="true" />
+                </Button>
+            </header>
+
+            <SwitchField
+                v-model="currentlyWorking"
+                label="I am currently working in this role"
+                @change="setCurrentlyWork"
+            />
+
+            <div class="pe-grid">
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="workExperiance.title" id="Title" size="small" class="w-100"/>
+                        <label for="Title">Title</label>
                     </FloatLabel>
                     <Visibility field="title" @visibilityChange="visibilityChange"/>
                 </div>
-                <div class="col-md-6">
-                    <FloatLabel variant="on" class="p-0 w-100">
-                    <InputText  v-model="workExperiance.company" inputId="company" id="FirstName" size="small" class="w-100"/>
-                    <label for="company">Company Or Organization</label>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="workExperiance.company" id="company" size="small" class="w-100"/>
+                        <label for="company">Company or Organization</label>
                     </FloatLabel>
                     <Visibility field="company" @visibilityChange="visibilityChange" />
                 </div>
-            </div>
-            
-            <div class="d-flex flex-row gap-2">
-               <div class="col-md-6">
-                 <FloatLabel variant="on" class="p-0 w-100">
-                    <Select v-model="SelectEmpType" size="small" :options="empTypes" optionLabel="name" inputId="SelectedGender" class="w-100" />
-                    <label for="SelectedGender">Employment Type</label>
-                </FloatLabel>
-                <Visibility field="empType" @visibilityChange="visibilityChange" />
-               </div>
-                <div class="col-md-6">
-                    <FloatLabel variant="on" class="p-0 w-100">
-                    <Select v-model="SelectLocationType" size="small" :options="types" optionLabel="name" inputId="locatoinType" class="w-100" />
-                    <label for="locatoinType">Location Type</label>
-                    </FloatLabel>
-                    <Visibility field="locationType" @visibilityChange="visibilityChange" />
-                </div>
-            </div>
 
-            <div class="d-flex flex-row gap-2">
-               <div class="col-md-6">
-                 <FloatLabel variant="on" class="p-0 w-100">
-                    <DatePicker v-model="workExperiance.startingDate"  class="w-100" dateFormat="dd/mm/yy"/>
-                    <label for="SelectedGender">Starting Date</label>
-                </FloatLabel>
-                <Visibility field="empType" @visibilityChange="visibilityChange" />
-               </div>
-
-                <div class="col-md-6" >
-                    <FloatLabel variant="on" class="p-0 w-100">
-                    <DatePicker v-model="workExperiance.endDate" class="w-100" dateFormat="dd/mm/yy" :disabled="isDisabled"/>
-                    <label for="SelectedGender">End Date</label>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <Select v-model="SelectEmpType" size="small" :options="empTypes" optionLabel="name" inputId="empType" class="w-100" />
+                        <label for="empType">Employment Type</label>
                     </FloatLabel>
                     <Visibility field="empType" @visibilityChange="visibilityChange" />
                 </div>
-            </div>
-            
-            <div class="d-flex flex-row gap-2">
-                <div class="col-md-6">
-                    <FloatLabel variant="on" class="p-0 w-100">
-                    <InputText  inputId="location" v-model="workExperiance.location" id="FirstName" size="small" class="w-100"/>
-                    <label for="location">Location</label>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <Select v-model="SelectLocationType" size="small" :options="types" optionLabel="name" inputId="locationType" class="w-100" />
+                        <label for="locationType">Location Type</label>
+                    </FloatLabel>
+                    <Visibility field="locationType" @visibilityChange="visibilityChange" />
+                </div>
+
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <DatePicker v-model="workExperiance.startingDate" inputId="startingDate" class="w-100" dateFormat="dd/mm/yy"/>
+                        <label for="startingDate">Starting Date</label>
+                    </FloatLabel>
+                    <Visibility field="empType" @visibilityChange="visibilityChange" />
+                </div>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <DatePicker v-model="workExperiance.endDate" inputId="endDate" class="w-100" dateFormat="dd/mm/yy" :disabled="isDisabled"/>
+                        <label for="endDate">End Date</label>
+                    </FloatLabel>
+                    <Visibility field="empType" @visibilityChange="visibilityChange" />
+                </div>
+
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="workExperiance.location" id="location" size="small" class="w-100"/>
+                        <label for="location">Location</label>
                     </FloatLabel>
                     <Visibility field="location" @visibilityChange="visibilityChange" />
                 </div>
-                <div class="col-md-6">
-                    <FloatLabel variant="on" class="p-0 w-100">
-                    <Select v-model="position" :options="positionType" optionLabel="name" size="small" inputId="locatoinType" class="w-100" />
-                    <label for="locatoinType">Position Type</label>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <Select v-model="position" :options="positionType" optionLabel="name" size="small" inputId="positionType" class="w-100" />
+                        <label for="positionType">Position Type</label>
                     </FloatLabel>
                     <Visibility field="locationType" @visibilityChange="visibilityChange" />
                 </div>
             </div>
-            
-            <Button label="Save" icon="pi pi-save" severity="secondary" size="small" class="fw-semibold col-md-3" @click="submitData" >
-                 <i class="pi pi-spin pi-spinner" v-if="(btnName == 'Please wait .....')" />
-                 <i class="pi pi-save" v-else />
-                <label class="fw-semibold">{{ btnName }}</label>
-            </Button>
-            
-        </div>
-    
+
+            <footer class="pe-actions">
+                <Button class="pe-save" @click="submitData">
+                    <Loader2 v-if="btnName == 'Please wait .....'" :size="16" class="pe-spin" aria-hidden="true" />
+                    <Save v-else :size="16" aria-hidden="true" />
+                    <label>{{ btnName }}</label>
+                </Button>
+            </footer>
+        </section>
 </template>
 <script lang="ts" setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import FloatLabel from 'primevue/floatlabel';
-import Checkbox from 'primevue/checkbox';
 import Visibility from '../commonComponents/Visibility.vue';
+import SwitchField from '../commonComponents/SwitchField.vue';
 import { useRoute } from 'vue-router';
 import showAlert from '@/composables/showAlert';
 import type { workExperianceType } from '@/types/workExperianceType';
 import { useUserProfile } from '@/stores/User/userProfile';
 import { useRouter } from 'vue-router';
 import DatePicker from 'primevue/datepicker';
-import ToggleSwitch from 'primevue/toggleswitch';
+import { Loader2, Save, Trash2 } from 'lucide-vue-next';
 
 const route = useRoute();
 const userProfile = useUserProfile();
@@ -157,10 +152,9 @@ const positionType = ref([
     {name:"Non Executive" , id:"non-executive"}
 ])
 
-const setCurrentlyWork = (event:any)=>
+const setCurrentlyWork = ()=>
 {
     workExperiance.value.currently_working = (currentlyWorking.value) ? 1 : 0;
-    console.log(workExperiance.value.currently_working)
 }
 
 const submitExperianceData = async() =>
@@ -199,7 +193,7 @@ const submitExperianceData = async() =>
                     confirmButtonColor: '#a03829',
                     showConfirmButton:true
                 }
-            
+
         let confirm = await showAlert(config);
         if(confirm.isConfirmed){
             btnName.value = 'Save';
@@ -211,13 +205,13 @@ const confirmDelete = async() => {
   let config ={
                 icon:'warning',
                 title:'Warning',
-                text: 'Are you sure? Delete this work experiance',
+                text: 'Are you sure? Delete this work experience',
                 confirmButtonText: 'OK',
                 confirmButtonColor: '#a03829',
                 showConfirmButton:true,
                 showCancelButton:true
             }
-            
+
         let confirm = await showAlert(config);
 
         if(confirm.isConfirmed)
@@ -248,7 +242,7 @@ const confirmDelete = async() => {
                     confirmButtonColor: '#a03829',
                     showConfirmButton:true
                 }
-            
+
                     let confirm = await showAlert(config);
                 }
         }
@@ -267,7 +261,7 @@ const submitData = () =>
     btnName.value = 'Please wait .....';
     if(showDelete.value)
     {
-       editDetails(); 
+       editDetails();
     }else{
         submitExperianceData();
     }
@@ -306,7 +300,7 @@ const editDetails =async() =>
                     confirmButtonColor: '#a03829',
                     showConfirmButton:true
                 }
-            
+
         let confirm = await showAlert(config);
         if(confirm.isConfirmed){
             btnName.value = 'Save';
@@ -342,7 +336,7 @@ const getDetails = async() =>
                     showConfirmButton:false,
                     timer: 3000
                 }
-            
+
         let confirm = await showAlert(config);
         if(confirm.isDismissed){
             btnName.value = 'Save';

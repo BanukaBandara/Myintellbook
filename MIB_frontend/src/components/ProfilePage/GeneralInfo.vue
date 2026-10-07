@@ -1,53 +1,59 @@
 <template>
         
-        <div class="row gap-4 p-4 bg-card mt-4 flex-grow-1 overflow-auto rounded-4">
-            <div class="d-flex flex-row align-items-center justify-content-between">
-                <h5>Edit General Information</h5>
+        <section class="pe-card">
+            <header class="pe-card-header">
+                <div>
+                    <h2 class="pe-title">General Information</h2>
+                    <p class="pe-subtitle">Your name, gender and birth date, and who can see each.</p>
+                </div>
+            </header>
+
+            <div class="pe-grid">
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="userGeneralInfo.first_name" id="FirstName" size="small" class="w-100"/>
+                        <label for="FirstName">First Name</label>
+                    </FloatLabel>
+                    <Visibility field="first_name" @visibilityChange="visibilityChange" :visibility="userGeneralInfo.visibility.first_name" id="visiFirstName" />
+                </div>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <InputText v-model="userGeneralInfo.last_name" id="LastName" size="small" class="w-100"/>
+                        <label for="LastName">Last Name</label>
+                    </FloatLabel>
+                    <Visibility field="last_name" @visibilityChange="visibilityChange" :visibility="userGeneralInfo.visibility.last_name" id="visiLastName" />
+                </div>
+                <div class="pe-field">
+                    <FloatLabel variant="on">
+                        <Select v-model="SelectedGender" :options="genders" optionLabel="name" value="id" inputId="SelectedGender" size="small" class="w-100" />
+                        <label for="SelectedGender">Gender</label>
+                    </FloatLabel>
+                    <Visibility field="gender" @visibilityChange="visibilityChange" :visibility="userGeneralInfo.visibility.gender" id="visiSelectGender" />
+                </div>
             </div>
-             <div class="d-flex flex-column"> 
-                <FloatLabel variant="on" class="p-0 col-md-9">
-                    <InputText v-model="userGeneralInfo.first_name" inputId="FirstName" id="FirstName" size="small" class="w-100"/>
-                    <label for="FirstName">First Name</label>
-                </FloatLabel>
-               
-                <Visibility field="first_name" @visibilityChange="visibilityChange" :visibility="userGeneralInfo.visibility.first_name" id="visiFirstName" />
-            </div>
-            <div class="d-flex flex-column"> 
-                <FloatLabel variant="on" class="p-0 col-md-9">
-                    <InputText v-model="userGeneralInfo.last_name" inputId="LastName" class="w-100" size="small"  id="LastName"/>
-                    <label for="LastName">Last Name</label>
-                </FloatLabel>
-                <Visibility field="last_name" @visibilityChange="visibilityChange" :visibility="userGeneralInfo.visibility.last_name" id="visiLastName" />
-            </div>
-             <div class="d-flex flex-column"> 
-                <FloatLabel variant="on" class="p-0 col-md-5">
-                    <Select v-model="SelectedGender" :options="genders" placeholder="Select a Gender" optionLabel="name" value="id" inputId="SelectedGender" class="w-100" id="SelectedGender" />
-                    <label for="SelectedGender">Select a Gender</label>
-                </FloatLabel>
-                <Visibility field="gender" @visibilityChange="visibilityChange" :visibility="userGeneralInfo.visibility.gender" id="visiSelectGender" />
-             </div>
-             <div class="d-flex flex-column"> 
-                 <label class="mb-2">Birth Date</label>
-                 <div class="d-flex flex-row">
-                    <Select v-model="year" :options="listOfYears" placeholder="Year" optionLabel="label" value="code" inputId="SelectedGender" class="w-100" id="SelectedGender" size="small"/>
-                 <Select v-model="month" :options="listOfMonths" placeholder="Month" optionLabel="label" value="code" inputId="SelectedGender" class="w-100" id="SelectedGender" size="small"/>
-                 <Select v-model="day" :options="listOfDays" placeholder="Day" optionLabel="label" value="code" inputId="SelectedGender" class="w-100" id="SelectedGender" size="small"/>
-                 </div>
-                <!-- <FloatLabel variant="on" class="p-0 col-md-3">
-                    <DatePicker v-model="userGeneralInfo.birth_date" inputId="over_label" showIcon iconDisplay="input" id="birthdate" />
-                    <label for="over_label">Birth Date</label>
-                </FloatLabel> -->
+
+            <div class="pe-field">
+                <span id="birthDateLabel" class="pe-field-label">Birth Date</span>
+                <div class="pe-inline" role="group" aria-labelledby="birthDateLabel">
+                    <Select v-model="year" :options="listOfYears" placeholder="Year" optionLabel="label" value="code" inputId="birthYear" aria-label="Birth year" size="small" class="w-100"/>
+                    <Select v-model="month" :options="listOfMonths" placeholder="Month" optionLabel="label" value="code" inputId="birthMonth" aria-label="Birth month" size="small" class="w-100"/>
+                    <Select v-model="day" :options="listOfDays" placeholder="Day" optionLabel="label" value="code" inputId="birthDay" aria-label="Birth day" size="small" class="w-100"/>
+                </div>
                 <Visibility field="birth_date" @visibilityChange="visibilityChange" :visibility="userGeneralInfo.visibility.birth_date" id="visiBirthDate" />
             </div>
-                <Button :label="SaveBtnName" icon="pi pi-save" id="saveData" severity="secondary" size="small" class="fw-semibold col-md-3" @click="saveGeneralInfo">
-                    <i class="pi pi-spin pi-spinner" v-if="(SaveBtnName == 'Please wait .....')" />
-                    <label class="fw-semibold">{{ SaveBtnName }}</label>
-                    </Button>
-        </div> 
+
+            <footer class="pe-actions">
+                <Button id="saveData" class="pe-save" @click="saveGeneralInfo">
+                    <Loader2 v-if="SaveBtnName == 'Please wait .....'" :size="16" class="pe-spin" aria-hidden="true" />
+                    <Save v-else :size="16" aria-hidden="true" />
+                    <label>{{ SaveBtnName }}</label>
+                </Button>
+            </footer>
+        </section>
 </template>
 <script lang="ts" setup>
 import { ref,onMounted } from 'vue';
-import DatePicker from 'primevue/datepicker';
+import { Loader2, Save } from 'lucide-vue-next';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';

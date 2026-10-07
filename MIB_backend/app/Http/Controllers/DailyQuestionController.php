@@ -111,24 +111,22 @@ class DailyQuestionController extends Controller
                     return ['status' => 'closed'];
                 }
 
+                // Re-submitting before midnight overwrites the choice; scoring happens in the midnight run.
                 $answer = UserAnswer::query()->updateOrCreate(
                     ['user_id' => $user->id, 'question_id' => $question->id],
                     [
                         'selected_option_index' => $index,
                         'answer_date' => today(),
-                        'score' => null,
+                        'score' => 0,
+                        'is_correct' => null,
                         'status' => UserAnswer::STATUS_PENDING,
                     ],
                 );
 
-                // Scored on submission: awards the points and recalculates the HIP score in this transaction.
-                DailyAnswerEvaluator::evaluate($answer->id);
-
                 return [
                     'status' => 'saved',
                     'index' => $index,
-                    'answer' => $answer->fresh(),
-                    'user' => $user->fresh(),
+                    'answer' => $answer,
                 ];
             }, 3);
 
@@ -152,11 +150,10 @@ class DailyQuestionController extends Controller
                 'code' => 200,
                 'answer_status' => $answer->status,
                 'selected_option_index' => $result['index'],
-                'is_correct' => $answer->is_correct,
-                'points' => $answer->score,
-                'total_points' => (float) $result['user']->total_points,
-                'hip_score' => (float) $result['user']->hip_score,
-                'message' => $answer->is_correct ? 'Correct answer — points awarded.' : 'Answer recorded.',
+                'can_update' => true,
+                'is_correct' => null,
+                'points' => null,
+                'message' => 'Your reflection is recorded. Final results and point evaluation will update at Midnight (12:00 AM).',
             ], 200);
         } catch (\Throwable $e) {
             Log::error('DailyQuestionController @submitDailyAnswer: '.$e->getMessage());
@@ -210,14 +207,15 @@ class DailyQuestionController extends Controller
     }
 
     /**
-     * Answers are scored on submission now; this scores any left pending from before that change
-     * (or from a failed evaluation) so they don't stay stuck when the scheduler isn't running.
+     * Answers are scored by the midnight EvaluateDailyQuestions run; this catches up any from
+     * previous days the scheduler missed. Today's answers stay pending (and editable) until midnight.
      */
     private function evaluateStaleAnswers(int $userId): void
     {
         UserAnswer::query()
             ->where('user_id', $userId)
             ->where('status', UserAnswer::STATUS_PENDING)
+            ->whereDate('answer_date', '<', today())
             ->pluck('id')
             ->each(function (int $id): void {
                 try {

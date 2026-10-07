@@ -22,7 +22,8 @@
                 <time class="date-label">{{ todayLabel }}</time>
             </header>
 
-            <div v-if="hasAnswered && !canUpdate" class="completion-state">
+            <!-- Points and correctness only exist once the midnight run has evaluated the answer. -->
+            <div v-if="hasAnswered && isEvaluated" class="completion-state">
                 <i class="bi bi-shield-check state-icon" aria-hidden="true"></i>
                 <p class="eyebrow centered">DAILY PRACTICE COMPLETE</p>
                 <h2>Your reflection is recorded.</h2>
@@ -40,11 +41,12 @@
                 </div>
             </div>
 
+            <!-- Until the midnight evaluation the question stays open; the saved choice shows as selected. -->
             <div v-else class="question-content">
                 <h2>{{ question.question_text }}</h2>
                 <p class="instruction">Choose the response that best reflects your judgment.</p>
 
-                <fieldset class="options-list" :disabled="submitting">
+                <fieldset class="options-list" :disabled="submitting || !canUpdate">
                     <legend class="sr-only">Choose one answer</legend>
                     <label
                         v-for="(option, index) in question.options"
@@ -72,21 +74,28 @@
                 <div class="deadline-note">
                     <i class="bi bi-clock" aria-hidden="true"></i>
                     <span>
-                        Your answer is scored as soon as you submit it and can't be changed afterwards.
+                        You can change your answer until midnight, when it is evaluated and points are awarded.
                         <strong>{{ countdownLabel }} left</strong>
                     </span>
                 </div>
 
                 <footer class="submit-row">
-                    <span class="privacy-note"><i class="bi bi-lock-fill" aria-hidden="true"></i> Your choice is private</span>
+                    <span class="privacy-note" aria-live="polite">
+                        <template v-if="isSaved">
+                            <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Answer saved
+                        </template>
+                        <template v-else>
+                            <i class="bi bi-lock-fill" aria-hidden="true"></i> Your choice is private
+                        </template>
+                    </span>
                     <button
                         class="accent-button"
                         type="button"
-                        :disabled="selectedIndex === null || submitting"
+                        :disabled="selectedIndex === null || isSaved || submitting || !canUpdate"
                         @click="submitAnswer"
                     >
                         <span v-if="submitting" class="button-spinner" aria-hidden="true"></span>
-                        {{ submitting ? 'Submitting' : 'Submit answer' }}
+                        {{ submitting ? 'Saving' : hasAnswered ? 'Update answer' : 'Submit answer' }}
                     </button>
                 </footer>
             </div>
@@ -111,9 +120,13 @@ const emit = defineEmits<{ (event: 'day-changed'): void }>();
 const question = ref<DailyQuestion | null>(null);
 const hasAnswered = ref(false);
 const canUpdate = ref(true);
+// 'pending_evaluation' until the midnight run, then 'evaluated'; null when not answered.
+const answerStatus = ref<string | null>(null);
 const userScoreToday = ref<number | null>(null);
 const isCorrect = ref<boolean | null>(null);
 const selectedIndex = ref<number | null>(null);
+// Index last confirmed by the server; "Update answer" is only needed when the selection differs.
+const savedIndex = ref<number | null>(null);
 const loading = ref(true);
 const submitting = ref(false);
 const loadError = ref('');
@@ -126,7 +139,9 @@ const now = ref(Date.now());
 let currentDayKey = new Date().toDateString();
 let countdownTimer: ReturnType<typeof setInterval> | undefined;
 
+const isEvaluated = computed(() => answerStatus.value === 'evaluated');
 const scoreLabel = computed(() => userScoreToday.value === null ? '--' : `${userScoreToday.value}`);
+const isSaved = computed(() => savedIndex.value !== null && selectedIndex.value === savedIndex.value);
 const todayLabel = computed(() => new Intl.DateTimeFormat(undefined, {
     weekday: 'long', month: 'short', day: 'numeric',
 }).format(new Date(now.value)));
@@ -159,13 +174,15 @@ async function loadQuestion(): Promise<void> {
         };
         hasAnswered.value = data.has_answered === true;
         canUpdate.value = data.can_update !== false;
-        userScoreToday.value = hasAnswered.value ? toPoints(data.user_score_today) : null;
-        isCorrect.value = typeof data.is_correct === 'boolean' ? data.is_correct : null;
+        answerStatus.value = hasAnswered.value && typeof data.answer_status === 'string' ? data.answer_status : null;
+        userScoreToday.value = isEvaluated.value ? toPoints(data.user_score_today) : null;
+        isCorrect.value = isEvaluated.value && typeof data.is_correct === 'boolean' ? data.is_correct : null;
         const saved = Number(data.selected_option_index);
         selectedIndex.value = hasAnswered.value && data.selected_option_index !== null
             && Number.isInteger(saved) && saved >= 0 && saved < payload.options.length
             ? saved
             : null;
+        savedIndex.value = selectedIndex.value;
     } catch {
         question.value = null;
         loadError.value = 'Please try again in a moment.';
@@ -186,19 +203,22 @@ async function submitAnswer(): Promise<void> {
             question_id: question.value.id,
             selected_option_index: index,
         });
-        if (data?.status !== 'success' || data.answer_status !== 'evaluated') {
+        if (data?.status !== 'success' || data.answer_status !== 'pending_evaluation') {
             throw new Error('Answer submission was not confirmed');
         }
+        // Points and correctness are only revealed after the midnight evaluation.
         hasAnswered.value = true;
-        canUpdate.value = false;
-        userScoreToday.value = toPoints(data.points);
-        isCorrect.value = typeof data.is_correct === 'boolean' ? data.is_correct : null;
+        canUpdate.value = true;
+        answerStatus.value = data.answer_status;
+        userScoreToday.value = null;
+        isCorrect.value = null;
+        savedIndex.value = index;
     } catch (error) {
         const status = (error as AxiosError).response?.status;
         if (status === 409) {
-            // Either already answered (e.g. in another tab) or the day rolled over; reload shows which.
+            // The answer was already evaluated or the day rolled over; reload shows which.
             await loadQuestion();
-            if (canUpdate.value) submitError.value = 'Today’s question is closed. A new question is now available.';
+            if (!hasAnswered.value) submitError.value = 'Today’s question is closed. A new question is now available.';
         } else if (status === 422) {
             submitError.value = 'That selection could not be validated. Choose an option and try again.';
         } else {
@@ -323,7 +343,7 @@ onBeforeUnmount(() => {
     }
 
     .option-row:hover:not(.disabled) { background: var(--ds-surface-muted); }
-    .option-row.selected { color: var(--ds-danger-text); font-weight: 500; background: rgba(254, 242, 242, .6); border-color: var(--ds-primary); box-shadow: 0 1px 2px rgba(15, 23, 42, .08); }
+    .option-row.selected { color: var(--ds-danger-text); font-weight: 500; background: #fff1f2; /* rose-50 */ border-color: #f43f5e; /* rose-500 */ box-shadow: 0 0 0 1px #f43f5e; }
     .option-row input { position: absolute; width: 1px; height: 1px; opacity: 0; }
     .option-row:focus-within { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
     .option-row.disabled { cursor: not-allowed; opacity: .7; }
@@ -369,6 +389,7 @@ onBeforeUnmount(() => {
     .completion-copy { margin: 20px 0 0; }
     .score-value { margin: 0 0 15px; color: var(--ds-danger-text); font-family: Georgia, 'Times New Roman', serif; font-size: 42px; }
     .score-value span { color: var(--ds-text-muted); font-family: inherit; font-size: 14px; }
+
 
     .ethics-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; color: var(--ds-success-text); font-size: 12px; font-weight: 600; background: var(--ds-success-soft); border: 1px solid var(--ds-success-border); border-radius: 999px; }
     .countdown { display: flex; max-width: 270px; align-items: center; justify-content: space-between; margin: 24px auto 0; padding-top: 15px; border-top: 1px solid var(--ds-border); }

@@ -1,24 +1,27 @@
 <template>
-    <div class="row gap-4 p-4 bg-card mt-4 flex-grow-1 overflow-auto rounded-4">
-        <h5>Change Cover Photo</h5>
-        <div class="">
-            <informationShow message="Your Cover Photo will be used to customize the header of your profile." borderClass="border-primary" bgClass="bg-primary"/>
-            <div class="w-100">
-                <ProfileImageCropper @coverPhoto="setImage" from="coverPhoto"/>
+    <section class="pe-card">
+        <header class="pe-card-header">
+            <div>
+                <h2 class="pe-title">Cover Photo</h2>
+                <p class="pe-subtitle">Your cover photo is used to customize the header of your profile.</p>
             </div>
-            <Button label="Save" icon="pi pi-save" severity="secondary" size="small" class="fw-semibold col-md-3 mt-4" @click="SaveImageToDataBase" >
-                 <i class="pi pi-save"  v-if="btnName == 'Save'"/>
-                <i class="pi pi-spin pi-spinner" v-else />
-                <label class="fw-semibold"> {{btnName}}</label>
-            </Button>
+        </header>
+        <div class="w-100">
+            <ProfileImageCropper @coverPhoto="setImage" from="coverPhoto"/>
         </div>
-          
-    </div> 
+        <footer class="pe-actions">
+            <Button class="pe-save" @click="SaveImageToDataBase">
+                <Save v-if="btnName == 'Save'" :size="16" aria-hidden="true" />
+                <Loader2 v-else :size="16" class="pe-spin" aria-hidden="true" />
+                <label>{{ btnName }}</label>
+            </Button>
+        </footer>
+    </section>
 </template>
 <script lang="ts" setup>
 import { ref } from 'vue';
 import Button from 'primevue/button';
-import informationShow from '../../components/commonComponents/infomationShow.vue';
+import { Loader2, Save } from 'lucide-vue-next';
 import ProfileImageCropper from './ProfileImageCropper.vue';
 import { useUserProfile } from '@/stores/User/userProfile';
 import showAlert from '@/composables/showAlert';
