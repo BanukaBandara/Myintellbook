@@ -61,7 +61,7 @@ const userProfile = useUserProfile();
 const dailyHistory = ref<InstanceType<typeof DailyQuestionHistory> | null>(null);
 let historyRefreshTimer: ReturnType<typeof setTimeout> | undefined;
 
-// Yesterday's answer appears immediately as "Evaluating"; refresh again once the midnight job has scored it.
+// At midnight yesterday's answer moves into the history; refresh again shortly after as a fallback.
 const refreshHistoryAfterMidnight = () => {
     void dailyHistory.value?.reload();
     if (historyRefreshTimer) clearTimeout(historyRefreshTimer);

@@ -8,6 +8,7 @@ use App\Models\TestamentResourceNote;
 use App\Models\User;
 use App\Notifications\NewUserNotification;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,68 +26,63 @@ class TestamentController extends Controller
     public const CONSENT_STATEMENT = 'I consent to MyIntellibook FATM storing this testament in encrypted form and releasing it only upon verified activation.';
     public const ATTESTATION_STATEMENT = 'I confirm that I witnessed the testator declare this testament as their own, of sound mind and free will.';
 
-    public function publicFeed(): JsonResponse
+    public function publicFeed(Request $request): JsonResponse
     {
-        $notes = TestamentResourceNote::query()
-            ->with('user.profile')
-            ->where('status', TestamentResourceNote::STATUS_ACTIVE)
-            ->latest()
-            ->get()
-            ->map(fn (TestamentResourceNote $note) => [
-                'id' => $note->id,
-                'title' => $note->title,
-                'description' => $note->description,
-                'category' => $note->category,
-                'phone' => $note->contact_phone,
-                'email' => $note->contact_email,
-                'location' => $note->location,
-                'status' => $note->status,
-                'created_at' => $note->created_at?->toIso8601String(),
-                'owner_name' => $this->displayName($note->user),
-            ])
-            ->values();
+        return $this->notesResponse($request, TestamentResourceNote::query());
+    }
 
-        return response()->json(['success' => true, 'notes' => $notes]);
+    /** Only the resource notes the signed-in member created. */
+    public function myNotes(Request $request): JsonResponse
+    {
+        return $this->notesResponse($request, TestamentResourceNote::query()->where('user_id', $this->userId($request)));
     }
 
     public function createResourceNote(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:150'],
-            'description' => ['required', 'string', 'max:10000'],
-            'category' => ['required', 'string', 'max:80'],
-            'phone' => ['sometimes', 'nullable', 'string', 'max:40'],
-            'email' => ['sometimes', 'nullable', 'email', 'max:255'],
-            'location' => ['nullable', 'string', 'max:160'],
-        ]);
+        $data = $request->validate($this->resourceNoteRules());
 
         $note = TestamentResourceNote::query()->create([
             'user_id' => $this->userId($request),
-            'title' => trim($data['title']),
-            'description' => trim($data['description']),
-            'category' => trim($data['category']),
-            'contact_phone' => $data['phone'] ?? null,
-            'contact_email' => $data['email'] ?? null,
-            'location' => isset($data['location']) ? trim($data['location']) : null,
+            ...$this->resourceNoteAttributes($data),
             'status' => TestamentResourceNote::STATUS_ACTIVE,
         ]);
+        $note->setRelation('user', $request->user());
 
         return response()->json([
             'success' => true,
             'message' => 'Your resource note is now shared with the community.',
-            'note' => [
-                'id' => $note->id,
-                'title' => $note->title,
-                'description' => $note->description,
-                'category' => $note->category,
-                'phone' => $note->contact_phone,
-                'email' => $note->contact_email,
-                'location' => $note->location,
-                'status' => $note->status,
-                'created_at' => $note->created_at?->toIso8601String(),
-                'owner_name' => $this->displayName($request->user()),
-            ],
+            'note' => $this->notePayload($note, $this->userId($request)),
         ], 201);
+    }
+
+    public function updateResourceNote(Request $request, int $id): JsonResponse
+    {
+        $userId = $this->userId($request);
+        $note = TestamentResourceNote::query()->with('user.profile')->find($id);
+        if ($denied = $this->denyNoteAccess($note, $userId)) {
+            return $denied;
+        }
+
+        $data = $request->validate($this->resourceNoteRules());
+        $note->update($this->resourceNoteAttributes($data));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Your note has been updated.',
+            'note' => $this->notePayload($note->fresh('user.profile'), $userId),
+        ]);
+    }
+
+    public function deleteResourceNote(Request $request, int $id): JsonResponse
+    {
+        $note = TestamentResourceNote::query()->find($id);
+        if ($denied = $this->denyNoteAccess($note, $this->userId($request))) {
+            return $denied;
+        }
+
+        $note->delete();
+
+        return response()->json(['success' => true, 'message' => 'Your note has been deleted.']);
     }
 
     public function show(Request $request): JsonResponse
@@ -473,6 +469,74 @@ class TestamentController extends Controller
                 'created_at' => \Illuminate\Support\Carbon::parse($entry->getRawOriginal('created_at'))->toIso8601String(),
             ])->values(),
         ];
+    }
+
+    private function resourceNoteRules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:150'],
+            'description' => ['required', 'string', 'max:10000'],
+            'category' => ['required', 'string', 'max:80'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'email' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'location' => ['nullable', 'string', 'max:160'],
+        ];
+    }
+
+    private function resourceNoteAttributes(array $data): array
+    {
+        return [
+            'title' => trim($data['title']),
+            'description' => trim($data['description']),
+            'category' => trim($data['category']),
+            'contact_phone' => $data['phone'] ?? null,
+            'contact_email' => $data['email'] ?? null,
+            'location' => isset($data['location']) ? trim($data['location']) : null,
+        ];
+    }
+
+    private function notesResponse(Request $request, Builder $query): JsonResponse
+    {
+        $userId = $this->userId($request);
+        $notes = $query
+            ->with('user.profile')
+            ->where('status', TestamentResourceNote::STATUS_ACTIVE)
+            ->latest()
+            ->get()
+            ->map(fn (TestamentResourceNote $note) => $this->notePayload($note, $userId))
+            ->values();
+
+        return response()->json(['success' => true, 'notes' => $notes]);
+    }
+
+    private function notePayload(TestamentResourceNote $note, int $viewerId): array
+    {
+        return [
+            'id' => $note->id,
+            'title' => $note->title,
+            'description' => $note->description,
+            'category' => $note->category,
+            'phone' => $note->contact_phone,
+            'email' => $note->contact_email,
+            'location' => $note->location,
+            'status' => $note->status,
+            'created_at' => $note->created_at?->toIso8601String(),
+            'owner_name' => $this->displayName($note->user),
+            'is_owner' => (int) $note->user_id === $viewerId,
+        ];
+    }
+
+    /** 404 for a missing note, 403 when it belongs to someone else; null when the viewer owns it. */
+    private function denyNoteAccess(?TestamentResourceNote $note, int $userId): ?JsonResponse
+    {
+        if (!$note) {
+            return response()->json(['success' => false, 'message' => 'This note no longer exists.'], 404);
+        }
+        if ((int) $note->user_id !== $userId) {
+            return response()->json(['success' => false, 'message' => 'You can only change notes you created.'], 403);
+        }
+
+        return null;
     }
 
     private function displayName(?User $user): string

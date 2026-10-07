@@ -2,31 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ScoreFetchService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\Score;
-use App\Models\Post;
-use App\Models\Question;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use App\Notifications\NewUserNotification;
-
 
 class ScoreController extends Controller
 {
-    private $scoreService;
-
-    public function __construct()
+    public function __construct(private ScoreFetchService $scoreService)
     {
-        $this->scoreService = new \App\Services\ScoreFetchService();
     }
 
-    public function getScores(Request $request)
+    /**
+     * The signed-in user's scored records, grouped by Score page tab.
+     */
+    public function getScores(Request $request): JsonResponse
     {
-        return response()->json(['data'=>$this->scoreService->getAllScores(auth()->user()->id),'code'=>200]);
+        return response()->json([
+            'data' => $this->scoreService->getAllScores($request->user()->getAuthIdentifier()),
+            'code' => 200,
+        ]);
     }
-
-    // public function topScores()
-    // { 
-    //     return response()->json(['data'=>$this->scoreService->getTopScores(),'code'=>200]); 
-    // }
 }

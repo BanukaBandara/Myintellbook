@@ -7,146 +7,23 @@
         <template #title>
           <div class="d-flex justify-content-between align-items-center w-100">
             <h5 class="fw-semibold m-0">Your Scores</h5>
-            <Button variant="link" icon="pi pi-arrow-left" label="go back" @click="()=> router.go(-1)"></Button>
-            <!-- <span class="badge bg-primary fs-6">
-              Total: {{ scores.totalScore }}
-            </span> -->
+            <RouterLink :to="{ name: 'profile' }" class="back-link">
+              <i class="bi bi-arrow-left" aria-hidden="true"></i> go back
+            </RouterLink>
           </div>
         </template>
 
         <template #content>
-          <Tabs value="0" class="mt-3">
+          <Tabs :value="activeTab" scrollable class="score-tabs mt-3" @update:value="selectTab">
             <TabList>
-              <Tab value="0"><span v-tooltip="'Life Competency Index'">LCI</span></Tab>
-              <Tab value="1">Identity verification</Tab>
-              <Tab value="2">Education</Tab>
-              <Tab value="3">Experiance</Tab>
-              <Tab value="4">Formal Recognition</Tab>
-              <Tab value="5">Daily Questions</Tab>
-              <Tab value="6">Exams</Tab>
-              <Tab value="6">Others</Tab>
+              <Tab v-for="tab in tabs" :key="tab.value" :value="tab.value">
+                <span v-if="tab.tooltip" v-tooltip="tab.tooltip">{{ tab.label }}</span>
+                <template v-else>{{ tab.label }}</template>
+              </Tab>
             </TabList>
 
             <TabPanels>
-            
-              <TabPanel value="1">
-                <div
-                  class="d-flex justify-content-between align-items-center p-3 border rounded-3 mb-2 bg-light"
-                >
-                 <table class="table">
-                  <thead>
-                    <tr>
-                      <th></th>
-                      <th>Verified</th>
-                      <th>Verified By</th>
-                      <th>Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>1. School/ univercity mate</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                    <tr>
-                      <td>2. School/ univercity mate</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                    <tr>
-                      <td>3. School/ univercity mate</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                    <tr>
-                      <td>4. Neighbour within same district</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                    <tr>
-                      <td>5. Neighbour within same district</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                  </tbody>
-                 </table>
-                </div>
-              </TabPanel>
-
-              <!-- Profile Updates -->
-              <TabPanel value="5">
-                 <!-- <div
-                  v-for="question in scores.daily_questions"
-                  :key="question.id"
-                  class="d-flex justify-content-between align-items-center p-3 border rounded-3 mb-2 bg-light"
-                >
-                  <small class="text-muted">{{ question.question_date }}</small>
-                  <span class="fw-semibold flex-grow-1 text-center px-3">
-                    {{ question.question }}
-                  </span>
-                  <span class="fw-bold text-success">
-                    +{{ question.points }}
-                  </span>
-                </div> -->
-
-              </TabPanel>
-
-              <!-- Exams -->
-              <TabPanel value="6">
-                <!-- <div
-                  v-for="update in scores.exam"
-                  :key="update.id"
-                  class="d-flex justify-content-between align-items-center p-3 border rounded-3 mb-2 bg-light"
-                >
-                  <small class="text-muted">{{ update.exam }}</small>
-                  <span class="fw-semibold flex-grow-1 text-center px-3">
-                    {{ update.diffuculty_level }}
-                  </span>
-                  <span class="fw-bold text-primary">
-                    +{{ update.points }}
-                  </span>
-                </div> -->
-              </TabPanel>
-              <TabPanel value="2">
-                 <div
-                  v-for="education in scores.education"
-                  :key="education.id"
-                  class="d-flex justify-content-between align-items-center p-3 border rounded-3 mb-2 bg-light"
-                >
-                  <small class="text-muted">{{ education.degree }}</small>
-                  <span class="fw-semibold flex-grow-1 text-center px-3">
-                    {{ education.category }}
-                  </span>
-                  <span class="fw-bold text-success">
-                    +{{ education.calculated_score }}
-                  </span>
-                </div>
-
-              </TabPanel>
-
-               <TabPanel value="3">
-                 <div
-                  v-for="experiance in scores.experience"
-                  :key="experiance.id"
-                  class="d-flex justify-content-between align-items-center p-3 border rounded-3 mb-2 bg-light"
-                >
-                  <small class="text-muted">{{ experiance.company }}</small>
-                  <span class="fw-semibold flex-grow-1 text-center px-3">
-                    {{ experiance.position }}
-                  </span>
-                  <span class="fw-bold text-success">
-                    +{{ experiance.calculated_score }}
-                  </span>
-                </div>
-
-              </TabPanel>
-
-              <TabPanel value="0">
+              <TabPanel value="lci">
                 <div v-if="lciLoading" class="lci-skeleton" aria-label="Loading your LCI"></div>
 
                 <div v-else-if="lciError" class="lci-error" role="alert">
@@ -196,6 +73,42 @@
                   <p class="lci-quote">“Build your Human Intelligence Portfolio — where knowledge meets integrity.”</p>
                 </template>
               </TabPanel>
+
+              <TabPanel v-for="tab in sectionTabs" :key="tab.value" :value="tab.value">
+                <div v-if="scoresLoading" class="score-skeleton" aria-label="Loading scores"></div>
+
+                <div v-else-if="scoresError" class="lci-error" role="alert">
+                  <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                  {{ scoresError }}
+                  <button type="button" class="link-button" @click="loadScores">Try again</button>
+                </div>
+
+                <div v-else-if="!scores?.[tab.value]?.length" class="score-empty">
+                  <i :class="['bi', tab.icon]" aria-hidden="true"></i>
+                  <p>{{ tab.empty }}</p>
+                </div>
+
+                <template v-else>
+                  <ul class="score-list">
+                    <li v-for="item in scores[tab.value]" :key="item.id" class="score-item">
+                      <div class="score-item-text">
+                        <span class="score-item-title">{{ item.title }}</span>
+                        <span v-if="item.subtitle || item.date" class="score-item-meta">
+                          {{ item.subtitle }}<template v-if="item.subtitle && item.date"> · </template>{{ formatDate(item.date) }}
+                        </span>
+                      </div>
+                      <span v-if="statusLabel(item.status)" class="score-status">{{ statusLabel(item.status) }}</span>
+                      <span class="score-points" :class="pointsClass(item.points)">{{ formatPoints(item.points) }}</span>
+                    </li>
+                  </ul>
+                  <div class="score-section-total">
+                    <span>{{ tab.label }} total</span>
+                    <span class="score-points" :class="pointsClass(sectionTotal(tab.value))">
+                      {{ formatPoints(sectionTotal(tab.value)) }}
+                    </span>
+                  </div>
+                </template>
+              </TabPanel>
             </TabPanels>
           </Tabs>
         </template>
@@ -204,51 +117,63 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref , computed, onMounted, onBeforeUnmount} from 'vue';
-import ProfileDetails from '@/components/HomePage/ProfileDetails.vue';
-import { useUserProfile} from '../../stores/User/userProfile';
+import { ref, onMounted } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { useUserProfile } from '../../stores/User/userProfile';
 import Card from 'primevue/card';
-import Divider from 'primevue/divider';
-import Button from 'primevue/button'
-import type {ScoreDetails, DailyQuestions, education}  from '@/types/ScoreDetails';
-import { useRouter} from 'vue-router'
-import HipRankBadge from '@/components/commonComponents/HipRankBadge.vue';
-import { refreshLci, type LciSummary } from '@/services/lci';
-
-
 import Tabs from 'primevue/tabs';
 import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
+import type { ScoreDetails, ScoreSectionKey } from '@/types/ScoreDetails';
+import HipRankBadge from '@/components/commonComponents/HipRankBadge.vue';
+import { refreshLci, type LciSummary } from '@/services/lci';
 
+type SectionTab = { value: ScoreSectionKey; label: string; icon: string; empty: string };
 
-const userProfile = useUserProfile();
+const sectionTabs: SectionTab[] = [
+  { value: 'identity', label: 'Identity verification', icon: 'bi-person-check', empty: 'No verified identity checks yet.' },
+  { value: 'education', label: 'Education', icon: 'bi-mortarboard', empty: 'No education records yet. Add one from your profile.' },
+  { value: 'experience', label: 'Experience', icon: 'bi-briefcase', empty: 'No work experience yet. Add one from your profile.' },
+  { value: 'formal_recognition', label: 'Formal Recognition', icon: 'bi-award', empty: 'No verified awards or professional registrations yet.' },
+  { value: 'daily_questions', label: 'Daily Questions', icon: 'bi-question-circle', empty: 'You have not answered any daily questions yet.' },
+  { value: 'exams', label: 'Exams', icon: 'bi-journal-check', empty: 'You have not completed any exams yet.' },
+  { value: 'others', label: 'Others', icon: 'bi-shield-check', empty: 'Nothing to show here.' },
+];
+
+const tabs: { value: string; label: string; tooltip?: string }[] = [
+  { value: 'lci', label: 'LCI', tooltip: 'Life Competency Index' },
+  ...sectionTabs,
+];
+
+const route = useRoute();
 const router = useRouter();
+const userProfile = useUserProfile();
 
-const scores = ref({
-  education:[{
-    'id':'',
-    'degree':'',
-    'category':'',
-    'calculated_score':0
-  }],
-  experience:[{
-    'id':'',
-    'company':'',
-    'position':'',
-    'calculated_score':0
-  }],
-  daily_questions:[],
-  totalScore:0
-});
+// The active tab lives in ?tab= so a refresh or shared link reopens the same tab.
+const initialTab = String(route.query.tab ?? '');
+const activeTab = ref(tabs.some((tab) => tab.value === initialTab) ? initialTab : 'lci');
 
-const getScores = async () => {
-    let result = await userProfile.getScores();
-    if(result.data){
-        scores.value = result.data;
-        console.log(scores.value)
-    }
+const selectTab = (value: string | number) => {
+  activeTab.value = String(value);
+  router.replace({ query: { ...route.query, tab: activeTab.value === 'lci' ? undefined : activeTab.value } });
+};
+
+const scores = ref<ScoreDetails | null>(null);
+const scoresLoading = ref(true);
+const scoresError = ref('');
+
+const loadScores = async () => {
+  scoresLoading.value = true;
+  scoresError.value = '';
+  const result = await userProfile.getScores();
+  if (result?.data) {
+    scores.value = result.data;
+  } else {
+    scoresError.value = 'Your score history could not be loaded.';
+  }
+  scoresLoading.value = false;
 };
 
 const lci = ref<LciSummary | null>(null);
@@ -256,32 +181,61 @@ const lciLoading = ref(true);
 const lciError = ref('');
 
 const loadLci = async () => {
-    lciLoading.value = true;
-    lciError.value = '';
-    try {
-        lci.value = await refreshLci();
-    } catch {
-        lciError.value = 'Your LCI could not be loaded.';
-    } finally {
-        lciLoading.value = false;
-    }
+  lciLoading.value = true;
+  lciError.value = '';
+  try {
+    lci.value = await refreshLci();
+  } catch {
+    lciError.value = 'Your LCI could not be loaded.';
+  } finally {
+    lciLoading.value = false;
+  }
 };
 
 const formatScore = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
 
+const formatPoints = (value: number) => `${value >= 0 ? '+' : ''}${formatScore(value)}`;
+
+const pointsClass = (value: number) => (value > 0 ? 'positive' : value < 0 ? 'negative' : 'zero');
+
+const formatDate = (value: string | null) =>
+  value ? new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  incorrect: 'Incorrect',
+  expired: 'Expired',
+  'already credited': 'Already credited',
+};
+
+const statusLabel = (status: string) => STATUS_LABELS[status] ?? '';
+
+const sectionTotal = (key: ScoreSectionKey) =>
+  Math.round((scores.value?.[key] ?? []).reduce((sum, item) => sum + item.points, 0) * 100) / 100;
+
 const barWidth = (value: number) => {
-    const largest = Math.max(1, ...(lci.value?.breakdown ?? []).map((item) => Math.abs(item.score)));
-    return Math.round(Math.abs(value) / largest * 100);
+  const largest = Math.max(1, ...(lci.value?.breakdown ?? []).map((item) => Math.abs(item.score)));
+  return Math.round(Math.abs(value) / largest * 100);
 };
 
 onMounted(() => {
-    getScores();
-    loadLci();
+  loadScores();
+  loadLci();
 });
 </script>
 
 <style scoped>
-.lci-skeleton { height: 220px; background: linear-gradient(90deg, var(--ds-surface-muted), var(--ds-border), var(--ds-surface-muted)); background-size: 200% 100%; border-radius: 14px; animation: lci-shimmer 1.4s ease-in-out infinite; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--ds-primary-hover); font-size: 14px; font-weight: 600; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+
+/* Active tab: rose-600 text and a 2px underline that slides between tabs. */
+.score-tabs :deep(.p-tab) { color: var(--ds-text-muted); font-weight: 500; border-bottom: 2px solid transparent; white-space: nowrap; transition: color .2s ease; }
+.score-tabs :deep(.p-tab:hover) { color: #e11d48; }
+.score-tabs :deep(.p-tab-active) { color: #e11d48; font-weight: 600; }
+.score-tabs :deep(.p-tablist-active-bar) { height: 2px; background: #e11d48; transition: left .25s ease, width .25s ease; }
+
+.lci-skeleton, .score-skeleton { height: 220px; background: linear-gradient(90deg, var(--ds-surface-muted), var(--ds-border), var(--ds-surface-muted)); background-size: 200% 100%; border-radius: 14px; animation: lci-shimmer 1.4s ease-in-out infinite; }
+.score-skeleton { height: 140px; }
 @keyframes lci-shimmer { to { background-position: -200% 0; } }
 
 .lci-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; color: var(--ds-danger-text); font-size: 13px; background: var(--ds-danger-soft); border: 1px solid var(--ds-danger-border); border-radius: 10px; }
@@ -311,12 +265,33 @@ onMounted(() => {
 .lci-total-row .lci-label, .lci-total-row .lci-value { color: var(--ds-text); font-weight: 800; }
 .lci-quote { margin: 16px 0 0; color: var(--ds-text-muted); font-size: 12px; font-style: italic; text-align: center; }
 
+.score-list { margin: 0; padding: 0; list-style: none; }
+.score-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: var(--ds-surface-subtle); border: 1px solid var(--ds-border); border-radius: 10px; }
+.score-item-text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.score-item-title { overflow: hidden; color: var(--ds-text); font-size: 14px; font-weight: 600; text-overflow: ellipsis; }
+.score-item-meta { color: var(--ds-text-muted); font-size: 12px; }
+.score-status { flex-shrink: 0; padding: 2px 8px; color: var(--ds-text-muted); font-size: 11px; font-weight: 600; background: var(--ds-surface-muted); border-radius: 999px; }
+
+.score-points { flex-shrink: 0; min-width: 72px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.score-points.positive { color: var(--ds-success-text); }
+.score-points.zero { color: var(--ds-text-subtle); }
+.score-points.negative { color: var(--ds-primary-hover); }
+
+.score-section-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 0; margin-top: 4px; color: var(--ds-text); font-size: 14px; font-weight: 800; border-top: 2px solid var(--ds-border); }
+
+.score-empty { padding: 32px 16px; color: var(--ds-text-muted); text-align: center; }
+.score-empty i { font-size: 28px; }
+.score-empty p { margin: 8px 0 0; font-size: 13px; }
+
 @media (max-width: 575px) {
   .lci-breakdown li { grid-template-columns: 1fr auto; }
   .lci-bar { grid-column: 1 / -1; grid-row: 2; }
+  .score-item { flex-wrap: wrap; }
+  .score-item-text { flex-basis: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lci-skeleton { animation: none; }
+  .lci-skeleton, .score-skeleton { animation: none; }
+  .score-tabs :deep(.p-tablist-active-bar) { transition: none; }
 }
 </style>

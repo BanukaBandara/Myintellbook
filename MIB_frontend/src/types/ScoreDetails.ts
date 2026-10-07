@@ -1,43 +1,22 @@
-export interface ScoreDetails {
-    daily_questions: Array<DailyQuestions>;
-    profile_update:{
-        Education:Array<education>
-        Experiance:Array<education>
-
-    };
-    exam:Array<DailyQuestions>;
-    totalScore:Number,
+/** One scored record on a Score page tab, as returned by GET /get-scores. */
+export interface ScoreItem {
+    id: number | string;
+    title: string | null;
+    subtitle: string | null;
+    date: string | null;
+    status: string;
+    points: number;
 }
 
-export interface DailyQuestions{
-    
-        id: string;
-        activity_id: string;
-        activity_type:string;
-        points:Number;
-        name?:string;
-        added_date?:string;
-        question_date?:string;
-        question?:string;
-        exam?:string;
-        score?:Number;
-        total_questions?:Number;
-        diffuculty_level?:string;
+export type ScoreSectionKey =
+    | 'identity'
+    | 'education'
+    | 'experience'
+    | 'formal_recognition'
+    | 'daily_questions'
+    | 'exams'
+    | 'others';
 
- 
-}
-
-export interface education{
-        id: string;
-        activity_id: string;
-        activity_type:string;
-        points:Number;
-        name?:string;
-        added_date?:string;
-        question_date?:string;
-        question?:string;
-        exam?:string;
-        score?:Number;
-        total_questions?:Number;
-        diffuculty_level?:string;
-}
+export type ScoreDetails = Record<ScoreSectionKey, ScoreItem[]> & {
+    totalScore: number;
+};

@@ -15,7 +15,7 @@
         </p>
 
         <p v-else-if="items.length === 0" class="empty-state">
-            Your answered questions will appear here after they are evaluated at midnight.
+            Your answers from previous days will appear here with their results.
         </p>
 
         <ol v-else class="timeline">
@@ -128,7 +128,7 @@ onMounted(() => {
 
     .history-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
     .eyebrow { margin: 0; color: var(--ds-text-muted); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
-    .total-points { color: var(--ds-danger-text); font-size: 12px; font-weight: 700; }
+    .total-points { color: var(--ds-success-text); font-size: 12px; font-weight: 700; }
 
     .empty-state { margin: 0; padding: 8px 0; color: var(--ds-text-muted); font-size: 13px; line-height: 1.5; }
     .link-button { padding: 0; margin-left: 6px; color: var(--ds-primary-hover); font-weight: 600; background: none; border: 0; }

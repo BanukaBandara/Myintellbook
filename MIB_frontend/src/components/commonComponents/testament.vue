@@ -7,31 +7,15 @@
     :badges="['Community shared', 'Contact details are optional']"
   >
     <section class="community" aria-labelledby="community-title">
-      <!-- Banner -->
-      <header class="legacy-banner">
-        <div class="banner-glow" aria-hidden="true"></div>
-        <div class="banner-copy">
-          <p class="banner-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i> Legacy &amp; resource notes</p>
-          <h2 id="community-title">Pass it on to someone who needs it</h2>
-          <p>Browse equipment, tools and know-how shared by community members, or post something that may help someone else.</p>
+      <!-- Action header -->
+      <header class="feed-header">
+        <div class="feed-header-copy">
+          <h2 id="community-title">Community Notes</h2>
+          <p>Share &amp; browse resources shared by community members</p>
         </div>
-        <button type="button" class="primary-button banner-cta" @click="showNoteForm = true">
-          <i class="bi bi-plus-lg" aria-hidden="true"></i> Create a note
+        <button type="button" class="create-button" @click="openCreateForm">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> Create a Note
         </button>
-        <dl class="banner-stats">
-          <div>
-            <dt>Shared notes</dt>
-            <dd>{{ notesLoading ? '—' : notes.length }}</dd>
-          </div>
-          <div>
-            <dt>Categories</dt>
-            <dd>{{ notesLoading ? '—' : categories.length }}</dd>
-          </div>
-          <div>
-            <dt>Contributors</dt>
-            <dd>{{ notesLoading ? '—' : contributorCount }}</dd>
-          </div>
-        </dl>
       </header>
 
       <Transition name="fade">
@@ -44,6 +28,22 @@
         <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> {{ notesError }}
         <button type="button" class="link-button" @click="loadNotes">Try again</button>
       </p>
+
+      <!-- Feed scope -->
+      <div class="scope-tabs" role="tablist" aria-label="Which notes to show">
+        <button
+          v-for="tab in SCOPE_TABS"
+          :key="tab.value"
+          type="button"
+          role="tab"
+          class="scope-tab"
+          :class="{ active: feedScope === tab.value }"
+          :aria-selected="feedScope === tab.value"
+          @click="setScope(tab.value)"
+        >
+          <i :class="['bi', tab.icon]" aria-hidden="true"></i> {{ tab.label }}
+        </button>
+      </div>
 
       <!-- Toolbar -->
       <div v-if="!notesLoading && notes.length > 0" class="feed-toolbar">
@@ -92,10 +92,16 @@
       <!-- Empty -->
       <div v-else-if="!notesError && notes.length === 0" class="notes-empty">
         <div class="empty-icon" aria-hidden="true"><i class="bi bi-box2-heart"></i></div>
-        <h3>No notes have been shared yet</h3>
-        <p>Be the first to post a resource. Unused equipment, a useful tool or hard-won knowledge could make someone's day.</p>
-        <button type="button" class="primary-button" @click="showNoteForm = true">
-          <i class="bi bi-plus-lg" aria-hidden="true"></i> Share the first note
+        <template v-if="feedScope === 'mine'">
+          <h3>You haven't shared any notes yet</h3>
+          <p>Notes you post appear here, where you can edit or remove them at any time.</p>
+        </template>
+        <template v-else>
+          <h3>No notes have been shared yet</h3>
+          <p>Be the first to post a resource. Unused equipment, a useful tool or hard-won knowledge could make someone's day.</p>
+        </template>
+        <button type="button" class="primary-button" @click="openCreateForm">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ feedScope === 'mine' ? 'Create a note' : 'Share the first note' }}
         </button>
       </div>
 
@@ -119,7 +125,17 @@
             <span class="note-category">
               <i :class="['bi', categoryIcon(note.category)]" aria-hidden="true"></i> {{ note.category }}
             </span>
-            <span class="note-status"><span class="status-dot" aria-hidden="true"></span> Available</span>
+            <div class="note-head-end">
+              <span class="note-status"><span class="status-dot" aria-hidden="true"></span> Available</span>
+              <div v-if="note.is_owner" class="owner-actions">
+                <button type="button" class="icon-button" :aria-label="`Edit ${note.title}`" title="Edit note" @click="openEditForm(note)">
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="icon-button danger" :aria-label="`Delete ${note.title}`" title="Delete note" @click="askDelete(note)">
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
           </div>
 
           <h3 class="note-title">{{ note.title }}</h3>
@@ -185,16 +201,16 @@
       </TransitionGroup>
     </section>
 
-    <!-- Create note modal -->
+    <!-- Create / edit note modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showNoteForm" class="note-modal-backdrop" role="presentation" @click.self="closeNoteForm">
           <section class="note-modal" role="dialog" aria-modal="true" aria-labelledby="note-form-title">
             <div class="note-modal-heading">
-              <div class="modal-icon" aria-hidden="true"><i class="bi bi-gift-fill"></i></div>
+              <div class="modal-icon" aria-hidden="true"><i :class="['bi', editingId === null ? 'bi-gift-fill' : 'bi-pencil-square']"></i></div>
               <div class="modal-heading-text">
                 <p class="form-eyebrow">Community sharing</p>
-                <h2 id="note-form-title">Create a testament note</h2>
+                <h2 id="note-form-title">{{ editingId === null ? 'Create a testament note' : 'Edit your testament note' }}</h2>
                 <p class="form-intro">Only the contact details you provide will be visible to other community members.</p>
               </div>
               <button type="button" class="modal-close" aria-label="Close form" :disabled="noteSaving" @click="closeNoteForm">
@@ -202,7 +218,7 @@
               </button>
             </div>
 
-            <form class="note-form" @submit.prevent="createNote">
+            <form class="note-form" @submit.prevent="saveNote">
               <label class="field">
                 <span class="field-label">Title</span>
                 <input v-model="noteForm.title" required maxlength="150" autocomplete="off" placeholder="e.g. Unused wheelchair in good condition" />
@@ -268,11 +284,38 @@
                 <button type="button" class="ghost-button" :disabled="noteSaving" @click="closeNoteForm">Cancel</button>
                 <button type="submit" class="primary-button" :disabled="noteSaving">
                   <span v-if="noteSaving" class="spinner" aria-hidden="true"></span>
-                  <i v-else class="bi bi-send-fill" aria-hidden="true"></i>
-                  {{ noteSaving ? 'Sharing…' : 'Share note' }}
+                  <i v-else :class="['bi', editingId === null ? 'bi-send-fill' : 'bi-check2']" aria-hidden="true"></i>
+                  <template v-if="editingId === null">{{ noteSaving ? 'Sharing…' : 'Share note' }}</template>
+                  <template v-else>{{ noteSaving ? 'Saving…' : 'Save changes' }}</template>
                 </button>
               </div>
             </form>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Delete confirmation -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="deleteTarget" class="note-modal-backdrop" role="presentation" @click.self="cancelDelete">
+          <section class="note-modal confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-desc">
+            <div class="confirm-body">
+              <div class="confirm-icon" aria-hidden="true"><i class="bi bi-trash3-fill"></i></div>
+              <h2 id="delete-title">Delete this note?</h2>
+              <p id="delete-desc">“{{ deleteTarget.title }}” will be removed from the community feed. This can't be undone.</p>
+              <p v-if="deleteError" class="alert error" role="alert">
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> {{ deleteError }}
+              </p>
+            </div>
+            <div class="note-form-actions confirm-actions">
+              <button type="button" class="ghost-button" :disabled="deleteBusy" @click="cancelDelete">Cancel</button>
+              <button type="button" class="primary-button danger-button" :disabled="deleteBusy" @click="confirmDelete">
+                <span v-if="deleteBusy" class="spinner" aria-hidden="true"></span>
+                <i v-else class="bi bi-trash3" aria-hidden="true"></i>
+                {{ deleteBusy ? 'Deleting…' : 'Delete note' }}
+              </button>
+            </div>
           </section>
         </div>
       </Transition>
@@ -308,16 +351,60 @@ function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(iso));
 }
 
+type FeedScope = 'all' | 'mine';
+const SCOPE_TABS: { value: FeedScope; label: string; icon: string }[] = [
+  { value: 'all', label: 'All Community Notes', icon: 'bi-people-fill' },
+  { value: 'mine', label: 'My Testament Notes', icon: 'bi-person-fill' },
+];
+const feedScope = ref<FeedScope>('all');
+let loadRequest = 0;
+
 async function loadNotes(): Promise<void> {
+  const request = ++loadRequest;
   notesError.value = '';
   notesLoading.value = true;
   try {
-    notes.value = await testamentApi.resourceNotes();
+    const loaded = feedScope.value === 'mine' ? await testamentApi.myResourceNotes() : await testamentApi.resourceNotes();
+    // Ignore a slower response for a tab the user has already left.
+    if (request === loadRequest) notes.value = loaded;
   } catch (error) {
-    notesError.value = errorMessage(error, 'Community notes could not be loaded.');
+    if (request === loadRequest) notesError.value = errorMessage(error, 'Community notes could not be loaded.');
   } finally {
-    notesLoading.value = false;
+    if (request === loadRequest) notesLoading.value = false;
   }
+}
+
+function setScope(scope: FeedScope): void {
+  if (feedScope.value === scope) return;
+  feedScope.value = scope;
+  void loadNotes();
+}
+
+/** Id of the note being edited, or null when the form creates a new note. */
+const editingId = ref<number | null>(null);
+
+function openCreateForm(): void {
+  // Coming out of an edit, start from a blank form rather than the edited note.
+  if (editingId.value !== null) {
+    editingId.value = null;
+    noteForm.value = emptyNote();
+  }
+  noteFormError.value = '';
+  showNoteForm.value = true;
+}
+
+function openEditForm(note: TestamentResourceNote): void {
+  editingId.value = note.id;
+  noteForm.value = {
+    title: note.title,
+    description: note.description,
+    category: note.category,
+    phone: note.phone,
+    email: note.email,
+    location: note.location,
+  };
+  noteFormError.value = '';
+  showNoteForm.value = true;
 }
 
 function closeNoteForm(): void {
@@ -326,7 +413,7 @@ function closeNoteForm(): void {
   noteFormError.value = '';
 }
 
-async function createNote(): Promise<void> {
+async function saveNote(): Promise<void> {
   noteSaving.value = true;
   noteFormError.value = '';
   noteNotice.value = '';
@@ -339,17 +426,57 @@ async function createNote(): Promise<void> {
     email: noteForm.value.email?.trim() || null,
     location: noteForm.value.location?.trim() || null,
   };
+  const id = editingId.value;
 
   try {
-    const created = await testamentApi.createResourceNote(input);
-    notes.value = [created, ...notes.value];
+    if (id === null) {
+      const created = await testamentApi.createResourceNote(input);
+      notes.value = [created, ...notes.value];
+      noteNotice.value = 'Your note is now available in the community feed.';
+    } else {
+      const updated = await testamentApi.updateResourceNote(id, input);
+      notes.value = notes.value.map((note) => (note.id === id ? updated : note));
+      editingId.value = null;
+      noteNotice.value = 'Your note has been updated.';
+    }
     noteForm.value = emptyNote();
     showNoteForm.value = false;
-    noteNotice.value = 'Your note is now available in the community feed.';
   } catch (error) {
-    noteFormError.value = errorMessage(error, 'Your note could not be shared.');
+    noteFormError.value = errorMessage(error, id === null ? 'Your note could not be shared.' : 'Your changes could not be saved.');
   } finally {
     noteSaving.value = false;
+  }
+}
+
+const deleteTarget = ref<TestamentResourceNote | null>(null);
+const deleteBusy = ref(false);
+const deleteError = ref('');
+
+function askDelete(note: TestamentResourceNote): void {
+  deleteError.value = '';
+  deleteTarget.value = note;
+}
+
+function cancelDelete(): void {
+  if (deleteBusy.value) return;
+  deleteTarget.value = null;
+}
+
+async function confirmDelete(): Promise<void> {
+  const target = deleteTarget.value;
+  if (!target) return;
+  deleteBusy.value = true;
+  deleteError.value = '';
+  noteNotice.value = '';
+  try {
+    await testamentApi.deleteResourceNote(target.id);
+    notes.value = notes.value.filter((note) => note.id !== target.id);
+    deleteTarget.value = null;
+    noteNotice.value = 'Your note has been deleted.';
+  } catch (error) {
+    deleteError.value = errorMessage(error, 'Your note could not be deleted.');
+  } finally {
+    deleteBusy.value = false;
   }
 }
 
@@ -365,8 +492,6 @@ const categories = computed(() => {
   for (const note of notes.value) counts.set(note.category, (counts.get(note.category) ?? 0) + 1);
   return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 });
-
-const contributorCount = computed(() => new Set(notes.value.map((note) => note.owner_name)).size);
 
 const filteredNotes = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
@@ -412,7 +537,9 @@ function categoryTone(category: string): (typeof TONES)[number] {
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && showNoteForm.value) closeNoteForm();
+  if (event.key !== 'Escape') return;
+  if (deleteTarget.value) cancelDelete();
+  else if (showNoteForm.value) closeNoteForm();
 }
 
 onMounted(() => {
@@ -429,53 +556,25 @@ onBeforeUnmount(() => {
 /* ---------- Shell ---------- */
 .community { padding: 20px; background: #fff; border: 1px solid var(--ds-border); border-radius: 18px; box-shadow: 0 1px 2px rgba(15, 23, 42, .05); }
 
-/* ---------- Banner ---------- */
-.legacy-banner {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px 20px;
-  align-items: start;
-  margin-bottom: 16px;
-  padding: 22px;
-  overflow: hidden;
-  color: #fff;
-  background: linear-gradient(135deg, var(--ds-primary) 0%, var(--ds-primary-hover) 55%, var(--ds-primary-active) 100%);
-  border-radius: 16px;
-  box-shadow: 0 12px 30px -12px rgba(190, 18, 60, .55);
-  isolation: isolate;
-}
-.banner-glow {
-  position: absolute;
-  inset: -40% -10% auto auto;
-  z-index: -1;
-  width: 320px;
-  height: 320px;
-  background: radial-gradient(circle, rgba(255, 255, 255, .28) 0, transparent 65%);
-  pointer-events: none;
-}
-.legacy-banner::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: radial-gradient(rgba(255, 255, 255, .14) 1px, transparent 1px);
-  background-size: 16px 16px;
-  mask-image: linear-gradient(120deg, transparent 35%, #000 100%);
-  pointer-events: none;
-}
-.banner-eyebrow { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; }
-.banner-copy h2 { margin: 0 0 6px; font-size: clamp(18px, 2.4vw, 22px); font-weight: 800; line-height: 1.25; }
-.banner-copy p:last-child { margin: 0; color: rgba(255, 255, 255, .86); font-size: 13px; line-height: 1.55; }
-.banner-cta.primary-button { color: var(--ds-primary-hover); background: #fff; box-shadow: 0 6px 18px rgba(15, 23, 42, .18); }
-.banner-cta.primary-button:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(15, 23, 42, .22); }
-.banner-stats { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 4px 0 0; }
-.banner-stats div { padding: 10px 12px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); border-radius: 12px; backdrop-filter: blur(6px); }
-.banner-stats dt { color: rgba(255, 255, 255, .78); font-size: 11px; font-weight: 600; }
-.banner-stats dd { margin: 2px 0 0; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+/* ---------- Action header ---------- */
+.feed-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin-bottom: 16px; }
+.feed-header-copy { min-width: 0; }
+.feed-header-copy h2 { margin: 0; color: var(--ds-text); font-size: 18px; font-weight: 700; line-height: 1.3; }
+.feed-header-copy p { margin: 2px 0 0; color: var(--ds-text-muted); font-size: 13px; line-height: 1.5; }
+/* bg-rose-600 hover:bg-rose-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-2 text-sm */
+.create-button { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; color: #fff; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; background: #e11d48; border: 0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, .1), 0 1px 2px -1px rgba(0, 0, 0, .1); transition: all .15s cubic-bezier(.4, 0, .2, 1); }
+.create-button:hover { background: #be123c; }
+.create-button:active { transform: scale(.95); }
+.create-button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
+
+/* ---------- Scope tabs ---------- */
+.scope-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-bottom: 12px; padding: 4px; background: var(--ds-surface-subtle); border: 1px solid var(--ds-border); border-radius: 14px; }
+.scope-tab { display: inline-flex; min-width: 0; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 12px; color: var(--ds-text-secondary); font-size: 13px; font-weight: 700; background: transparent; border: 0; border-radius: 10px; transition: background-color .2s ease, color .2s ease, box-shadow .2s ease; }
+.scope-tab:hover:not(.active) { color: var(--ds-primary-hover); }
+.scope-tab.active { color: var(--ds-primary-hover); background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
 
 /* ---------- Toolbar ---------- */
-.feed-toolbar { display: grid; gap: 10px; margin-bottom: 14px; }
+.feed-toolbar { display: grid; gap: 10px; margin-bottom: 24px; }
 .search-field { position: relative; display: block; margin: 0; }
 .search-field > i { position: absolute; top: 50%; left: 13px; color: var(--ds-text-subtle); font-size: 14px; transform: translateY(-50%); pointer-events: none; }
 .search-field input { width: 100%; min-height: 42px; padding: 10px 12px 10px 38px; color: var(--ds-text); font-size: 13px; background: var(--ds-surface-subtle); border: 1px solid var(--ds-border); border-radius: 12px; outline: none; transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; }
@@ -484,7 +583,7 @@ onBeforeUnmount(() => {
 .category-chips::-webkit-scrollbar { display: none; }
 .chip { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 6px 11px; color: var(--ds-text-secondary); font-size: 12px; font-weight: 650; white-space: nowrap; background: #fff; border: 1px solid var(--ds-border); border-radius: 999px; transition: all .18s ease; }
 .chip:hover { color: var(--ds-primary-hover); border-color: var(--ds-primary-200); }
-.chip.active { color: #fff; background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover)); border-color: transparent; box-shadow: 0 4px 10px rgba(225, 29, 72, .25); }
+.chip.active { color: #fff; background: var(--ds-primary); border-color: transparent; box-shadow: 0 4px 10px rgba(225, 29, 72, .25); }
 .chip-count { padding: 1px 6px; font-size: 10.5px; font-weight: 700; background: rgba(15, 23, 42, .06); border-radius: 999px; }
 .chip.active .chip-count { background: rgba(255, 255, 255, .22); }
 
@@ -519,6 +618,11 @@ onBeforeUnmount(() => {
 .status-dot { position: relative; width: 7px; height: 7px; background: var(--ds-success); border-radius: 50%; }
 .status-dot::after { content: ''; position: absolute; inset: 0; background: var(--ds-success); border-radius: 50%; animation: pulse 2s ease-out infinite; }
 @keyframes pulse { 0% { opacity: .7; transform: scale(1); } 100% { opacity: 0; transform: scale(2.6); } }
+.note-head-end { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.owner-actions { display: flex; gap: 2px; padding-left: 8px; border-left: 1px solid var(--ds-surface-muted); }
+.icon-button { display: grid; width: 28px; height: 28px; color: var(--ds-text-subtle); font-size: 13px; place-items: center; background: transparent; border: 0; border-radius: 8px; transition: color .18s ease, background-color .18s ease; }
+.icon-button:hover { color: var(--tone-strong); background: var(--tone-soft); }
+.icon-button.danger:hover { color: var(--ds-danger); background: var(--ds-danger-soft); }
 
 .note-title { margin: 12px 0 6px; color: var(--ds-text); font-size: 16px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
 .note-description { margin: 0; color: var(--ds-text-secondary); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -536,7 +640,7 @@ onBeforeUnmount(() => {
 .owner-label { color: var(--ds-text-subtle); font-size: 10.5px; font-weight: 600; }
 .owner-name { overflow: hidden; color: var(--ds-text); font-size: 12.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 
-.contact-button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; min-height: 36px; padding: 7px 12px; color: #fff; font-size: 12px; font-weight: 700; background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover)); border: 0; border-radius: 10px; box-shadow: 0 4px 12px rgba(225, 29, 72, .25); transition: transform .2s ease, box-shadow .2s ease; }
+.contact-button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; min-height: 36px; padding: 7px 12px; color: #fff; font-size: 12px; font-weight: 700; background: var(--ds-primary); border: 0; border-radius: 10px; box-shadow: 0 4px 12px rgba(225, 29, 72, .25); transition: transform .2s ease, box-shadow .2s ease; }
 .contact-button:hover { box-shadow: 0 8px 18px rgba(225, 29, 72, .32); transform: translateY(-1px); }
 .contact-button .chevron { font-size: 10px; transition: transform .25s ease; }
 .contact-button.open .chevron { transform: rotate(180deg); }
@@ -569,15 +673,17 @@ onBeforeUnmount(() => {
 @keyframes float { 50% { transform: translateY(-5px); } }
 
 /* ---------- Buttons & alerts ---------- */
-.primary-button, .ghost-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 16px; font-size: 13.5px; font-weight: 700; border-radius: 12px; transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease; }
-.primary-button { color: #fff; background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover)); border: 0; box-shadow: 0 4px 12px rgba(225, 29, 72, .22); }
-.primary-button:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(225, 29, 72, .3); transform: translateY(-1px); }
+.primary-button, .ghost-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 16px; font-size: 13.5px; font-weight: 500; border-radius: 12px; transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease; }
+.primary-button { color: #fff; background: var(--ds-primary); border: 0; box-shadow: var(--ds-shadow-sm); }
+.primary-button:hover:not(:disabled) { background: var(--ds-primary-hover); }
 .ghost-button { color: var(--ds-text-secondary); background: #fff; border: 1px solid var(--ds-border); }
 .ghost-button:hover:not(:disabled) { color: var(--ds-primary-hover); background: var(--ds-primary-soft); }
 .primary-button:disabled, .ghost-button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
 .primary-button:focus-visible, .ghost-button:focus-visible, .contact-button:focus-visible, .link-button:focus-visible,
 .modal-close:focus-visible, .chip:focus-visible, .read-more:focus-visible, .contact-row:focus-visible, .suggestion:focus-visible,
-.alert-dismiss:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
+.alert-dismiss:focus-visible, .scope-tab:focus-visible, .icon-button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
+.danger-button.primary-button { background: var(--ds-danger); box-shadow: 0 4px 12px rgba(220, 38, 38, .25); }
+.danger-button.primary-button:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(220, 38, 38, .32); }
 
 .alert { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; padding: 10px 12px; font-size: 13px; border-radius: 12px; }
 .alert.error { color: var(--ds-danger-text); background: var(--ds-danger-soft); border: 1px solid var(--ds-danger-border); }
@@ -593,7 +699,7 @@ onBeforeUnmount(() => {
 .note-modal-backdrop { position: fixed; inset: 0; z-index: 1050; display: grid; overflow-y: auto; padding: 20px; place-items: center; background: rgba(17, 24, 39, .55); backdrop-filter: blur(4px); }
 .note-modal { position: relative; width: min(100%, 580px); max-height: min(92vh, 860px); overflow-y: auto; padding: 0; background: #fff; border: 1px solid var(--ds-border); border-radius: 20px; box-shadow: 0 30px 80px -20px rgba(15, 23, 42, .45); }
 .note-modal-heading { position: relative; display: flex; align-items: flex-start; gap: 14px; padding: 22px 22px 18px; background: radial-gradient(circle at 100% 0%, var(--ds-primary-100) 0, transparent 55%), #fff; border-bottom: 1px solid var(--ds-surface-muted); }
-.modal-icon { display: grid; flex: 0 0 46px; width: 46px; height: 46px; color: #fff; font-size: 20px; place-items: center; background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover)); border-radius: 14px; box-shadow: 0 8px 18px -6px rgba(225, 29, 72, .55); }
+.modal-icon { display: grid; flex: 0 0 46px; width: 46px; height: 46px; color: #fff; font-size: 20px; place-items: center; background: var(--ds-primary); border-radius: 14px; box-shadow: 0 8px 18px -6px rgba(225, 29, 72, .55); }
 .modal-heading-text { flex: 1; min-width: 0; }
 .modal-heading-text h2 { margin: 2px 0 4px; color: var(--ds-text); font-size: 19px; font-weight: 800; }
 .form-eyebrow { margin: 0; color: var(--ds-primary); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
@@ -625,6 +731,14 @@ onBeforeUnmount(() => {
 .note-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .note-form-actions { position: sticky; bottom: -22px; display: flex; justify-content: flex-end; gap: 8px; margin: 0 -22px -22px; padding: 14px 22px; background: rgba(255, 255, 255, .94); border-top: 1px solid var(--ds-surface-muted); backdrop-filter: blur(6px); }
 
+.confirm-modal { width: min(100%, 400px); }
+.confirm-body { display: grid; justify-items: center; gap: 6px; padding: 24px 22px 18px; text-align: center; }
+.confirm-body h2 { margin: 6px 0 0; color: var(--ds-text); font-size: 18px; font-weight: 800; }
+.confirm-body p { margin: 0; color: var(--ds-text-muted); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.confirm-body .alert { margin-top: 8px; text-align: left; }
+.confirm-icon { display: grid; width: 48px; height: 48px; color: var(--ds-danger); font-size: 20px; place-items: center; background: var(--ds-danger-soft); border: 1px solid var(--ds-danger-border); border-radius: 14px; }
+.confirm-actions { position: static; margin: 0; }
+
 /* ---------- Transitions ---------- */
 .fade-enter-active, .fade-leave-active { transition: opacity .25s ease, transform .25s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-4px); }
@@ -643,11 +757,6 @@ onBeforeUnmount(() => {
 /* ---------- Responsive & motion ---------- */
 @media (max-width: 575px) {
   .community { padding: 14px 12px; }
-  .legacy-banner { grid-template-columns: 1fr; padding: 18px 16px; }
-  .banner-cta { width: 100%; }
-  .banner-stats { gap: 6px; }
-  .banner-stats div { padding: 8px 10px; }
-  .banner-stats dd { font-size: 17px; }
   .note-form-row { grid-template-columns: 1fr; }
   .note-modal-backdrop { align-items: end; padding: 0; }
   .note-modal { width: 100%; max-height: 94vh; border-radius: 20px 20px 0 0; }
@@ -655,6 +764,8 @@ onBeforeUnmount(() => {
   .note-form { padding: 16px 16px 18px; }
   .note-form-actions { bottom: -18px; margin: 0 -16px -18px; padding: 12px 16px; }
   .note-form-actions > * { flex: 1; }
+  .confirm-actions { margin: 0; }
+  .scope-tab { padding: 8px 6px; font-size: 12px; }
   .note-footer { flex-wrap: wrap; }
   .contact-button { justify-content: center; width: 100%; }
 }

@@ -405,10 +405,11 @@ onMounted(async () => {
 
 .form-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 18px; font-size: 13.5px; font-weight: 700; border-radius: 12px; transition: background .2s ease, color .2s ease; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; border-radius: 12px; transition: background .2s ease, color .2s ease; }
 .btn:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
-.btn.primary { color: #fff; background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover)); border: 0; box-shadow: 0 4px 12px rgba(225, 29, 72, .22); }
+.btn.primary { color: #fff; background: var(--ds-primary); border: 0; box-shadow: var(--ds-shadow-sm); }
 .btn.ghost { color: var(--ds-text-secondary); background: #fff; border: 1px solid var(--ds-border); }
+.btn.primary:hover:not(:disabled) { background: var(--ds-primary-hover); }
 .btn.ghost:hover:not(:disabled) { color: var(--ds-primary-hover); background: var(--ds-primary-soft); }
 .btn:disabled { cursor: not-allowed; opacity: .45; box-shadow: none; }
 .spinner { width: 14px; height: 14px; border: 2px solid #ffffff70; border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }

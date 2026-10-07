@@ -65,6 +65,7 @@ export type TestamentResourceNote = {
     status: 'active';
     created_at: string | null;
     owner_name: string;
+    is_owner: boolean;
 };
 
 export type TestamentResourceNoteInput = {
@@ -110,6 +111,17 @@ export const testamentApi = {
     async createResourceNote(input: TestamentResourceNoteInput): Promise<TestamentResourceNote> {
         const { data } = await instance.post('/testament/notes', input);
         return data.note;
+    },
+    async myResourceNotes(): Promise<TestamentResourceNote[]> {
+        const { data } = await instance.get('/testament/my-notes');
+        return data.notes;
+    },
+    async updateResourceNote(id: number, input: TestamentResourceNoteInput): Promise<TestamentResourceNote> {
+        const { data } = await instance.put(`/testament/notes/${id}`, input);
+        return data.note;
+    },
+    async deleteResourceNote(id: number): Promise<void> {
+        await instance.delete(`/testament/notes/${id}`);
     },
 };
 

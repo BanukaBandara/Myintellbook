@@ -145,30 +145,7 @@ class HipScoreCalculator
                     Schema::hasColumn('work_experiances', 'currently_working') ? 'currently_working' : null,
                 ])),
             ]) as $experience) {
-                $pointsPerYear = self::experiencePoints(
-                    $experience->positionType
-                        ?? $experience->position_type
-                        ?? $experience->title
-                        ?? null,
-                );
-                $startDateValue = $experience->starting_date ?? $experience->start_date ?? null;
-                if ($pointsPerYear === 0.0 || empty($startDateValue)) {
-                    continue;
-                }
-
-                $endDate = ($experience->currently_working ?? false) || empty($experience->end_date)
-                    ? Carbon::today()
-                    : Carbon::parse($experience->end_date);
-
-                if ($endDate !== null) {
-                    $startDate = Carbon::parse($startDateValue);
-                    if ($startDate->greaterThan($endDate)) {
-                        continue;
-                    }
-
-                    $years = $startDate->diffInYears($endDate);
-                    $buckets['experience'] += $pointsPerYear * $years;
-                }
+                $buckets['experience'] += self::experienceRecordPoints($experience);
             }
         }
 
@@ -182,23 +159,13 @@ class HipScoreCalculator
             $verifiedAchievementCategories = $user->achievements()
                 ->where('verification_status', 'verified')
                 ->get($achievementColumns)
-                ->map(function ($achievement): string {
-                    $category = self::normalize($achievement->category);
-
-                    return isset(self::ACHIEVEMENT_POINTS[$category]) || $achievement->title === null
-                        ? $category
-                        : self::normalize($achievement->title);
-                })
+                ->map(fn ($achievement): string => self::achievementKey($achievement))
                 ->unique()
                 ->values();
         }
 
         foreach ($verifiedAchievementCategories as $category) {
-            // Profile completion/verification is its own LCI bucket (PCM); the rest is formal recognition.
-            $bucket = str_contains($category, 'profile completion') || str_contains($category, 'profile verification')
-                ? 'pcm'
-                : 'formal_recognition';
-            $buckets[$bucket] += self::achievementPoints($category);
+            $buckets[self::achievementBucket($category)] += self::achievementPoints($category);
         }
 
         $hasAchievementRegisteredProfessional = $verifiedAchievementCategories
@@ -219,11 +186,66 @@ class HipScoreCalculator
             foreach ($user->tribunalReports()
                 ->where('status', 'confirmed')
                 ->pluck('violation_type') as $violationType) {
-                $buckets['others_legal'] += self::PENALTY_POINTS[self::normalize($violationType)] ?? 0.0;
+                $buckets['others_legal'] += self::penaltyPoints($violationType);
             }
         }
 
         return $buckets;
+    }
+
+    /**
+     * Points one work experience record earns: the position's yearly rate times full years served.
+     */
+    public static function experienceRecordPoints(object $experience): float
+    {
+        $pointsPerYear = self::experiencePoints(
+            $experience->positionType
+                ?? $experience->position_type
+                ?? $experience->title
+                ?? null,
+        );
+        $startDateValue = $experience->starting_date ?? $experience->start_date ?? null;
+        if ($pointsPerYear === 0.0 || empty($startDateValue)) {
+            return 0.0;
+        }
+
+        $endDate = ($experience->currently_working ?? false) || empty($experience->end_date)
+            ? Carbon::today()
+            : Carbon::parse($experience->end_date);
+
+        $startDate = Carbon::parse($startDateValue);
+        if ($startDate->greaterThan($endDate)) {
+            return 0.0;
+        }
+
+        return $pointsPerYear * $startDate->diffInYears($endDate);
+    }
+
+    /**
+     * The scoring key for an achievement. Achievements sharing a key are only credited once.
+     */
+    public static function achievementKey(object $achievement): string
+    {
+        $category = self::normalize($achievement->category);
+
+        return isset(self::ACHIEVEMENT_POINTS[$category]) || ($achievement->title ?? null) === null
+            ? $category
+            : self::normalize($achievement->title);
+    }
+
+    /**
+     * Profile completion/verification is its own LCI bucket (PCM); the rest is formal recognition.
+     */
+    public static function achievementBucket(string $key): string
+    {
+        return str_contains($key, 'profile completion') || str_contains($key, 'profile verification')
+            ? 'pcm'
+            : 'formal_recognition';
+    }
+
+    public static function penaltyPoints(?string $violationType): float
+    {
+        return self::PENALTY_POINTS[self::normalize($violationType)] ?? 0.0;
     }
 
     public static function calculate(User $user): float
@@ -252,7 +274,7 @@ class HipScoreCalculator
         };
     }
 
-    private static function educationPoints(?string $category, ?string $degree): float
+    public static function educationPoints(?string $category, ?string $degree): float
     {
         $labels = array_filter([
             strtolower(trim((string) $category)),
@@ -303,7 +325,7 @@ class HipScoreCalculator
         return 0.0;
     }
 
-    private static function achievementPoints(string $category): float
+    public static function achievementPoints(string $category): float
     {
         if (isset(self::ACHIEVEMENT_POINTS[$category])) {
             return self::ACHIEVEMENT_POINTS[$category];

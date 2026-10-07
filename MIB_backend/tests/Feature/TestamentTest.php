@@ -236,6 +236,62 @@ class TestamentTest extends TestCase
             ->assertJsonValidationErrors('email');
     }
 
+    #[Test]
+    public function my_notes_returns_only_the_members_own_notes_and_feed_flags_ownership(): void
+    {
+        $mine = $this->createNote($this->testatorHeaders, 'Mine');
+        $this->createNote($this->witnessHeaders, 'Theirs');
+
+        $this->withHeaders($this->testatorHeaders)->getJson('/api/testament/my-notes')
+            ->assertOk()
+            ->assertJsonCount(1, 'notes')
+            ->assertJsonPath('notes.0.id', $mine)
+            ->assertJsonPath('notes.0.is_owner', true);
+
+        $feed = $this->withHeaders($this->testatorHeaders)->getJson('/api/testament/notes')->assertOk()->json('notes');
+        $this->assertEquals(['Mine' => true, 'Theirs' => false],array_column($feed, 'is_owner', 'title'));
+    }
+
+    #[Test]
+    public function owners_can_update_and_delete_their_notes_but_others_cannot(): void
+    {
+        $id = $this->createNote($this->testatorHeaders, 'Original');
+        $update = [
+            'title' => '  Updated title ',
+            'description' => 'Updated description.',
+            'category' => 'Tools',
+            'phone' => null,
+            'email' => 'new@example.com',
+            'location' => 'Kandy',
+        ];
+
+        $this->withHeaders($this->witnessHeaders)->putJson("/api/testament/notes/{$id}", $update)->assertForbidden();
+        $this->withHeaders($this->witnessHeaders)->deleteJson("/api/testament/notes/{$id}")->assertForbidden();
+        $this->withHeaders($this->testatorHeaders)->putJson("/api/testament/notes/{$id}", ['email' => 'bad'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['title', 'description', 'category', 'email']);
+
+        $this->withHeaders($this->testatorHeaders)->putJson("/api/testament/notes/{$id}", $update)
+            ->assertOk()
+            ->assertJsonPath('note.title', 'Updated title')
+            ->assertJsonPath('note.email', 'new@example.com')
+            ->assertJsonPath('note.location', 'Kandy')
+            ->assertJsonPath('note.is_owner', true);
+
+        $this->withHeaders($this->testatorHeaders)->deleteJson("/api/testament/notes/{$id}")->assertOk();
+        $this->assertDatabaseMissing('testament_resource_notes', ['id' => $id]);
+        $this->withHeaders($this->testatorHeaders)->deleteJson("/api/testament/notes/{$id}")->assertNotFound();
+    }
+
+    private function createNote(array $headers, string $title): int
+    {
+        return $this->withHeaders($headers)->postJson('/api/testament/notes', [
+            'title' => $title,
+            'description' => 'A note.',
+            'category' => 'Equipment',
+        ])->assertCreated()->json('note.id');
+    }
+
     private function completeDraft(): array
     {
         return [

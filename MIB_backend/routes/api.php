@@ -72,6 +72,9 @@ Route::middleware('auth.token')->group(function () {
         Route::get('/notes', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
         Route::get('/public-feed', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
         Route::post('/notes', [\App\Http\Controllers\TestamentController::class, 'createResourceNote']);
+        Route::get('/my-notes', [\App\Http\Controllers\TestamentController::class, 'myNotes']);
+        Route::put('/notes/{id}', [\App\Http\Controllers\TestamentController::class, 'updateResourceNote'])->whereNumber('id');
+        Route::delete('/notes/{id}', [\App\Http\Controllers\TestamentController::class, 'deleteResourceNote'])->whereNumber('id');
         Route::get('/', [\App\Http\Controllers\TestamentController::class, 'show']);
         Route::put('/', [\App\Http\Controllers\TestamentController::class, 'save']);
         Route::post('/submit', [\App\Http\Controllers\TestamentController::class, 'submit']);

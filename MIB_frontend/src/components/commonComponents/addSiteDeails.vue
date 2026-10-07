@@ -135,15 +135,15 @@ const route = useRoute();
 
 .nav-cta.primary {
   color: #fff;
-  background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover));
+  background: var(--ds-primary);
   box-shadow: 0 4px 12px rgba(225, 29, 72, .25);
 }
 
-.nav-cta.primary:hover { color: #fff; box-shadow: 0 6px 16px rgba(225, 29, 72, .32); transform: translateY(-1px); }
+.nav-cta.primary:hover { color: #fff; background: var(--ds-primary-hover); box-shadow: 0 6px 16px rgba(225, 29, 72, .32); transform: translateY(-1px); }
 .nav-cta.primary.active { box-shadow: 0 0 0 3px var(--ds-primary-100), 0 4px 12px rgba(225, 29, 72, .25); }
 
-.nav-cta.secondary { color: var(--ds-primary-hover); background: #fff; border: 1px solid var(--ds-primary-200); }
-.nav-cta.secondary:hover { color: var(--ds-primary); background: var(--ds-primary-soft); }
+.nav-cta.secondary { color: var(--ds-primary); background: var(--ds-primary-soft); border: 1px solid transparent; }
+.nav-cta.secondary:hover { color: var(--ds-primary); background: var(--ds-primary-100); }
 .nav-cta.secondary.active { background: var(--ds-primary-soft); border-color: var(--ds-primary); }
 
 @media (prefers-reduced-motion: reduce) {

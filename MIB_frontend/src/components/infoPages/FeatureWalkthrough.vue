@@ -147,7 +147,7 @@ async function go(index: number): Promise<void> {
   padding: 9px 16px;
   overflow: hidden;
   font-size: 13.5px;
-  font-weight: 700;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
   border-radius: 12px;
@@ -155,8 +155,9 @@ async function go(index: number): Promise<void> {
 }
 
 .nav-button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
-.nav-button.primary { color: #fff; background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover)); border: 0; box-shadow: 0 4px 12px rgba(225, 29, 72, .22); }
+.nav-button.primary { color: #fff; background: var(--ds-primary); border: 0; box-shadow: var(--ds-shadow-sm); }
 .nav-button.ghost { color: var(--ds-text-secondary); background: #fff; border: 1px solid var(--ds-border); }
+.nav-button.primary:hover:not(:disabled) { background: var(--ds-primary-hover); }
 .nav-button.ghost:hover:not(:disabled) { color: var(--ds-primary-hover); background: var(--ds-primary-soft); }
 .nav-button:disabled { cursor: not-allowed; opacity: .45; }
 

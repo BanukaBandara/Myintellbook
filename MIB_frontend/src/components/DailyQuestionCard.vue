@@ -27,8 +27,12 @@
                 <p class="eyebrow centered">DAILY PRACTICE COMPLETE</p>
                 <h2>Your reflection is recorded.</h2>
                 <p v-if="submitError" class="error-alert" role="alert">{{ submitError }}</p>
+                <span v-if="isCorrect !== null" class="result-badge" :class="isCorrect ? 'correct' : 'incorrect'">
+                    <i :class="['bi', isCorrect ? 'bi-check-circle-fill' : 'bi-x-circle-fill']" aria-hidden="true"></i>
+                    {{ isCorrect ? 'Correct' : 'Incorrect' }}
+                </span>
                 <p class="completion-copy">You earned</p>
-                <p class="score-value">{{ scoreLabel }} <span>HIP points</span></p>
+                <p class="score-value">+{{ scoreLabel }} <span>HIP points</span></p>
                 <span class="ethics-badge"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Integrity in action</span>
                 <div class="countdown">
                     <span>NEXT QUESTION IN</span>
@@ -57,7 +61,6 @@
                         >
                         <span class="radio-mark" aria-hidden="true"></span>
                         <span class="option-text">{{ option }}</span>
-                        <span v-if="savedIndex === index" class="saved-tag">Saved</span>
                     </label>
                 </fieldset>
 
@@ -66,15 +69,10 @@
                     {{ submitError }}
                 </p>
 
-                <p v-else-if="savedMessage" class="saved-alert" role="status">
-                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                    {{ savedMessage }}
-                </p>
-
                 <div class="deadline-note">
                     <i class="bi bi-clock" aria-hidden="true"></i>
                     <span>
-                        You can change your answer until Midnight (12:00 AM). Points will be evaluated at midnight.
+                        Your answer is scored as soon as you submit it and can't be changed afterwards.
                         <strong>{{ countdownLabel }} left</strong>
                     </span>
                 </div>
@@ -88,7 +86,7 @@
                         @click="submitAnswer"
                     >
                         <span v-if="submitting" class="button-spinner" aria-hidden="true"></span>
-                        {{ submitting ? 'Saving' : hasAnswered ? 'Update answer' : 'Submit answer' }}
+                        {{ submitting ? 'Submitting' : 'Submit answer' }}
                     </button>
                 </footer>
             </div>
@@ -114,13 +112,16 @@ const question = ref<DailyQuestion | null>(null);
 const hasAnswered = ref(false);
 const canUpdate = ref(true);
 const userScoreToday = ref<number | null>(null);
+const isCorrect = ref<boolean | null>(null);
 const selectedIndex = ref<number | null>(null);
-const savedIndex = ref<number | null>(null);
 const loading = ref(true);
 const submitting = ref(false);
 const loadError = ref('');
 const submitError = ref('');
-const savedMessage = ref('');
+
+function toPoints(value: unknown): number | null {
+    return value !== null && value !== undefined && Number.isFinite(Number(value)) ? Number(value) : null;
+}
 const now = ref(Date.now());
 let currentDayKey = new Date().toDateString();
 let countdownTimer: ReturnType<typeof setInterval> | undefined;
@@ -158,19 +159,13 @@ async function loadQuestion(): Promise<void> {
         };
         hasAnswered.value = data.has_answered === true;
         canUpdate.value = data.can_update !== false;
-        userScoreToday.value = hasAnswered.value && data.user_score_today !== null
-            && Number.isFinite(Number(data.user_score_today))
-            ? Number(data.user_score_today)
-            : null;
+        userScoreToday.value = hasAnswered.value ? toPoints(data.user_score_today) : null;
+        isCorrect.value = typeof data.is_correct === 'boolean' ? data.is_correct : null;
         const saved = Number(data.selected_option_index);
-        savedIndex.value = hasAnswered.value && data.selected_option_index !== null
+        selectedIndex.value = hasAnswered.value && data.selected_option_index !== null
             && Number.isInteger(saved) && saved >= 0 && saved < payload.options.length
             ? saved
             : null;
-        selectedIndex.value = savedIndex.value;
-        savedMessage.value = hasAnswered.value && canUpdate.value
-            ? 'Your selection is saved. You can change it anytime before midnight.'
-            : '';
     } catch {
         question.value = null;
         loadError.value = 'Please try again in a moment.';
@@ -186,23 +181,24 @@ async function submitAnswer(): Promise<void> {
 
     submitting.value = true;
     submitError.value = '';
-    savedMessage.value = '';
     try {
         const { data } = await instance.post('/daily-questions/answer', {
             question_id: question.value.id,
             selected_option_index: index,
         });
-        if (data?.status !== 'success' || data.answer_status !== 'pending_evaluation') {
+        if (data?.status !== 'success' || data.answer_status !== 'evaluated') {
             throw new Error('Answer submission was not confirmed');
         }
         hasAnswered.value = true;
-        savedIndex.value = index;
-        savedMessage.value = 'Your selection is saved. You can change it anytime before midnight.';
+        canUpdate.value = false;
+        userScoreToday.value = toPoints(data.points);
+        isCorrect.value = typeof data.is_correct === 'boolean' ? data.is_correct : null;
     } catch (error) {
         const status = (error as AxiosError).response?.status;
         if (status === 409) {
+            // Either already answered (e.g. in another tab) or the day rolled over; reload shows which.
             await loadQuestion();
-            submitError.value = 'Today’s question is closed. A new question is now available.';
+            if (canUpdate.value) submitError.value = 'Today’s question is closed. A new question is now available.';
         } else if (status === 422) {
             submitError.value = 'That selection could not be validated. Choose an option and try again.';
         } else {
@@ -362,11 +358,12 @@ onBeforeUnmount(() => {
     .button-spinner { width: 14px; height: 14px; border: 2px solid #ffffff70; border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
 
     .error-alert { display: flex; gap: 8px; margin: 15px 0 0; padding: 11px 12px; color: var(--ds-danger-text); font-size: 12px; line-height: 1.4; background: var(--ds-danger-soft); border: 1px solid var(--ds-danger-border); border-radius: 8px; }
-    .saved-alert { display: flex; gap: 8px; margin: 15px 0 0; padding: 11px 12px; color: var(--ds-success-text); font-size: 12px; line-height: 1.4; background: var(--ds-success-soft); border: 1px solid var(--ds-success-border); border-radius: 8px; }
     .deadline-note { display: flex; gap: 8px; margin-top: 14px; color: var(--ds-text-muted); font-size: 12px; line-height: 1.5; }
     .deadline-note i { color: var(--ds-text-subtle); }
     .deadline-note strong { margin-left: 4px; color: var(--ds-text-secondary); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .saved-tag { margin-left: auto; padding: 2px 8px; color: var(--ds-success-text); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--ds-success-soft); border: 1px solid var(--ds-success-border); border-radius: 999px; }
+    .result-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 4px 12px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; }
+    .result-badge.correct { color: var(--ds-success-text); background: var(--ds-success-soft); border: 1px solid var(--ds-success-border); }
+    .result-badge.incorrect { color: var(--ds-danger-text); background: var(--ds-danger-soft); border: 1px solid var(--ds-danger-border); }
     .completion-state, .message-state { padding-top: 24px; text-align: center; }
     .state-icon { display: grid; width: 48px; height: 48px; margin: 2px auto 16px; color: var(--ds-success-text); font-size: 21px; place-items: center; background: var(--ds-success-soft); border: 1px solid var(--ds-success-border); border-radius: 50%; }
     .completion-copy { margin: 20px 0 0; }

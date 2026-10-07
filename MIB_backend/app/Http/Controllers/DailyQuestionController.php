@@ -30,6 +30,7 @@ class DailyQuestionController extends Controller
         }
 
         $user = User::query()->findOrFail($request->user()->getAuthIdentifier());
+        $this->evaluateStaleAnswers($user->id);
         $answer = UserAnswer::query()
             ->where('user_id', $user->id)
             ->where('question_id', $question->id)
@@ -58,7 +59,7 @@ class DailyQuestionController extends Controller
             'selected_option_index' => $answer?->selected_option_index ?? $legacyAnswer?->selected_option_index,
             'can_update' => !$isEvaluated,
             'user_score_today' => $userScoreToday,
-            'evaluates_at' => today()->addDay()->toIso8601String(),
+            'is_correct' => $isEvaluated ? ($answer?->is_correct ?? ($legacyAnswer ? $legacyAnswer->answer_status === 'correct' : null)) : null,
             'question' => [
                 'id' => $question->id,
                 'category' => $question->category ?: $question->profession?->name,
@@ -110,8 +111,7 @@ class DailyQuestionController extends Controller
                     return ['status' => 'closed'];
                 }
 
-                // Points are awarded by the midnight evaluation (app:evaluate-daily-questions).
-                UserAnswer::query()->updateOrCreate(
+                $answer = UserAnswer::query()->updateOrCreate(
                     ['user_id' => $user->id, 'question_id' => $question->id],
                     [
                         'selected_option_index' => $index,
@@ -121,7 +121,15 @@ class DailyQuestionController extends Controller
                     ],
                 );
 
-                return ['status' => 'saved', 'updated' => $existing !== null, 'index' => $index];
+                // Scored on submission: awards the points and recalculates the HIP score in this transaction.
+                DailyAnswerEvaluator::evaluate($answer->id);
+
+                return [
+                    'status' => 'saved',
+                    'index' => $index,
+                    'answer' => $answer->fresh(),
+                    'user' => $user->fresh(),
+                ];
             }, 3);
 
             if ($result['status'] === 'missing_question') {
@@ -136,15 +144,19 @@ class DailyQuestionController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Selected option is invalid.'], 422);
             }
 
+            $answer = $result['answer'];
+
             return response()->json([
                 'success' => true,
                 'status' => 'success',
                 'code' => 200,
-                'updated' => $result['updated'],
-                'answer_status' => UserAnswer::STATUS_PENDING,
+                'answer_status' => $answer->status,
                 'selected_option_index' => $result['index'],
-                'evaluates_at' => today()->addDay()->toIso8601String(),
-                'message' => 'Choice saved successfully',
+                'is_correct' => $answer->is_correct,
+                'points' => $answer->score,
+                'total_points' => (float) $result['user']->total_points,
+                'hip_score' => (float) $result['user']->hip_score,
+                'message' => $answer->is_correct ? 'Correct answer — points awarded.' : 'Answer recorded.',
             ], 200);
         } catch (\Throwable $e) {
             Log::error('DailyQuestionController @submitDailyAnswer: '.$e->getMessage());
@@ -159,6 +171,7 @@ class DailyQuestionController extends Controller
     public function history(Request $request): JsonResponse
     {
         $userId = $request->user()->getAuthIdentifier();
+        $this->evaluateStaleAnswers((int) $userId);
 
         $answers = UserAnswer::query()
             ->with('question:id,question,options,category,scheduled_date,profession_id', 'question.profession:id,name')
@@ -194,6 +207,25 @@ class DailyQuestionController extends Controller
             'status' => 'success',
             'data' => $items->values(),
         ]);
+    }
+
+    /**
+     * Answers are scored on submission now; this scores any left pending from before that change
+     * (or from a failed evaluation) so they don't stay stuck when the scheduler isn't running.
+     */
+    private function evaluateStaleAnswers(int $userId): void
+    {
+        UserAnswer::query()
+            ->where('user_id', $userId)
+            ->where('status', UserAnswer::STATUS_PENDING)
+            ->pluck('id')
+            ->each(function (int $id): void {
+                try {
+                    DailyAnswerEvaluator::evaluate($id);
+                } catch (\Throwable $e) {
+                    Log::error("DailyQuestionController: evaluating answer {$id} failed: {$e->getMessage()}");
+                }
+            });
     }
 
     private function resolveTodayQuestion(): ?Question
