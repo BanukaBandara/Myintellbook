@@ -51,7 +51,7 @@ class DailyAnswerSecurityTest extends TestCase
     }
 
     #[Test]
-    public function answers_are_scored_on_submission_and_cannot_be_changed_afterwards(): void
+    public function answers_are_scored_only_at_midnight_and_are_final_afterwards(): void
     {
         $question = $this->question(today());
 
@@ -64,24 +64,36 @@ class DailyAnswerSecurityTest extends TestCase
             ])
             ->assertUnprocessable();
 
+        // Submitting records the choice but awards nothing yet.
         $this->withHeaders($this->headers)
             ->postJson('/api/daily-questions/answer', [
                 'question_id' => $question->id,
                 'selected_option_index' => 1,
             ])
             ->assertOk()
-            ->assertJsonPath('answer_status', 'evaluated')
-            ->assertJsonPath('is_correct', true)
-            ->assertJsonPath('points', 5)
-            ->assertJsonPath('total_points', 5)
-            ->assertJsonPath('hip_score', 5);
+            ->assertJsonPath('answer_status', UserAnswer::STATUS_PENDING)
+            ->assertJsonPath('is_correct', null)
+            ->assertJsonPath('points', null);
 
         $this->assertDatabaseHas('user_answers', [
             'user_id' => $this->user->id,
             'question_id' => $question->id,
             'selected_option_index' => 1,
+            'status' => UserAnswer::STATUS_PENDING,
+        ]);
+        $this->assertDatabaseMissing('answers', ['user_id' => $this->user->id, 'question_id' => $question->id]);
+        $this->assertSame(0.0, (float) $this->user->fresh()->total_points);
+        $this->assertSame(0.0, (float) $this->user->fresh()->hip_score);
+
+        // Midnight: the final choice is scored once.
+        $this->travelTo(now()->addDay()->setTime(0, 0, 5));
+        $this->artisan('app:evaluate-daily-questions')->assertSuccessful();
+
+        $this->assertDatabaseHas('user_answers', [
+            'user_id' => $this->user->id,
+            'question_id' => $question->id,
             'score' => 5,
-            'status' => 'evaluated',
+            'status' => UserAnswer::STATUS_EVALUATED,
             'is_correct' => true,
         ]);
         $this->assertDatabaseHas('answers', [
@@ -90,8 +102,9 @@ class DailyAnswerSecurityTest extends TestCase
             'answer_status' => 'correct',
             'score' => 5,
         ]);
+        $this->assertDatabaseHas('users', ['id' => $this->user->id, 'total_points' => 5, 'hip_score' => 5]);
 
-        // The answer is final once scored.
+        // The answer is final once evaluated.
         $this->withHeaders($this->headers)
             ->postJson('/api/daily-questions/answer', [
                 'question_id' => $question->id,
@@ -99,17 +112,7 @@ class DailyAnswerSecurityTest extends TestCase
             ])
             ->assertStatus(409);
 
-        $this->withHeaders($this->headers)
-            ->getJson('/api/daily-question/today')
-            ->assertOk()
-            ->assertJsonPath('has_answered', true)
-            ->assertJsonPath('answer_status', 'evaluated')
-            ->assertJsonPath('can_update', false)
-            ->assertJsonPath('user_score_today', 5)
-            ->assertJsonPath('is_correct', true);
-
-        // The midnight command must not award the same answer twice.
-        $this->travelTo(now()->addDay()->setTime(0, 0, 5));
+        // A second run must not award the same answer twice.
         $this->artisan('app:evaluate-daily-questions')->assertSuccessful();
         $this->assertDatabaseHas('users', ['id' => $this->user->id, 'total_points' => 5, 'hip_score' => 5]);
 
@@ -134,10 +137,15 @@ class DailyAnswerSecurityTest extends TestCase
                 'selected_option_index' => 0,
             ])
             ->assertOk()
-            ->assertJsonPath('answer_status', 'evaluated')
-            ->assertJsonPath('is_correct', false)
-            ->assertJsonPath('points', 2)
-            ->assertJsonPath('hip_score', 2);
+            ->assertJsonPath('answer_status', UserAnswer::STATUS_PENDING);
+
+        $this->travelTo(now()->addDay()->setTime(0, 0, 5));
+        $this->artisan('app:evaluate-daily-questions')->assertSuccessful();
+
+        $answer = UserAnswer::query()->where('user_id', $this->user->id)->sole();
+        $this->assertFalse($answer->is_correct);
+        $this->assertSame(2.0, $answer->score);
+        $this->assertSame(2.0, (float) $this->user->fresh()->hip_score);
     }
 
     #[Test]

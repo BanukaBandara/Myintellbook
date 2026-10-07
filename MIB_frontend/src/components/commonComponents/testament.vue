@@ -119,7 +119,6 @@
           v-for="note in filteredNotes"
           :key="note.id"
           class="note-card"
-          :class="`tone-${categoryTone(note.category)}`"
         >
           <div class="note-card-head">
             <span class="note-category">
@@ -528,14 +527,6 @@ function categoryIcon(category: string): string {
   return CATEGORY_ICONS.find(([pattern]) => pattern.test(category))?.[1] ?? 'bi-tag-fill';
 }
 
-const TONES = ['rose', 'amber', 'emerald', 'sky', 'violet'] as const;
-
-function categoryTone(category: string): (typeof TONES)[number] {
-  let hash = 0;
-  for (const char of category.toLowerCase()) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return TONES[hash % TONES.length];
-}
-
 function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return;
   if (deleteTarget.value) cancelDelete();
@@ -589,53 +580,48 @@ onBeforeUnmount(() => {
 
 /* ---------- Grid & cards ---------- */
 .notes-grid { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+/* bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all p-5 */
 .note-card {
-  --tone: var(--ds-primary);
-  --tone-strong: var(--ds-primary-hover);
-  --tone-soft: var(--ds-primary-soft);
-  --tone-border: var(--ds-primary-100);
   position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: 18px 16px 16px;
-  overflow: hidden;
+  padding: 20px;
   background: #fff;
-  border: 1px solid var(--ds-border);
+  border: 1px solid rgba(226, 232, 240, .8);
   border-radius: 16px;
-  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+  transition: all .15s cubic-bezier(.4, 0, .2, 1);
 }
-.note-card::before { content: ''; position: absolute; inset: 0 0 auto; height: 4px; background: linear-gradient(90deg, var(--tone), var(--tone-strong)); }
-.note-card:hover { border-color: var(--tone-border); box-shadow: 0 14px 32px -14px rgba(15, 23, 42, .22); transform: translateY(-3px); }
-.tone-amber { --tone: var(--ds-warning); --tone-strong: var(--ds-warning-text); --tone-soft: var(--ds-warning-soft); --tone-border: var(--ds-warning-border); }
-.tone-emerald { --tone: var(--ds-success); --tone-strong: var(--ds-success-text); --tone-soft: var(--ds-success-soft); --tone-border: var(--ds-success-border); }
-.tone-sky { --tone: #0ea5e9; --tone-strong: #0369a1; --tone-soft: #f0f9ff; --tone-border: #bae6fd; }
-.tone-violet { --tone: #8b5cf6; --tone-strong: #6d28d9; --tone-soft: #f5f3ff; --tone-border: #ddd6fe; }
+.note-card:hover { box-shadow: 0 4px 6px -1px rgba(15, 23, 42, .1), 0 2px 4px -2px rgba(15, 23, 42, .1); }
 
 .note-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.note-category { display: inline-flex; min-width: 0; align-items: center; gap: 5px; padding: 4px 10px; color: var(--tone-strong); font-size: 11px; font-weight: 700; background: var(--tone-soft); border: 1px solid var(--tone-border); border-radius: 999px; overflow-wrap: anywhere; }
-.note-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; color: var(--ds-success-text); font-size: 11px; font-weight: 650; }
-.status-dot { position: relative; width: 7px; height: 7px; background: var(--ds-success); border-radius: 50%; }
-.status-dot::after { content: ''; position: absolute; inset: 0; background: var(--ds-success); border-radius: 50%; animation: pulse 2s ease-out infinite; }
-@keyframes pulse { 0% { opacity: .7; transform: scale(1); } 100% { opacity: 0; transform: scale(2.6); } }
+/* bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200/50 */
+.note-category { display: inline-flex; min-width: 0; align-items: center; gap: 6px; padding: 4px 10px; color: #334155; font-size: 12px; font-weight: 500; line-height: 16px; background: #f1f5f9; border: 1px solid rgba(226, 232, 240, .5); border-radius: 8px; overflow-wrap: anywhere; }
+.note-category i { color: #64748b; }
+/* text-xs font-medium text-slate-600 with a w-2 h-2 bg-emerald-500 dot */
+.note-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; color: #475569; font-size: 12px; font-weight: 500; }
+.status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
 .note-head-end { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .owner-actions { display: flex; gap: 2px; padding-left: 8px; border-left: 1px solid var(--ds-surface-muted); }
 .icon-button { display: grid; width: 28px; height: 28px; color: var(--ds-text-subtle); font-size: 13px; place-items: center; background: transparent; border: 0; border-radius: 8px; transition: color .18s ease, background-color .18s ease; }
-.icon-button:hover { color: var(--tone-strong); background: var(--tone-soft); }
+.icon-button:hover { color: #334155; background: #f1f5f9; }
 .icon-button.danger:hover { color: var(--ds-danger); background: var(--ds-danger-soft); }
 
 .note-title { margin: 12px 0 6px; color: var(--ds-text); font-size: 16px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
 .note-description { margin: 0; color: var(--ds-text-secondary); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .note-description.clamped { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
-.read-more { display: inline-flex; align-self: flex-start; align-items: center; gap: 4px; margin-top: 6px; padding: 0; color: var(--tone-strong); font-size: 12px; font-weight: 700; background: none; border: 0; }
+.read-more { display: inline-flex; align-self: flex-start; align-items: center; gap: 4px; margin-top: 6px; padding: 0; color: var(--ds-primary); font-size: 12px; font-weight: 600; background: none; border: 0; }
+.read-more:hover { color: var(--ds-primary-hover); }
 
 .note-meta { display: flex; flex: 1; flex-wrap: wrap; align-content: flex-start; gap: 6px; margin: 12px 0 14px; padding: 0; list-style: none; }
 .note-meta li { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; color: var(--ds-text-muted); font-size: 11.5px; background: var(--ds-surface-subtle); border: 1px solid var(--ds-surface-muted); border-radius: 8px; overflow-wrap: anywhere; }
-.note-meta i { color: var(--tone); }
+.note-meta i { color: var(--ds-text-subtle); }
 
 .note-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--ds-border); }
 .note-owner { display: flex; min-width: 0; align-items: center; gap: 9px; }
-.owner-avatar { display: grid; flex: 0 0 34px; width: 34px; height: 34px; color: #fff; font-size: 12px; font-weight: 800; letter-spacing: .02em; place-items: center; background: linear-gradient(135deg, var(--tone), var(--tone-strong)); border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--tone-border); }
+/* bg-slate-100 text-slate-700 font-semibold border border-slate-200 rounded-full w-9 h-9 flex items-center justify-center */
+.owner-avatar { display: flex; flex: 0 0 36px; width: 36px; height: 36px; align-items: center; justify-content: center; color: #334155; font-size: 12px; font-weight: 600; letter-spacing: .02em; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 50%; }
 .owner-text { display: grid; min-width: 0; line-height: 1.25; }
 .owner-label { color: var(--ds-text-subtle); font-size: 10.5px; font-weight: 600; }
 .owner-name { overflow: hidden; color: var(--ds-text); font-size: 12.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }

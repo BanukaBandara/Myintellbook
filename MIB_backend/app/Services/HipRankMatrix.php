@@ -5,10 +5,11 @@ namespace App\Services;
 use App\Models\User;
 
 /**
- * HIP rank tiers, relative to the spread of LCI scores across all users:
+ * HIP rank tiers from the HIP matrix sheet, relative to the spread of LCI scores across all users:
  *   x = highest LCI, y = lowest LCI, range = x - y
- *   percent below max = (x - lci) / range * 100
- * Each tier covers [lower, upper) percent below the top score.
+ * A tier with lower-bound fraction p is reached when lci >= x - range * p, so a score exactly on a
+ * boundary takes the higher rank (Platinum 1 is lci >= x - range*0.05, Platinum 2 is
+ * lci < x - range*0.05 and >= x - range*0.07, and so on).
  */
 class HipRankMatrix
 {
@@ -19,28 +20,31 @@ class HipRankMatrix
         'Bronze' => '#CD7F32',
     ];
 
-    /** [upper bound (% below max, exclusive), rank name, tier] in order from the top. */
+    /** Given when there is no spread to rank against (a single user, or everyone tied). */
+    private const BASE_RANK = ['Bronze 1', 'Bronze'];
+
+    /** [fraction of range below x (inclusive lower score bound), rank name, tier] in order from the top. */
     private const TIERS = [
-        [5, 'Platinum 1', 'Platinum'],
-        [7, 'Platinum 2', 'Platinum'],
-        [10, 'Platinum 3', 'Platinum'],
-        [12, 'Gold 1', 'Gold'],
-        [15, 'Gold 2', 'Gold'],
-        [17, 'Gold 3', 'Gold'],
-        [20, 'Gold 4', 'Gold'],
-        // 20%–50% split evenly into 8 Silver bands of 3.75% each.
-        [23.75, 'Silver 1', 'Silver'],
-        [27.5, 'Silver 2', 'Silver'],
-        [31.25, 'Silver 3', 'Silver'],
-        [35, 'Silver 4', 'Silver'],
-        [38.75, 'Silver 5', 'Silver'],
-        [42.5, 'Silver 6', 'Silver'],
-        [46.25, 'Silver 7', 'Silver'],
-        [50, 'Silver 8', 'Silver'],
-        [70, 'Bronze 1', 'Bronze'],
-        // The mark sheet stops at 70%; everyone further below the top falls in Bronze 2.
-        [PHP_FLOAT_MAX, 'Bronze 2', 'Bronze'],
+        [0.05, 'Platinum 1', 'Platinum'],
+        [0.07, 'Platinum 2', 'Platinum'],
+        [0.10, 'Platinum 3', 'Platinum'],
+        [0.12, 'Gold 1', 'Gold'],
+        [0.15, 'Gold 2', 'Gold'],
+        [0.17, 'Gold 3', 'Gold'],
+        [0.20, 'Gold 4', 'Gold'],
+        [0.24, 'Silver 1', 'Silver'],
+        [0.28, 'Silver 2', 'Silver'],
+        [0.32, 'Silver 3', 'Silver'],
+        [0.36, 'Silver 4', 'Silver'],
+        [0.40, 'Silver 5', 'Silver'],
+        [0.44, 'Silver 6', 'Silver'],
+        [0.48, 'Silver 7', 'Silver'],
+        [0.50, 'Silver 8', 'Silver'],
+        [0.70, 'Bronze 1', 'Bronze'],
     ];
+
+    /** The sheet stops at 70% below the top; scores below that fall in Bronze 2. */
+    private const BELOW_SHEET_RANK = ['Bronze 2', 'Bronze'];
 
     /**
      * @return array{highest: float, lowest: float}
@@ -61,22 +65,37 @@ class HipRankMatrix
     public static function rankFor(float $lci, float $highest, float $lowest): array
     {
         $range = $highest - $lowest;
-        // Everyone level (or a single user): nobody is below the top.
-        $percentBelowMax = $range > 0 ? max(0.0, ($highest - $lci) / $range * 100) : 0.0;
 
-        foreach (self::TIERS as [$upper, $name, $tier]) {
-            if ($percentBelowMax < $upper) {
-                return [
-                    'hip_rank' => $name,
-                    'rank_tier' => $tier,
-                    'rank_badge_color' => self::COLORS[$tier],
-                    'percent_below_max' => round($percentBelowMax, 2),
-                ];
+        // No spread (single user, initial seed data, everyone tied): nothing to rank against.
+        if ($range <= 0) {
+            return self::result(...self::BASE_RANK, percentBelowMax: 0.0);
+        }
+
+        $percentBelowMax = max(0.0, ($highest - $lci) / $range * 100);
+
+        // Compared in score space, exactly as the sheet writes it: lci >= x - range * p.
+        // Scores have 2 decimals, so thresholds are exact to 4; rounding to 6 strips float noise
+        // (1000 - 1000 * 0.15 is 850.0000000000001) that would push boundary scores down a rank.
+        foreach (self::TIERS as [$fraction, $name, $tier]) {
+            if ($lci >= round($highest - $range * $fraction, 6)) {
+                return self::result($name, $tier, $percentBelowMax);
             }
         }
 
-        // Unreachable: the last tier is unbounded.
-        return ['hip_rank' => 'Bronze 2', 'rank_tier' => 'Bronze', 'rank_badge_color' => self::COLORS['Bronze'], 'percent_below_max' => 100.0];
+        return self::result(...self::BELOW_SHEET_RANK, percentBelowMax: $percentBelowMax);
+    }
+
+    /**
+     * @return array{hip_rank: string, rank_tier: string, rank_badge_color: string, percent_below_max: float}
+     */
+    private static function result(string $name, string $tier, float $percentBelowMax): array
+    {
+        return [
+            'hip_rank' => $name,
+            'rank_tier' => $tier,
+            'rank_badge_color' => self::COLORS[$tier],
+            'percent_below_max' => round($percentBelowMax, 2),
+        ];
     }
 
     /**
