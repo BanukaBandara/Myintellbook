@@ -16,6 +16,7 @@ use App\Models\Education;
 use App\Models\Skill;
 use App\Models\Post;
 use App\Models\Exam;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
@@ -34,6 +35,7 @@ class User extends Authenticatable
         'google_id',
         'Rank',
         'total_points',
+        'hip_score',
         'is_admin',
     ];
 
@@ -58,6 +60,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'hip_score' => 'float',
         ];
     }
 
@@ -101,6 +104,18 @@ class User extends Authenticatable
         return $this->hasOne(Profile::class);
     }
 
+    /**
+     * True once the onboarding Personal Details form has been saved.
+     */
+    public function isProfileCompleted(): bool
+    {
+        $profile = $this->profile;
+
+        return $profile !== null
+            && filled($profile->first_name)
+            && filled($profile->last_name);
+    }
+
     public function workExperiances()
     {
         return $this->hasMany(WorkExperiance::class);
@@ -134,6 +149,21 @@ class User extends Authenticatable
     public function educations()
     {
         return $this->hasMany(Education::class);
+    }
+
+    public function achievements(): HasMany
+    {
+        return $this->hasMany(Achievement::class);
+    }
+
+    public function tribunalReports(): HasMany
+    {
+        return $this->hasMany(TribunalReport::class);
+    }
+
+    public function userAnswers(): HasMany
+    {
+        return $this->hasMany(UserAnswer::class);
     }
 
     public function skills()
@@ -227,8 +257,9 @@ class User extends Authenticatable
         }
 
         $verification = $this->latestProfessionalVerification;
-        return $verification !== null 
-            && $verification->isValid() 
+
+        return $verification !== null
+            && $verification->isValid()
             && $verification->profession_type === \App\Enums\ProfessionalType::AttorneyAtLaw;
     }
 
