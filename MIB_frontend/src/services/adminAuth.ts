@@ -15,18 +15,6 @@ export interface AdminLoginResponse {
   message: string;
 }
 
-// Request interceptor: attach adminToken for all admin API endpoints
-instance.interceptors.request.use((config) => {
-  const url = config.url || '';
-  if (url.startsWith('/admin') || url.includes('/admin/')) {
-    const adminToken = localStorage.getItem('adminToken');
-    if (adminToken) {
-      config.headers.Authorization = `Bearer ${adminToken}`;
-    }
-  }
-  return config;
-});
-
 export const adminAuth = {
   async login(email: string, password: string): Promise<AdminLoginResponse> {
     try {
