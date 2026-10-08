@@ -570,4 +570,101 @@ class TribunalJuryPanelAssignmentTest extends TestCase
         $this->assertArrayNotHasKey('max_cases', $panelData);
         $this->assertArrayNotHasKey('maximum_cases', $panelData);
     }
+
+    #[Test]
+    public function test_18_creating_case_attempts_jury_panel_assignment_immediately(): void
+    {
+        [$panel] = $this->createJuryPanel('Immediate Panel', 'immediate@test.com', 'active');
+
+        $complainant = $this->createUser('comp18@test.com');
+        $respondent = $this->createUser('resp18@test.com');
+
+        $caseService = app(\App\Services\Tribunal\TribunalCaseService::class);
+        $case = $caseService->create([
+            'respondent_id' => $respondent->id,
+            'title' => 'Immediate Jury Assignment Test Case',
+            'category' => 'Commercial',
+            'description' => 'Dispute testing immediate assignment upon creation.',
+            'requested_resolution' => 'Resolution required.',
+        ], $complainant->id);
+
+        // Active Jury Panel must be assigned immediately without respondent acknowledgement
+        $this->assertNotNull($case->currentJuryPanelAssignment);
+        $this->assertEquals($panel->id, $case->currentJuryPanelAssignment->tribunal_jury_panel_id);
+        $this->assertEquals(TribunalJuryPanelAssignmentStatus::Active, $case->currentJuryPanelAssignment->status);
+        $this->assertEquals(TribunalCaseStatus::EvidenceCollection, $case->status);
+
+        $this->assertDatabaseHas('tribunal_jury_panel_assignments', [
+            'tribunal_case_id' => $case->id,
+            'tribunal_jury_panel_id' => $panel->id,
+            'status' => 'active',
+        ]);
+    }
+
+    #[Test]
+    public function test_19_case_creation_succeeds_when_zero_active_panels_exist(): void
+    {
+        // Only inactive and suspended panels exist
+        $this->createJuryPanel('Inactive Panel', 'inactive19@test.com', 'inactive');
+        $this->createJuryPanel('Suspended Panel', 'suspended19@test.com', 'suspended');
+
+        $complainant = $this->createUser('comp19@test.com');
+        $respondent = $this->createUser('resp19@test.com');
+
+        $caseService = app(\App\Services\Tribunal\TribunalCaseService::class);
+        $case = $caseService->create([
+            'respondent_id' => $respondent->id,
+            'title' => 'Zero Active Panels Test Case',
+            'category' => 'Commercial',
+            'description' => 'Dispute testing case creation when zero active panels are available.',
+            'requested_resolution' => 'Resolution required.',
+        ], $complainant->id);
+
+        // Case must still be created successfully and safely unassigned
+        $this->assertNotNull($case->id);
+        $this->assertNull($case->currentJuryPanelAssignment);
+        $this->assertDatabaseCount('tribunal_jury_panel_assignments', 0);
+        $this->assertDatabaseHas('tribunal_cases', [
+            'id' => $case->id,
+            'title' => 'Zero Active Panels Test Case',
+        ]);
+    }
+
+    #[Test]
+    public function test_20_respondent_response_preserves_existing_jury_assignment_without_duplicates(): void
+    {
+        [$panel] = $this->createJuryPanel('Preserved Panel', 'preserved@test.com', 'active');
+
+        $complainant = $this->createUser('comp20@test.com');
+        $respondent = $this->createUser('resp20@test.com');
+
+        $caseService = app(\App\Services\Tribunal\TribunalCaseService::class);
+        $case = $caseService->create([
+            'respondent_id' => $respondent->id,
+            'title' => 'Duplicate Prevention Test Case',
+            'category' => 'Commercial',
+            'description' => 'Dispute testing respondent response with existing assignment.',
+            'requested_resolution' => 'Resolution required.',
+        ], $complainant->id);
+
+        $this->assertNotNull($case->currentJuryPanelAssignment);
+
+        // Respondent later acknowledges and submits response
+        $respondentService = app(TribunalRespondentService::class);
+        $respondentService->acknowledge($case, $respondent->id);
+        $updatedCase = $respondentService->submitResponse($case, [
+            'position' => 'deny',
+            'response_text' => 'We deny these claims.',
+        ], $respondent->id);
+
+        // Must still have exactly 1 active assignment for this case
+        $assignments = TribunalJuryPanelAssignment::where('tribunal_case_id', $case->id)
+            ->where('status', TribunalJuryPanelAssignmentStatus::Active)
+            ->get();
+        $this->assertCount(1, $assignments);
+        $this->assertEquals($panel->id, $assignments->first()->tribunal_jury_panel_id);
+
+        // Status must NOT have regressed to jury_selection
+        $this->assertEquals(TribunalCaseStatus::EvidenceCollection, $updatedCase->fresh()->status);
+    }
 }

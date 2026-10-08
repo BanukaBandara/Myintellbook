@@ -986,4 +986,48 @@ class TribunalHearingTest extends TestCase
         $response2 = $this->postJson("/api/tribunal/cases/{$case->id}/jury-private-chat", [], $this->authHeaders($comp));
         $this->assertTrue(in_array($response2->status(), [404, 405]));
     }
+
+    // -------------------------------------------------------------------------
+    // TEST 33: Hearing participants show real profile names (no Party {id} labels)
+    // -------------------------------------------------------------------------
+    #[Test]
+    public function test_33_hearing_participants_show_real_profile_names_without_party_id_labels(): void
+    {
+        $comp = $this->createUser('comp33@test.com');
+        $comp->profile->update(['first_name' => 'Dulitha', 'last_name' => 'Matharaarachchi']);
+
+        $resp = $this->createUser('resp33@test.com');
+        $resp->profile->update(['first_name' => 'Nimal', 'last_name' => 'Perera']);
+
+        $case = $this->createCase($comp, $resp);
+
+        [$panel, $juryUser] = $this->createJuryPanel('Colombo Central Panel', 'panel33@jury.test');
+        $this->assignPanelToCase($panel, $case);
+
+        $hearingService = app(TribunalHearingService::class);
+        $hearing = $hearingService->scheduleHearing($case, $juryUser->id, [
+            'hearing_type' => 'formal',
+            'scheduled_at' => now()->addDays(2)->toIso8601String(),
+        ]);
+
+        $response = $this->getJson("/api/tribunal/cases/{$case->id}/hearings", $this->authHeaders($comp));
+        $response->assertStatus(200);
+
+        $participants = $response->json('active_hearing.participants');
+        $this->assertNotEmpty($participants);
+
+        $displayNames = collect($participants)->pluck('display_name')->toArray();
+
+        // Must contain real profile names
+        $this->assertContains('Dulitha Matharaarachchi', $displayNames);
+        $this->assertContains('Nimal Perera', $displayNames);
+        $this->assertContains('Colombo Central Panel (Jury Panel)', $displayNames);
+
+        // Must NOT contain generic "Party X" labels
+        foreach ($displayNames as $name) {
+            $this->assertDoesNotMatchRegularExpression('/^Party\s+\d+$/i', $name);
+            $this->assertStringNotContainsString('Party ' . $comp->id, $name);
+            $this->assertStringNotContainsString('Party ' . $resp->id, $name);
+        }
+    }
 }

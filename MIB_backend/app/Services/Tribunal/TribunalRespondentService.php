@@ -92,9 +92,11 @@ class TribunalRespondentService
                 ]
             );
 
-            $tribunalCase->update([
-                'status' => TribunalCaseStatus::JurySelection,
-            ]);
+            if (!$tribunalCase->currentJuryPanelAssignment()->exists()) {
+                $tribunalCase->update([
+                    'status' => TribunalCaseStatus::JurySelection,
+                ]);
+            }
 
             // Log event
             TribunalCaseEventService::log($tribunalCase, 'response_submitted', $userId, [

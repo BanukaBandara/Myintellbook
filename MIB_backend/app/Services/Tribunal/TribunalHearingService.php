@@ -428,40 +428,54 @@ class TribunalHearingService
         $case = $hearing->case;
 
         // Complainant & Respondent
+        $case->loadMissing(['parties.user.profile']);
         foreach ($case->parties as $party) {
+            $profile = $party->user?->profile;
+            $fullName = $profile && filled($profile->first_name)
+                ? trim("{$profile->first_name} {$profile->last_name}")
+                : null;
+            $roleFallback = $party->role->value === 'complainant' ? 'Complainant' : 'Respondent';
+            $displayName = $fullName ?: $roleFallback;
+
             TribunalHearingParticipant::create([
                 'tribunal_hearing_id' => $hearing->id,
                 'user_id' => $party->user_id,
                 'participant_type' => $party->role->value,
                 'side' => $party->role->value,
-                'display_name' => $party->user?->name ?? 'Party ' . $party->user_id,
+                'display_name' => $displayName,
                 'invited_by' => $juryUserId,
                 'attendance_status' => 'invited',
             ]);
         }
 
         // Active Legal Representatives
-        $activeReps = $case->activeRepresentativeAssignments()->with('representative')->get();
+        $activeReps = $case->activeRepresentativeAssignments()->with('representative.profile')->get();
         foreach ($activeReps as $rep) {
             $partType = $rep->side === 'complainant' ? 'complainant_representative' : 'respondent_representative';
+            $profile = $rep->representative?->profile;
+            $counselName = $profile && filled($profile->first_name)
+                ? trim("{$profile->first_name} {$profile->last_name}")
+                : 'Counsel';
+
             TribunalHearingParticipant::create([
                 'tribunal_hearing_id' => $hearing->id,
                 'user_id' => $rep->representative_user_id,
                 'participant_type' => $partType,
                 'side' => $rep->side,
-                'display_name' => ($rep->representative?->name ?? 'Counsel') . ' (Counsel)',
+                'display_name' => "{$counselName} (Counsel)",
                 'invited_by' => $juryUserId,
                 'attendance_status' => 'invited',
             ]);
         }
 
         // Jury Panel
+        $panelName = $panel->panel_name ?? $panel->name ?? 'Jury Panel';
         TribunalHearingParticipant::create([
             'tribunal_hearing_id' => $hearing->id,
             'user_id' => $panel->login_user_id,
             'participant_type' => 'jury_panel',
             'side' => 'neutral',
-            'display_name' => $panel->name . ' (Jury Panel)',
+            'display_name' => "{$panelName} (Jury Panel)",
             'invited_by' => $juryUserId,
             'attendance_status' => 'confirmed',
         ]);

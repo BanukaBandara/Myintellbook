@@ -153,8 +153,8 @@ onBeforeUnmount(() => {
 
           <div class="d-flex align-items-center gap-2">
             <router-link
-              v-if="selectedUser.profile_url"
-              :to="`/showUserProfile/${selectedUser.profile_url}`"
+              v-if="selectedUser.id"
+              :to="`/showUserProfile/${selectedUser.id}`"
               class="btn btn-outline-secondary btn-sm"
               title="View public profile"
             >
@@ -270,8 +270,8 @@ onBeforeUnmount(() => {
                 <!-- Action Buttons -->
                 <div class="d-flex align-items-center gap-2 ms-auto">
                   <router-link
-                    v-if="user.profile_url"
-                    :to="`/showUserProfile/${user.profile_url}`"
+                    v-if="user.id"
+                    :to="`/showUserProfile/${user.id}`"
                     class="btn btn-outline-secondary btn-sm"
                     title="View public profile"
                   >

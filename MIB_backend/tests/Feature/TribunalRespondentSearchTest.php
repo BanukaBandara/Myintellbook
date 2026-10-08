@@ -461,7 +461,7 @@ class TribunalRespondentSearchTest extends TestCase
         $caseData = $response->json('data');
 
         $this->assertNotEmpty($caseData['case_number']);
-        $this->assertEquals('submitted', $caseData['status']);
+        $this->assertEquals('jury_selection', $caseData['status']);
         $this->assertCount(2, $caseData['parties']);
     }
 }
