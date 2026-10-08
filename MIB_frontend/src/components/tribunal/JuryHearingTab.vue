@@ -3,7 +3,6 @@ import { ref, onMounted, computed } from 'vue';
 import { tribunalService } from '@/services/tribunalService';
 import type {
   TribunalHearing,
-  TribunalWitness,
   TribunalHearingEntry,
 } from '@/types/tribunal';
 
@@ -22,7 +21,6 @@ const error = ref<string | null>(null);
 
 const hearings = ref<TribunalHearing[]>([]);
 const activeHearing = ref<TribunalHearing | null>(null);
-const witnesses = ref<TribunalWitness[]>([]);
 
 // Modals
 const showScheduleModal = ref(false);
@@ -33,7 +31,7 @@ const scheduleForm = ref({
   location_type: 'online',
   meeting_link: '',
   notes: '',
-});
+  });
 
 const showDirectionModal = ref(false);
 const postingDirection = ref(false);
@@ -42,17 +40,7 @@ const directionBody = ref('');
 const showQuestionModal = ref(false);
 const askingQuestion = ref(false);
 const questionBody = ref('');
-const questionTarget = ref<'complainant' | 'respondent' | 'both' | 'witness'>('both');
-
-const showRejectModal = ref(false);
-const rejecting = ref(false);
-const selectedWitness = ref<TribunalWitness | null>(null);
-const rejectReason = ref('');
-
-const showTestimonyModal = ref(false);
-const recordingTestimony = ref(false);
-const testimonyWitness = ref<TribunalWitness | null>(null);
-const testimonyBody = ref('');
+const questionTarget = ref<'complainant' | 'respondent' | 'both'>('both');
 
 const actionInProgress = ref(false);
 
@@ -70,14 +58,10 @@ const fetchHearingData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [hearingRes, witnessRes] = await Promise.all([
-      tribunalService.getJuryHearings(props.caseId),
-      tribunalService.getJuryWitnesses(props.caseId),
-    ]);
+    const hearingRes = await tribunalService.getJuryHearings(props.caseId);
 
     hearings.value = hearingRes.hearings || [];
     activeHearing.value = hearingRes.active_hearing || null;
-    witnesses.value = witnessRes.witnesses || [];
 
     if (activeHearing.value?.id) {
       const singleRes = await tribunalService.getJuryHearing(activeHearing.value.id);
@@ -174,39 +158,6 @@ const handleCloseHearing = async () => {
   }
 };
 
-const handleApproveWitness = async (witness: TribunalWitness) => {
-  if (actionInProgress.value) return;
-  actionInProgress.value = true;
-  try {
-    await tribunalService.approveJuryWitness(props.caseId, witness.id);
-    await fetchHearingData();
-  } catch (err: any) {
-    alert(err?.response?.data?.message || 'Failed to approve witness.');
-  } finally {
-    actionInProgress.value = false;
-  }
-};
-
-const openRejectModal = (witness: TribunalWitness) => {
-  selectedWitness.value = witness;
-  rejectReason.value = '';
-  showRejectModal.value = true;
-};
-
-const handleRejectWitness = async () => {
-  if (!selectedWitness.value || !rejectReason.value.trim() || rejecting.value) return;
-  rejecting.value = true;
-  try {
-    await tribunalService.rejectJuryWitness(props.caseId, selectedWitness.value.id, rejectReason.value.trim());
-    showRejectModal.value = false;
-    await fetchHearingData();
-  } catch (err: any) {
-    alert(err?.response?.data?.message || 'Failed to reject witness.');
-  } finally {
-    rejecting.value = false;
-  }
-};
-
 const handlePostDirection = async () => {
   if (!activeHearing.value || !directionBody.value.trim() || postingDirection.value) return;
   postingDirection.value = true;
@@ -240,27 +191,6 @@ const handleAskQuestion = async () => {
     alert(err?.response?.data?.message || 'Failed to post question.');
   } finally {
     askingQuestion.value = false;
-  }
-};
-
-const openTestimonyModal = (witness: TribunalWitness) => {
-  testimonyWitness.value = witness;
-  testimonyBody.value = '';
-  showTestimonyModal.value = true;
-};
-
-const handleRecordTestimony = async () => {
-  if (!activeHearing.value || !testimonyWitness.value || !testimonyBody.value.trim() || recordingTestimony.value) return;
-  recordingTestimony.value = true;
-  try {
-    await tribunalService.recordJuryWitnessTestimony(activeHearing.value.id, testimonyWitness.value.id, testimonyBody.value.trim());
-    testimonyBody.value = '';
-    showTestimonyModal.value = false;
-    await fetchHearingData();
-  } catch (err: any) {
-    alert(err?.response?.data?.message || 'Failed to record witness testimony.');
-  } finally {
-    recordingTestimony.value = false;
   }
 };
 
@@ -305,7 +235,7 @@ const getEntryBadge = (entryType: string) => {
         </div>
         <h4 class="fw-bold text-dark mb-2">Hearing Completed — Ready for Jury Panel Deliberation</h4>
         <p class="text-muted max-w-600 mx-auto mb-0">
-          The formal hearing session has concluded. Case evidence, hearing statements, and witness testimonies have been entered into the official record. Deliberation and verdict workflows will occur in the next judicial stage.
+          The formal hearing session has concluded. Case evidence and hearing statements have been entered into the official record. Deliberation and verdict workflows will occur in the next judicial stage.
         </p>
       </div>
     </div>
@@ -435,9 +365,9 @@ const getEntryBadge = (entryType: string) => {
         </div>
       </div>
 
-      <!-- Two-Column Layout: Participants & Witnesses | Hearing Record Transcript -->
+      <!-- Two-Column Layout: Participants | Hearing Record Transcript -->
       <div class="row g-4">
-        <!-- Left: Participants & Witnesses -->
+        <!-- Left: Participants -->
         <div class="col-lg-5">
           <!-- Participants Card -->
           <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
@@ -467,87 +397,6 @@ const getEntryBadge = (entryType: string) => {
                   </span>
                 </li>
               </ul>
-            </div>
-          </div>
-
-          <!-- Witnesses Card -->
-          <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
-            <div class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
-              <h5 class="fw-bold text-dark mb-0">
-                <i class="bi bi-person-badge me-2 text-primary" />Case Witnesses
-              </h5>
-              <span class="badge bg-secondary rounded-pill">{{ witnesses.length }}</span>
-            </div>
-            <div class="card-body p-4 pt-2">
-              <div v-if="!witnesses.length" class="text-muted small py-2">
-                No witnesses proposed for this case yet.
-              </div>
-              <div v-else class="d-flex flex-column gap-3">
-                <div
-                  v-for="w in witnesses"
-                  :key="w.id"
-                  class="p-3 border rounded-3 bg-light bg-opacity-50"
-                >
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div>
-                      <strong class="text-dark">{{ w.witness_name }}</strong>
-                      <span class="badge bg-secondary-subtle text-dark ms-2 text-capitalize">{{ w.side }}</span>
-                    </div>
-                    <span
-                      class="badge rounded-pill"
-                      :class="{
-                        'bg-warning-subtle text-warning': w.status === 'proposed',
-                        'bg-success-subtle text-success': w.status === 'approved',
-                        'bg-danger-subtle text-danger': w.status === 'rejected',
-                        'bg-primary-subtle text-primary': w.status === 'testified',
-                      }"
-                    >
-                      {{ w.status }}
-                    </span>
-                  </div>
-
-                  <div v-if="w.relationship_to_case" class="small text-muted mb-1">
-                    <em>Relation:</em> {{ w.relationship_to_case }}
-                  </div>
-                  <div v-if="w.statement_summary" class="small text-dark mb-2">
-                    "{{ w.statement_summary }}"
-                  </div>
-                  <div v-if="w.rejected_reason" class="small text-danger mb-2">
-                    <strong>Rejection reason:</strong> {{ w.rejected_reason }}
-                  </div>
-
-                  <!-- Jury Witness Controls -->
-                  <div class="d-flex gap-2 mt-2 pt-2 border-top">
-                    <button
-                      v-if="w.status === 'proposed'"
-                      type="button"
-                      class="btn btn-sm btn-success rounded-pill px-3"
-                      :disabled="actionInProgress"
-                      @click="handleApproveWitness(w)"
-                    >
-                      <i class="bi bi-check-circle me-1" />Approve
-                    </button>
-                    <button
-                      v-if="w.status === 'proposed'"
-                      type="button"
-                      class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                      :disabled="actionInProgress"
-                      @click="openRejectModal(w)"
-                    >
-                      <i class="bi bi-x-circle me-1" />Reject
-                    </button>
-
-                    <button
-                      v-if="activeHearing?.status === 'active' && (w.status === 'approved' || w.status === 'testified')"
-                      type="button"
-                      class="btn btn-sm btn-primary rounded-pill px-3"
-                      @click="openTestimonyModal(w)"
-                    >
-                      <i class="bi bi-mic me-1" />{{ w.status === 'testified' ? 'Add Testimony' : 'Record Testimony' }}
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -608,9 +457,6 @@ const getEntryBadge = (entryType: string) => {
                     {{ entry.body }}
                   </div>
 
-                  <div v-if="entry.relatedWitness" class="small text-muted mb-1">
-                    <i class="bi bi-person-fill me-1" />Witness: <strong>{{ entry.relatedWitness.witness_name }}</strong>
-                  </div>
                   <div v-if="entry.relatedEvidence" class="small text-muted mb-1">
                     <i class="bi bi-paperclip me-1" />Evidence: <strong>{{ entry.relatedEvidence.evidence_number }} — {{ entry.relatedEvidence.title }}</strong>
                   </div>
@@ -696,7 +542,7 @@ const getEntryBadge = (entryType: string) => {
           </div>
           <div class="modal-body p-4">
             <label class="form-label small fw-semibold">Direction / Order</label>
-            <textarea v-model="directionBody" rows="4" class="form-control" placeholder="Enter formal order to parties or witnesses..." />
+            <textarea v-model="directionBody" rows="4" class="form-control" placeholder="Enter formal order to parties..." />
           </div>
           <div class="modal-footer border-0 pt-0">
             <button type="button" class="btn btn-light rounded-pill px-4" @click="showDirectionModal = false">Cancel</button>
@@ -723,7 +569,6 @@ const getEntryBadge = (entryType: string) => {
                 <option value="both">Both Parties</option>
                 <option value="complainant">Complainant (and Counsel)</option>
                 <option value="respondent">Respondent (and Counsel)</option>
-                <option value="witness">Witness</option>
               </select>
             </div>
             <div class="mb-3">
@@ -735,56 +580,6 @@ const getEntryBadge = (entryType: string) => {
             <button type="button" class="btn btn-light rounded-pill px-4" @click="showQuestionModal = false">Cancel</button>
             <button type="button" class="btn btn-primary rounded-pill px-4" :disabled="askingQuestion || !questionBody.trim()" @click="handleAskQuestion">
               {{ askingQuestion ? 'Posting...' : 'Send Question' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Reject Witness Modal -->
-    <div v-if="showRejectModal" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-          <div class="modal-header border-0 pb-0">
-            <h5 class="fw-bold mb-0 text-danger">Decline Witness Request</h5>
-            <button type="button" class="btn-close" @click="showRejectModal = false" />
-          </div>
-          <div class="modal-body p-4">
-            <p class="text-muted small">
-              Witness: <strong>{{ selectedWitness?.witness_name }}</strong> ({{ selectedWitness?.side }})
-            </p>
-            <label class="form-label small fw-semibold">Reason for Rejection (Required)</label>
-            <textarea v-model="rejectReason" rows="3" class="form-control" placeholder="Explain why this witness will not be admitted..." />
-          </div>
-          <div class="modal-footer border-0 pt-0">
-            <button type="button" class="btn btn-light rounded-pill px-4" @click="showRejectModal = false">Cancel</button>
-            <button type="button" class="btn btn-danger rounded-pill px-4" :disabled="rejecting || !rejectReason.trim()" @click="handleRejectWitness">
-              {{ rejecting ? 'Declining...' : 'Confirm Rejection' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Testimony Modal -->
-    <div v-if="showTestimonyModal" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 border-0 shadow">
-          <div class="modal-header border-0 pb-0">
-            <h5 class="fw-bold mb-0 text-success">Record Witness Testimony</h5>
-            <button type="button" class="btn-close" @click="showTestimonyModal = false" />
-          </div>
-          <div class="modal-body p-4">
-            <div class="alert alert-info py-2 small mb-3">
-              Recording testimony for approved witness: <strong>{{ testimonyWitness?.witness_name }}</strong> ({{ testimonyWitness?.side }} side).
-            </div>
-            <label class="form-label small fw-semibold">Testimony Transcript / Record</label>
-            <textarea v-model="testimonyBody" rows="6" class="form-control" placeholder="Enter witness testimony given during session..." />
-          </div>
-          <div class="modal-footer border-0 pt-0">
-            <button type="button" class="btn btn-light rounded-pill px-4" @click="showTestimonyModal = false">Cancel</button>
-            <button type="button" class="btn btn-success rounded-pill px-4" :disabled="recordingTestimony || !testimonyBody.trim()" @click="handleRecordTestimony">
-              {{ recordingTestimony ? 'Recording...' : 'Save Testimony' }}
             </button>
           </div>
         </div>

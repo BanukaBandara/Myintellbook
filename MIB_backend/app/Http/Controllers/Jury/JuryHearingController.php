@@ -6,17 +6,14 @@ use App\Enums\TribunalHearingEntryType;
 use App\Http\Controllers\Controller;
 use App\Models\TribunalCase;
 use App\Models\TribunalHearing;
-use App\Models\TribunalWitness;
 use App\Services\Tribunal\TribunalHearingService;
-use App\Services\Tribunal\TribunalWitnessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class JuryHearingController extends Controller
 {
     public function __construct(
-        protected TribunalHearingService $hearingService,
-        protected TribunalWitnessService $witnessService
+        protected TribunalHearingService $hearingService
     ) {
     }
 
@@ -158,62 +155,7 @@ class JuryHearingController extends Controller
         ]);
     }
 
-    /**
-     * List witnesses for assigned case.
-     */
-    public function witnesses(int $caseId): JsonResponse
-    {
-        $case = TribunalCase::findOrFail($caseId);
-        $user = auth()->user();
 
-        if (!$case->isAssignedJuryPanelUser($user->id)) {
-            abort(403, 'Unauthorized.');
-        }
-
-        $witnesses = $case->witnesses()
-            ->with(['proposer.profile', 'witnessUser.profile'])
-            ->get();
-
-        return response()->json([
-            'witnesses' => $witnesses,
-        ]);
-    }
-
-    /**
-     * Approve proposed witness.
-     */
-    public function approveWitness(int $caseId, int $witnessId): JsonResponse
-    {
-        $witness = TribunalWitness::where('tribunal_case_id', $caseId)->findOrFail($witnessId);
-        $user = auth()->user();
-
-        $approved = $this->witnessService->approveWitness($witness, $user->id);
-
-        return response()->json([
-            'message' => 'Witness approved.',
-            'witness' => $approved,
-        ]);
-    }
-
-    /**
-     * Reject proposed witness with reason.
-     */
-    public function rejectWitness(Request $request, int $caseId, int $witnessId): JsonResponse
-    {
-        $witness = TribunalWitness::where('tribunal_case_id', $caseId)->findOrFail($witnessId);
-        $user = auth()->user();
-
-        $data = $request->validate([
-            'reason' => 'required|string|max:1000',
-        ]);
-
-        $rejected = $this->witnessService->rejectWitness($witness, $user->id, $data['reason']);
-
-        return response()->json([
-            'message' => 'Witness rejected.',
-            'witness' => $rejected,
-        ]);
-    }
 
     /**
      * Post a procedural direction or entry from Jury Panel.
@@ -249,8 +191,7 @@ class JuryHearingController extends Controller
 
         $data = $request->validate([
             'body' => 'required|string|max:5000',
-            'target_side' => 'nullable|string|in:complainant,respondent,both,witness',
-            'related_witness_id' => 'nullable|integer',
+            'target_side' => 'nullable|string|in:complainant,respondent,both',
             'related_evidence_id' => 'nullable|integer',
         ]);
 
@@ -264,24 +205,4 @@ class JuryHearingController extends Controller
         ], 201);
     }
 
-    /**
-     * Record witness testimony during active hearing.
-     */
-    public function recordTestimony(Request $request, int $hearingId, int $witnessId): JsonResponse
-    {
-        $hearing = TribunalHearing::findOrFail($hearingId);
-        $witness = TribunalWitness::findOrFail($witnessId);
-        $user = auth()->user();
-
-        $data = $request->validate([
-            'testimony' => 'required|string|max:10000',
-        ]);
-
-        $entry = $this->witnessService->recordTestimony($hearing, $witness, $user->id, $data['testimony']);
-
-        return response()->json([
-            'message' => 'Witness testimony recorded.',
-            'entry' => $entry,
-        ], 201);
-    }
 }

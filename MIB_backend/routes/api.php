@@ -172,14 +172,11 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/settlement-proposals/{proposal}/accept', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'acceptProposal']);
         Route::post('/settlement-proposals/{proposal}/reject', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'rejectProposal']);
 
-        // Formal Hearing & Witnesses (Step 5)
+        // Formal Hearing (Step 5)
         Route::get('/cases/{tribunalCase}/hearings', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'index']);
         Route::get('/hearings/{hearing}', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'show']);
-        Route::post('/cases/{tribunalCase}/witnesses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'proposeWitness']);
-        Route::get('/cases/{tribunalCase}/witnesses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'witnesses']);
         Route::post('/hearings/{hearing}/entries', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'addEntry']);
         Route::post('/hearings/{hearing}/questions/{question}/responses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'respondToQuestion']);
-        Route::post('/hearings/{hearing}/witnesses/{witness}/testimony', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'recordTestimony']);
 
         // Final Decision & Outcomes (Step 6)
         Route::get('/cases/{tribunalCase}/decision', [\App\Http\Controllers\Tribunal\TribunalDecisionController::class, 'show']);
@@ -239,7 +236,7 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/cases/{id}/mediation/offer', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationOffer']);
         Route::post('/cases/{id}/mediation/end', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationEnd']);
 
-        // Hearing & Witness Management for assigned Jury Panel (Step 5)
+        // Hearing Management for assigned Jury Panel (Step 5)
         Route::get('/cases/{id}/hearings', [\App\Http\Controllers\Jury\JuryHearingController::class, 'index']);
         Route::post('/cases/{id}/hearings', [\App\Http\Controllers\Jury\JuryHearingController::class, 'schedule']);
         Route::get('/hearings/{hearing}', [\App\Http\Controllers\Jury\JuryHearingController::class, 'show']);
@@ -247,12 +244,8 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/hearings/{hearing}/recess', [\App\Http\Controllers\Jury\JuryHearingController::class, 'recess']);
         Route::post('/hearings/{hearing}/resume', [\App\Http\Controllers\Jury\JuryHearingController::class, 'resume']);
         Route::post('/hearings/{hearing}/close', [\App\Http\Controllers\Jury\JuryHearingController::class, 'close']);
-        Route::get('/cases/{id}/witnesses', [\App\Http\Controllers\Jury\JuryHearingController::class, 'witnesses']);
-        Route::post('/cases/{id}/witnesses/{witness}/approve', [\App\Http\Controllers\Jury\JuryHearingController::class, 'approveWitness']);
-        Route::post('/cases/{id}/witnesses/{witness}/reject', [\App\Http\Controllers\Jury\JuryHearingController::class, 'rejectWitness']);
         Route::post('/hearings/{hearing}/entries', [\App\Http\Controllers\Jury\JuryHearingController::class, 'addEntry']);
         Route::post('/hearings/{hearing}/questions', [\App\Http\Controllers\Jury\JuryHearingController::class, 'askQuestion']);
-        Route::post('/hearings/{hearing}/witnesses/{witness}/testimony', [\App\Http\Controllers\Jury\JuryHearingController::class, 'recordTestimony']);
 
         // Deliberation, Findings & Final Decision for assigned Jury Panel (Step 6)
         Route::get('/cases/{id}/deliberation', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'show']);

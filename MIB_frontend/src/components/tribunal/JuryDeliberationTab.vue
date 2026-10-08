@@ -56,7 +56,6 @@ const findingForm = ref<{
   display_order: number;
   is_public: boolean;
   evidence_ids: number[];
-  witness_ids: number[];
   hearing_entry_ids: number[];
 }>({
   finding_type: 'fact',
@@ -66,7 +65,6 @@ const findingForm = ref<{
   display_order: 1,
   is_public: true,
   evidence_ids: [],
-  witness_ids: [],
   hearing_entry_ids: [],
 });
 
@@ -210,7 +208,6 @@ const openCreateFindingModal = () => {
     display_order: (data.value?.findings.length || 0) + 1,
     is_public: true,
     evidence_ids: [],
-    witness_ids: [],
     hearing_entry_ids: [],
   };
   showFindingModal.value = true;
@@ -226,7 +223,6 @@ const openEditFindingModal = (finding: TribunalFinding) => {
     display_order: finding.display_order,
     is_public: finding.is_public,
     evidence_ids: (finding.evidence || []).map(e => e.id),
-    witness_ids: (finding.witnesses || []).map(w => w.id),
     hearing_entry_ids: (finding.hearing_entries || []).map(h => h.id),
   };
   showFindingModal.value = true;
@@ -596,7 +592,7 @@ const formatConclusion = (conclusion: string) => {
               v-model="decisionDraft.reasoning"
               class="form-control rounded-3"
               rows="8"
-              placeholder="Provide detailed legal, factual, and credibility reasoning. Detail how evidence and witness testimonies were evaluated to reach the conclusion..."
+              placeholder="Provide detailed legal and factual reasoning. Detail how evidence and submissions were evaluated to reach the conclusion..."
             />
             <div class="form-text text-muted">Detail the reasoning supporting each determination, citing findings, exhibits, and statements.</div>
           </div>
@@ -623,7 +619,7 @@ const formatConclusion = (conclusion: string) => {
                 <i class="bi bi-check2-circle me-2 text-primary" />Findings of Fact &amp; Issue Determinations
               </h5>
               <p class="text-muted small mb-0">
-                Formal determinations on disputed factual claims, witness credibility, and case issues.
+                Formal determinations on disputed factual claims and case issues.
               </p>
             </div>
             <button
@@ -704,13 +700,10 @@ const formatConclusion = (conclusion: string) => {
               </div>
 
               <!-- References -->
-              <div v-if="finding.evidence?.length || finding.witnesses?.length || finding.hearing_entries?.length" class="small text-muted mt-1">
+              <div v-if="finding.evidence?.length || finding.hearing_entries?.length" class="small text-muted mt-1">
                 <strong>References:</strong>
                 <span v-for="ev in finding.evidence" :key="ev.id" class="badge bg-secondary-subtle text-dark me-1">
                   <i class="bi bi-paperclip me-1" />{{ ev.evidence_number }}
-                </span>
-                <span v-for="w in finding.witnesses" :key="w.id" class="badge bg-info-subtle text-dark me-1">
-                  <i class="bi bi-person me-1" />Witness: {{ w.witness_name }}
                 </span>
                 <span v-for="h in finding.hearing_entries" :key="h.id" class="badge bg-light text-muted border me-1">
                   <i class="bi bi-mic me-1" />Hearing Entry #{{ h.sequence_number }}
@@ -832,7 +825,7 @@ const formatConclusion = (conclusion: string) => {
           <div v-if="!data.deliberation?.notes?.length" class="text-center py-5 bg-light rounded-4">
             <i class="bi bi-lock fs-1 text-muted" />
             <h6 class="fw-bold text-dark mt-2">No Private Deliberation Notes Recorded</h6>
-            <p class="text-muted small mb-3">Record internal discussions on evidence analysis, witness credibility, or issues.</p>
+            <p class="text-muted small mb-3">Record internal discussions on evidence analysis or issues.</p>
             <button
               v-if="isDeliberationOpen"
               type="button"
@@ -945,25 +938,6 @@ const formatConclusion = (conclusion: string) => {
                     {{ ev.challenge_status || 'unchallenged' }}
                   </span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Witnesses & Testimony -->
-          <div class="mb-4">
-            <h6 class="fw-bold text-dark mb-2">
-              <i class="bi bi-people me-1" />Witness Testimonies ({{ data.dossier.witnesses.length }})
-            </h6>
-            <div v-if="!data.dossier.witnesses.length" class="text-muted small p-3 bg-light rounded-3">
-              No witnesses examined during hearing.
-            </div>
-            <div v-else class="d-flex flex-column gap-2">
-              <div v-for="w in data.dossier.witnesses" :key="w.id" class="p-3 border rounded-3 bg-white">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <strong class="text-dark">{{ w.witness_name }} ({{ w.side }} witness)</strong>
-                  <span class="badge bg-secondary text-uppercase">{{ w.status }}</span>
-                </div>
-                <div class="small text-muted">{{ w.statement_summary || 'No written summary provided.' }}</div>
               </div>
             </div>
           </div>
@@ -1123,7 +1097,6 @@ const formatConclusion = (conclusion: string) => {
               <select v-model="noteForm.note_type" class="form-select rounded-3">
                 <option value="general">General</option>
                 <option value="evidence_analysis">Evidence Analysis</option>
-                <option value="witness_analysis">Witness Analysis</option>
                 <option value="credibility">Credibility Assessment</option>
                 <option value="issue_analysis">Issue Analysis</option>
                 <option value="remedy_consideration">Remedy Consideration</option>
@@ -1256,29 +1229,6 @@ const formatConclusion = (conclusion: string) => {
                   >
                   <label class="form-check-label small" :for="'evCheck' + ev.id">
                     {{ ev.evidence_number }} ({{ ev.title }})
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Witness References -->
-            <div v-if="data?.dossier.witnesses.length" class="mb-3">
-              <label class="form-label fw-bold small">Referenced Witnesses</label>
-              <div class="d-flex flex-wrap gap-2">
-                <div
-                  v-for="w in data.dossier.witnesses"
-                  :key="w.id"
-                  class="form-check form-check-inline"
-                >
-                  <input
-                    :id="'witCheck' + w.id"
-                    v-model="findingForm.witness_ids"
-                    class="form-check-input"
-                    type="checkbox"
-                    :value="w.id"
-                  >
-                  <label class="form-check-label small" :for="'witCheck' + w.id">
-                    {{ w.witness_name }} ({{ w.side }})
                   </label>
                 </div>
               </div>

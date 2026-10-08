@@ -403,13 +403,10 @@ const formatConclusion = (conclusion: string) => {
               </div>
 
               <!-- References -->
-              <div v-if="finding.evidence?.length || finding.witnesses?.length || finding.hearing_entries?.length" class="small text-muted border-top pt-2 mt-1">
+              <div v-if="finding.evidence?.length || finding.hearing_entries?.length" class="small text-muted border-top pt-2 mt-1">
                 <strong>Cited In Support:</strong>
                 <span v-for="ev in finding.evidence" :key="ev.id" class="badge bg-white text-dark border me-1">
                   <i class="bi bi-paperclip me-1" />{{ ev.evidence_number }}
-                </span>
-                <span v-for="w in finding.witnesses" :key="w.id" class="badge bg-white text-dark border me-1">
-                  <i class="bi bi-person me-1" />{{ w.witness_name }}
                 </span>
                 <span v-for="h in finding.hearing_entries" :key="h.id" class="badge bg-white text-dark border me-1">
                   <i class="bi bi-mic me-1" />Record Entry #{{ h.sequence_number }}

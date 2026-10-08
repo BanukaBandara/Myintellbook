@@ -7,17 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\TribunalCase;
 use App\Models\TribunalHearing;
 use App\Models\TribunalHearingEntry;
-use App\Models\TribunalWitness;
 use App\Services\Tribunal\TribunalHearingService;
-use App\Services\Tribunal\TribunalWitnessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TribunalHearingController extends Controller
 {
     public function __construct(
-        protected TribunalHearingService $hearingService,
-        protected TribunalWitnessService $witnessService
+        protected TribunalHearingService $hearingService
     ) {
     }
 
@@ -80,48 +77,7 @@ class TribunalHearingController extends Controller
         ]);
     }
 
-    /**
-     * Propose a witness for a case.
-     * Proposing side is derived on backend.
-     */
-    public function proposeWitness(Request $request, TribunalCase $tribunalCase): JsonResponse
-    {
-        $userId = auth()->id();
-        $this->ensureAuthorized($tribunalCase, $userId);
 
-        $data = $request->validate([
-            'witness_name' => 'required|string|max:255',
-            'witness_email' => 'nullable|email|max:255',
-            'relationship_to_case' => 'nullable|string|max:500',
-            'statement_summary' => 'nullable|string|max:2000',
-            'witness_user_id' => 'nullable|integer|exists:users,id',
-            'tribunal_hearing_id' => 'nullable|integer|exists:tribunal_hearings,id',
-        ]);
-
-        $witness = $this->witnessService->proposeWitness($tribunalCase, $userId, $data);
-
-        return response()->json([
-            'message' => 'Witness successfully proposed.',
-            'witness' => $witness,
-        ], 201);
-    }
-
-    /**
-     * List witnesses for a case.
-     */
-    public function witnesses(TribunalCase $tribunalCase): JsonResponse
-    {
-        $userId = auth()->id();
-        $this->ensureAuthorized($tribunalCase, $userId);
-
-        $witnesses = $tribunalCase->witnesses()
-            ->with(['proposer.profile', 'witnessUser.profile'])
-            ->get();
-
-        return response()->json([
-            'witnesses' => $witnesses,
-        ]);
-    }
 
     /**
      * Submit a statement or evidence reference in active hearing.
@@ -171,23 +127,4 @@ class TribunalHearingController extends Controller
         ], 201);
     }
 
-    /**
-     * Record approved witness testimony.
-     */
-    public function recordTestimony(Request $request, TribunalHearing $hearing, TribunalWitness $witness): JsonResponse
-    {
-        $userId = auth()->id();
-        $this->ensureAuthorized($hearing->case, $userId);
-
-        $data = $request->validate([
-            'testimony' => 'required|string|max:10000',
-        ]);
-
-        $entry = $this->witnessService->recordTestimony($hearing, $witness, $userId, $data['testimony']);
-
-        return response()->json([
-            'message' => 'Witness testimony recorded.',
-            'entry' => $entry,
-        ], 201);
-    }
 }

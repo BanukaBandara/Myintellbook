@@ -555,20 +555,6 @@ export const tribunalService = {
     return response.data;
   },
 
-  async getJuryWitnesses(caseId: number): Promise<any> {
-    const response = await api.get(`/jury/cases/${caseId}/witnesses`);
-    return response.data;
-  },
-
-  async approveJuryWitness(caseId: number, witnessId: number): Promise<any> {
-    const response = await api.post(`/jury/cases/${caseId}/witnesses/${witnessId}/approve`);
-    return response.data;
-  },
-
-  async rejectJuryWitness(caseId: number, witnessId: number, reason: string): Promise<any> {
-    const response = await api.post(`/jury/cases/${caseId}/witnesses/${witnessId}/reject`, { reason });
-    return response.data;
-  },
 
   async addJuryHearingEntry(hearingId: number, data: {
     entry_type: string;
@@ -591,10 +577,6 @@ export const tribunalService = {
     return response.data;
   },
 
-  async recordJuryWitnessTestimony(hearingId: number, witnessId: number, testimony: string): Promise<any> {
-    const response = await api.post(`/jury/hearings/${hearingId}/witnesses/${witnessId}/testimony`, { testimony });
-    return response.data;
-  },
 
   // Normal Tribunal endpoints (parties & counsel)
   async getTribunalHearings(caseId: number): Promise<any> {
@@ -607,22 +589,6 @@ export const tribunalService = {
     return response.data;
   },
 
-  async getTribunalWitnesses(caseId: number): Promise<any> {
-    const response = await api.get(`/tribunal/cases/${caseId}/witnesses`);
-    return response.data;
-  },
-
-  async proposeTribunalWitness(caseId: number, data: {
-    witness_name: string;
-    witness_email?: string | null;
-    relationship_to_case?: string | null;
-    statement_summary?: string | null;
-    witness_user_id?: number | null;
-    tribunal_hearing_id?: number | null;
-  }): Promise<any> {
-    const response = await api.post(`/tribunal/cases/${caseId}/witnesses`, data);
-    return response.data;
-  },
 
   async addTribunalHearingEntry(hearingId: number, data: {
     entry_type: string;
@@ -643,10 +609,6 @@ export const tribunalService = {
     return response.data;
   },
 
-  async recordTribunalWitnessTestimony(hearingId: number, witnessId: number, testimony: string): Promise<any> {
-    const response = await api.post(`/tribunal/hearings/${hearingId}/witnesses/${witnessId}/testimony`, { testimony });
-    return response.data;
-  },
 
   // ==========================================
   // STEP 6: DELIBERATION, FINDINGS & DECISION

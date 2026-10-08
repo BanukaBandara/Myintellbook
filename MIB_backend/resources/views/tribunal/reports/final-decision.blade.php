@@ -533,34 +533,32 @@
         @endif
     </div>
 
+    @if(!empty($witnesses))
     <!-- SECTION F: WITNESSES & TESTIMONIAL EVIDENCE -->
     <div class="section">
         <div class="section-title">6. Witness Testimonial Record</div>
-        @if(empty($witnesses))
-            <div style="color: #64748b; font-size: 8.5pt; font-style: italic;">No approved witness testimonies were recorded for this proceeding.</div>
-        @else
-            <table class="data-table">
-                <thead>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Witness Name</th>
+                    <th style="width: 15%;">Party Side</th>
+                    <th style="width: 20%;">Relationship</th>
+                    <th style="width: 40%;">Official Statement Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($witnesses as $w)
                     <tr>
-                        <th style="width: 25%;">Witness Name</th>
-                        <th style="width: 15%;">Party Side</th>
-                        <th style="width: 20%;">Relationship</th>
-                        <th style="width: 40%;">Official Statement Summary</th>
+                        <td><strong>{{ $w['witness_name'] }}</strong></td>
+                        <td><span class="badge badge-primary">{{ $w['side'] }}</span></td>
+                        <td>{{ $w['relationship'] ?: 'Participant' }}</td>
+                        <td style="font-size: 8pt;">{{ $w['statement_summary'] ?: 'Official testimony given during hearing.' }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach($witnesses as $w)
-                        <tr>
-                            <td><strong>{{ $w['witness_name'] }}</strong></td>
-                            <td><span class="badge badge-primary">{{ $w['side'] }}</span></td>
-                            <td>{{ $w['relationship'] ?: 'Participant' }}</td>
-                            <td style="font-size: 8pt;">{{ $w['statement_summary'] ?: 'Official testimony given during hearing.' }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
+                @endforeach
+            </tbody>
+        </table>
     </div>
+    @endif
 
     <!-- SECTION G: HEARINGS RECORD -->
     <div class="section">

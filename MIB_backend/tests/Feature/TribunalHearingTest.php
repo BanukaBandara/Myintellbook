@@ -305,7 +305,7 @@ class TribunalHearingTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // TEST 6: Complainant can propose witness
+    // TEST 6: Complainant cannot propose witness (Witness feature disabled)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_06_complainant_can_propose_witness(): void
@@ -324,20 +324,15 @@ class TribunalHearingTest extends TestCase
             'statement_summary' => 'Can confirm goods were rejected at dock.',
         ], $this->authHeaders($comp));
 
-        $response->assertStatus(201);
-        $response->assertJsonPath('witness.side', 'complainant');
-        $response->assertJsonPath('witness.status', 'proposed');
-
-        $this->assertDatabaseHas('tribunal_witnesses', [
+        $response->assertStatus(404);
+        $this->assertDatabaseMissing('tribunal_witnesses', [
             'tribunal_case_id' => $case->id,
             'witness_name' => 'Alice Witness',
-            'side' => 'complainant',
-            'status' => 'proposed',
         ]);
     }
 
     // -------------------------------------------------------------------------
-    // TEST 7: Respondent can propose witness
+    // TEST 7: Respondent cannot propose witness (Witness feature disabled)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_07_respondent_can_propose_witness(): void
@@ -355,12 +350,11 @@ class TribunalHearingTest extends TestCase
             'statement_summary' => 'Tested the delivered batch.',
         ], $this->authHeaders($resp));
 
-        $response->assertStatus(201);
-        $response->assertJsonPath('witness.side', 'respondent');
+        $response->assertStatus(404);
     }
 
     // -------------------------------------------------------------------------
-    // TEST 8: Lawyer can propose witness on behalf of client
+    // TEST 8: Lawyer cannot propose witness on behalf of client (Witness feature disabled)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_08_lawyer_can_propose_witness_on_behalf_of_client(): void
@@ -388,13 +382,11 @@ class TribunalHearingTest extends TestCase
             'statement_summary' => 'Financial forensic evaluation.',
         ], $this->authHeaders($lawyer));
 
-        $response->assertStatus(201);
-        $response->assertJsonPath('witness.side', 'complainant');
-        $response->assertJsonPath('witness.proposed_by', $lawyer->id);
+        $response->assertStatus(404);
     }
 
     // -------------------------------------------------------------------------
-    // TEST 9: Jury Panel can approve witness
+    // TEST 9: Jury Panel cannot approve witness (Witness feature disabled)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_09_jury_panel_can_approve_witness(): void
@@ -412,17 +404,11 @@ class TribunalHearingTest extends TestCase
         ]);
 
         $response = $this->postJson("/api/jury/cases/{$case->id}/witnesses/{$witness->id}/approve", [], $this->authHeaders($juryUser));
-        $response->assertStatus(200);
-        $response->assertJsonPath('witness.status', 'approved');
-
-        $this->assertDatabaseHas('tribunal_witnesses', [
-            'id' => $witness->id,
-            'status' => 'approved',
-        ]);
+        $response->assertStatus(404);
     }
 
     // -------------------------------------------------------------------------
-    // TEST 10: Jury Panel can reject witness
+    // TEST 10: Jury Panel cannot reject witness (Witness feature disabled)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_10_jury_panel_can_reject_witness(): void
@@ -443,13 +429,11 @@ class TribunalHearingTest extends TestCase
             'reason' => 'Testimony does not have material bearing on contested terms.',
         ], $this->authHeaders($juryUser));
 
-        $response->assertStatus(200);
-        $response->assertJsonPath('witness.status', 'rejected');
-        $response->assertJsonPath('witness.rejected_reason', 'Testimony does not have material bearing on contested terms.');
+        $response->assertStatus(404);
     }
 
     // -------------------------------------------------------------------------
-    // TEST 11: Party cannot approve witness
+    // TEST 11: Party cannot approve witness (Witness feature disabled)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_11_party_cannot_approve_witness(): void
@@ -467,7 +451,7 @@ class TribunalHearingTest extends TestCase
         ]);
 
         $response = $this->postJson("/api/jury/cases/{$case->id}/witnesses/{$witness->id}/approve", [], $this->authHeaders($comp));
-        $response->assertStatus(403);
+        $response->assertStatus(404);
     }
 
     // -------------------------------------------------------------------------
@@ -665,7 +649,7 @@ class TribunalHearingTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // TEST 19: Approved witness testimony can be recorded
+    // TEST 19: Witness testimony endpoint is disabled (returns 404)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_19_approved_witness_testimony_can_be_recorded(): void
@@ -689,15 +673,11 @@ class TribunalHearingTest extends TestCase
             'testimony' => 'I supervised the unloading and confirmed physical cracks in the machinery.',
         ], $this->authHeaders($comp));
 
-        $response->assertStatus(201);
-        $response->assertJsonPath('entry.entry_type', 'witness_testimony');
-
-        $witness->refresh();
-        $this->assertEquals(TribunalWitnessStatus::Testified, $witness->status);
+        $response->assertStatus(404);
     }
 
     // -------------------------------------------------------------------------
-    // TEST 20: Unapproved witness cannot testify
+    // TEST 20: Unapproved witness cannot testify (Witness endpoint disabled - returns 404)
     // -------------------------------------------------------------------------
     #[Test]
     public function test_20_unapproved_witness_cannot_testify(): void
@@ -720,7 +700,7 @@ class TribunalHearingTest extends TestCase
             'testimony' => 'Should fail because not approved.',
         ], $this->authHeaders($comp));
 
-        $response->assertStatus(422);
+        $response->assertStatus(404);
     }
 
     // -------------------------------------------------------------------------
