@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Register from '../views/User/Register.vue';
 import EmailConfirmation from '../views/User/EmailConfirmation.vue';
 import Login from '../views/User/Login.vue';
-import { fetchAuthUser, isProfileCompleted } from '../services/auth';
+import { clearSession, getAuthState, isProfileCompleted } from '../services/auth';
 import Swal from 'sweetalert2';
 import {useLoadingStore} from '@/stores/loadingStore';
 import CreateTribunalCase from '@/views/tribunal/CreateTribunalCase.vue';
@@ -535,43 +535,64 @@ const router = createRouter({
   ],
 });
 // Add this after router is created
-router.beforeEach(async(to, from, next) => {
+// Shown at most once per 30s so a flaky connection doesn't stack warnings on every navigation.
+let lastConnectionWarning = 0;
+const warnConnection = () => {
+  if (Date.now() - lastConnectionWarning < 30_000) return;
+  lastConnectionWarning = Date.now();
+  void Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'warning',
+    title: "Couldn't reach the server. Some data may not load.",
+    showConfirmButton: false,
+    timer: 4000,
+  });
+};
+
+router.beforeEach(async(to) => {
+  if (!to.meta.requiresAuth) return true;
+
   const loadingStore = useLoadingStore();
-      loadingStore.loadingStart();
-  const isAuthRequired = to.meta.requiresAuth;
+  loadingStore.loadingStart();
+  try {
+    const auth = await getAuthState();
 
-  if (isAuthRequired) {
-    const authUser = await fetchAuthUser();
-
-    if (authUser) {
-      loadingStore.loadingStop();
-      // Onboarding is only for users without a profile; everyone else goes to the dashboard.
-      if (to.name === 'basicDetails-fill' && isProfileCompleted(authUser)) {
-        next({ name: 'home' });
-      } else {
-        next();
-      }
-
-    } else {
-      loadingStore.loadingStop();
-      // Redirect to login if not authenticated
-      let confirm =await Swal.fire({
-        icon: 'error',
-        title: 'error',
-        text: 'You are not authenticated. Please login to continue.',
-        showCancelButton: false,
+    if (auth.status === 'unauthenticated') {
+      // Only a missing token or an explicit 401 from /user ends the session.
+      clearSession();
+      void Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Please log in to continue.',
         showConfirmButton: false,
         timer: 3000,
-    });
-
-        next('/');
-
-
+      });
+      return { path: '/login' };
     }
-  } else {
+
+    if (auth.status === 'unknown') {
+      // Timeout / offline / 5xx: never redirect (that caused the loop). The API still enforces auth.
+      console.warn('Could not verify the session; continuing.', auth.error);
+      warnConnection();
+      return true;
+    }
+
+    // Onboarding is only for users without a profile; everyone else goes to the dashboard.
+    if (to.name === 'basicDetails-fill' && isProfileCompleted(auth.user)) {
+      return { name: 'home' };
+    }
+    return true;
+  } finally {
     loadingStore.loadingStop();
-    next();
   }
+});
+
+// A lazy route chunk that fails to download (e.g. the connection dropped) shouldn't leave a dead page.
+router.onError((error) => {
+  console.error('Navigation failed:', error);
+  warnConnection();
 });
 
 router.afterEach((to) => {

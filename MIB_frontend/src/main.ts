@@ -57,6 +57,12 @@ app.use(GoogleLogin, {
 //     enabledTransports: ["ws"],
 // });
 
+// A failed API call inside one component (e.g. a timeout in onMounted) is logged instead of
+// surfacing as an uncaught error that can break rendering or navigation.
+app.config.errorHandler = (error, _instance, info) => {
+  console.error(`Unhandled component error (${info}):`, error);
+};
+
 app.use(createPinia())
 app.use(router)
 app.use(PrimeVue);

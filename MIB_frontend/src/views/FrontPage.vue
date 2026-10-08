@@ -230,7 +230,7 @@
 
 <script lang="ts" setup>
 import Button from 'primevue/button';
-import { checkAuth, routeAfterLogin } from '../services/auth';
+import { getAuthState, routeAfterLogin } from '../services/auth';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router'; 
 import { useUserStore } from '@/stores/User/userStore';
@@ -240,14 +240,13 @@ const isLoggedIn = ref<boolean>(true);
 const router = useRouter();
 
 const checkAuthUser = async () => {
-    let result = await checkAuth();
+    const auth = await getAuthState();
 
-    if (result) {
-        isLoggedIn.value = true;
-        router.push('/home');
-    } else {
-        isLoggedIn.value = false;
-        router.push('/');
+    // Only skip the landing page for a confirmed session. On a timeout or error, stay here:
+    // bouncing to /home would hit the same failing check in the router guard.
+    isLoggedIn.value = auth.status === 'authenticated';
+    if (auth.status === 'authenticated') {
+        router.replace(routeAfterLogin(auth.user));
     }
 }
 

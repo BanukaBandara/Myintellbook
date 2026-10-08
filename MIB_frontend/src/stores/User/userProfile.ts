@@ -594,13 +594,14 @@ export const useUserProfile = defineStore('userProfile', {
                 {
                     return response.data;
                 }else{
-                    new Error('Error in getting user profiles');
+                    throw new Error('Error in getting user profiles');
                 }
             }catch(e){
                  console.error("Error in getting user profiles", e);
                   return {
                       code: 500,
                       message: "getting user profiles fail",
+                      data: [], // lists always come back as arrays, so widgets never read undefined
                   };
             }
         },
@@ -674,6 +675,7 @@ export const useUserProfile = defineStore('userProfile', {
                 return {
                     code: 500,
                     message: "Getting notifications failed",
+                    data: [],
                 };
             }
         },
@@ -691,6 +693,7 @@ export const useUserProfile = defineStore('userProfile', {
                 return {
                     code: 500,
                     message: "Getting notifications failed",
+                    data: [],
                 };
             }
         },
@@ -708,6 +711,7 @@ export const useUserProfile = defineStore('userProfile', {
                 return {
                     code: 500,
                     message: "Getting Top users failed",
+                    data: [],
                 };
             }
         },
@@ -727,6 +731,7 @@ export const useUserProfile = defineStore('userProfile', {
                 return {
                     code: 500,
                     message: "Getting search data failed",
+                    data: [],
                 };
             }
         },
@@ -738,13 +743,14 @@ export const useUserProfile = defineStore('userProfile', {
                 {
                     return response.data;
                 }else{
-                    new Error('Error in getting user profiles');
+                    throw new Error('Error in getting user profiles');
                 }
             }catch(e){
                  console.error("Error in getting user profiles", e);
                   return {
                       code: 500,
                       message: "getting user profiles fail",
+                      data: [], // lists always come back as arrays, so widgets never read undefined
                   };
             }
         },
