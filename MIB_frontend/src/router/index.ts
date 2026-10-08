@@ -3,6 +3,7 @@ import Register from '../views/User/Register.vue';
 import EmailConfirmation from '../views/User/EmailConfirmation.vue';
 import Login from '../views/User/Login.vue';
 import { fetchAuthUser, isProfileCompleted, isJuryPanelUser } from '../services/auth';
+import { adminAuth } from '@/services/adminAuth';
 import Swal from 'sweetalert2';
 import {useLoadingStore} from '@/stores/loadingStore';
 import CreateTribunalCase from '@/views/tribunal/CreateTribunalCase.vue';
@@ -533,13 +534,57 @@ const router = createRouter({
       },
     },
     {
-      path: '/admin/tribunal/jury-panels',
-      name: 'admin-tribunal-jury-panels',
-      component: () => import('@/views/admin/AdminJuryPanels.vue'),
+      path: '/admin/login',
+      name: 'admin-login',
+      component: () => import('@/views/admin/AdminLogin.vue'),
       meta: {
-        requiresAuth: true,
-        title: 'Manage Jury Panels',
+        title: 'Super Admin Login',
+        hideNavBar: true,
       },
+    },
+    {
+      path: '/admin',
+      component: () => import('@/layouts/AdminLayout.vue'),
+      meta: {
+        requiresAdmin: true,
+        hideNavBar: true,
+      },
+      children: [
+        {
+          path: '',
+          redirect: '/admin/dashboard',
+        },
+        {
+          path: 'dashboard',
+          name: 'admin-dashboard',
+          component: () => import('@/views/admin/AdminDashboard.vue'),
+          meta: {
+            title: 'Admin Dashboard',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'tribunal/jury-panels',
+          name: 'admin-tribunal-jury-panels',
+          component: () => import('@/views/admin/AdminJuryPanels.vue'),
+          meta: {
+            title: 'Manage Jury Panels',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'professional-verifications',
+          name: 'admin-professional-verifications',
+          component: () => import('@/views/admin/AdminProfessionalVerifications.vue'),
+          meta: {
+            title: 'Professional Verifications',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+      ],
     },
     {
       path: '/tribunal/reports/verify/:verificationCode?',
@@ -597,6 +642,41 @@ const router = createRouter({
 router.beforeEach(async(to, from, next) => {
   const loadingStore = useLoadingStore();
   loadingStore.loadingStart();
+
+  // Dedicated Super Admin Route Protection & Isolation
+  if (to.path.startsWith('/admin')) {
+    if (to.path === '/admin/login') {
+      if (adminAuth.isAuthenticated()) {
+        loadingStore.loadingStop();
+        next('/admin/dashboard');
+        return;
+      }
+      loadingStore.loadingStop();
+      next();
+      return;
+    }
+
+    if (!adminAuth.isAuthenticated()) {
+      loadingStore.loadingStop();
+      next('/admin/login');
+      return;
+    }
+
+    loadingStore.loadingStop();
+    next();
+    return;
+  }
+
+  // If user is exclusively authenticated as Super Admin, prevent entering consumer app
+  if (adminAuth.isAuthenticated() && !to.path.startsWith('/admin')) {
+    const hasConsumerToken = Boolean(localStorage.getItem('userToken'));
+    if (!hasConsumerToken) {
+      loadingStore.loadingStop();
+      next('/admin/dashboard');
+      return;
+    }
+  }
+
   const isAuthRequired = to.meta.requiresAuth;
 
   if (isAuthRequired) {

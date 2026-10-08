@@ -6,6 +6,7 @@ use App\Http\Controllers\Tribunal\TribunalCaseController;
 Route::post('/register', [\App\Http\Controllers\UserController::class, 'userRegister']);
 Route::post('/verify-email', [\App\Http\Controllers\UserController::class, 'verifyEmail']);
 Route::post('/login', [\App\Http\Controllers\UserController::class, 'userLogin']);
+Route::middleware('throttle:10,1')->post('/admin/login', [\App\Http\Controllers\Admin\AdminAuthController::class, 'login']);
 Route::post('/password/reset', [\App\Http\Controllers\UserController::class, 'passwordResetLink']);
 Route::post('/password/reset/{token}', [\App\Http\Controllers\UserController::class, 'passwordReset']);
 Route::post('auth/google', [\App\Http\Controllers\GoogleController::class, 'callback']);
@@ -212,6 +213,13 @@ Route::middleware('auth.token')->group(function () {
         Route::patch('/{juryPanel}', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'update']);
         Route::post('/{juryPanel}/activate', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'activate']);
         Route::post('/{juryPanel}/deactivate', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'deactivate']);
+    });
+
+    // Dedicated Super Admin Authentication & Dashboard
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        Route::post('/logout', [\App\Http\Controllers\Admin\AdminAuthController::class, 'logout']);
+        Route::get('/me', [\App\Http\Controllers\Admin\AdminAuthController::class, 'me']);
+        Route::get('/dashboard/stats', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'stats']);
     });
 
     // Dedicated Jury Panel Portal (Step 2, Step 3, Step 4, Step 5, Step 6)

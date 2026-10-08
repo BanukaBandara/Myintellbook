@@ -73,6 +73,15 @@ class UserService{
                 throw new \Exception('Invalid credentials');
             }
 
+            if ($user->isAdmin()) {
+                return response()->json([
+                    'code' => 403,
+                    'status' => false,
+                    'requires_admin_portal' => true,
+                    'message' => 'This administrator account must use the admin login portal.',
+                ], 403);
+            }
+
             $apiToken = new \App\Models\ApiToken();
             $token = $apiToken->tokenGenerate($user);
             $user->load('profile');
