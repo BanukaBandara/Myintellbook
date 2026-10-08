@@ -84,7 +84,8 @@ class ProfileService
     public function insertProfile($request)
     {
         try{
-            $profile=new Profile();
+            // Re-submitting onboarding updates the existing profile instead of creating a duplicate.
+            $profile = Profile::firstOrNew(['user_id' => Auth::user()->id]);
 
             $profile->first_name= $request['first_name'];
             $profile->last_name= $request['last_name'];
@@ -115,16 +116,23 @@ class ProfileService
 
     public function getUserData($user_id){
         try{
-            $user = Profile::where('user_id', $user_id)->first();
+            $profile = Profile::where('user_id', $user_id)->firstOrFail();
+            $user = $profile->user;
+            $lci = \App\Services\HipRankMatrix::forUser($user);
 
             $user_summary =[
-                'full_name'=> $user->full_name,
-                'profile_image'=> ($user->profile_image) ? $user->profile_image : '',
-                'cover_image'=>($user->cover_image) ? $user->cover_image: '',
-                'total_points'=>$user->user->total_points,
-                'rank'=>$user->user->Rank,
-                'school'=>getSchool($user->user->id),
-                'profession'=>getProfession($user->user->id),
+                'full_name'=> $profile->full_name,
+                'profile_image'=> ($profile->profile_image) ? $profile->profile_image : '',
+                'cover_image'=>($profile->cover_image) ? $profile->cover_image: '',
+                'total_points'=>$user->total_points,
+                'hip_score'=>$lci['lci_score'],
+                'lci_score'=>$lci['lci_score'],
+                'hip_rank'=>$lci['hip_rank'],
+                'rank_tier'=>$lci['rank_tier'],
+                'rank_badge_color'=>$lci['rank_badge_color'],
+                'rank'=>$user->Rank,
+                'school'=>getSchool($user->id),
+                'profession'=>getProfession($user->id),
             ];
             return response()->json([
                 'code' => 200,
@@ -206,7 +214,13 @@ class ProfileService
     {
         try{
             if($request['currently_working']){
-                    WorkExperiance::where('currently_working',1)->update(['currently_working'=>0]);
+                    WorkExperiance::where('user_id', Auth::id())
+                        ->where('currently_working', 1)
+                        ->get()
+                        ->each(function (WorkExperiance $experience): void {
+                            $experience->currently_working = 0;
+                            $experience->save();
+                        });
             }
 
             $work = new WorkExperiance();
@@ -309,19 +323,30 @@ class ProfileService
     {
          try{
             if($request['currently_working']){
-                    $work = WorkExperiance::where('currently_working',1)->where('user_id',Auth::user()->id)->update(['currently_working'=>0]);
-            }
-            $experiance = WorkExperiance::where('id',$request['id'])->where('user_id',Auth::user()->id)->update([
-                'title'=>$request['title'],
-                'company'=>$request['company'],
-                'currently_working'=>$request['currently_working'],
-                'location'=>$request['location'],
-                'selectEmpType'=>$request['selectEmpType'],
-                'locationtype'=>$request['locationType'],
-                'starting_date' => $request['startingDate'],
-                'end_date' => $request['endDate'],
-                'positionType' => $request['position'],
-            ]);
+                     WorkExperiance::where('currently_working', 1)
+                         ->where('user_id', Auth::id())
+                         ->where('id', '!=', $request['id'])
+                         ->get()
+                         ->each(function (WorkExperiance $experience): void {
+                             $experience->currently_working = 0;
+                             $experience->save();
+                         });
+             }
+             $experiance = WorkExperiance::where('id', $request['id'])
+                 ->where('user_id', Auth::id())
+                 ->firstOrFail();
+             $experiance->fill([
+                 'title' => $request['title'],
+                 'company' => $request['company'],
+                 'currently_working' => $request['currently_working'],
+                 'location' => $request['location'],
+                 'selectEmpType' => $request['selectEmpType'],
+                 'locationType' => $request['locationType'],
+                 'starting_date' => $request['startingDate'],
+                 'end_date' => $request['endDate'],
+                 'positionType' => $request['position'],
+             ]);
+             $experiance->save();
 
             Post::create([
                 'content'=>'Work Experiance updated',
@@ -353,7 +378,9 @@ class ProfileService
     {
         try{
 
-            $experiance = WorkExperiance::find($id);
+            $experiance = WorkExperiance::where('id', $id)
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
             $experiance->delete();
 
             if(!$experiance)
@@ -470,7 +497,9 @@ class ProfileService
     {
          try{
 
-            $education = Education::where('user_id',Auth::user()->id)->where('id',$id);
+            $education = Education::where('user_id', Auth::id())
+                ->where('id', $id)
+                ->firstOrFail();
             $education->delete();
 
             //  Post::create([
@@ -499,12 +528,16 @@ class ProfileService
     {
         try{
 
-            $education = Education::where('user_id',Auth::user()->id)->where('id',$request['id'])->update([
-                'school'=>$request['school'],
-                'degree'=>$request['degree'],
+            $education = Education::where('user_id', Auth::id())
+                ->where('id', $request['id'])
+                ->firstOrFail();
+            $education->fill([
+                'school' => $request['school'],
+                'degree' => $request['degree'],
                 'category' => $request['degree_category'],
-                'field_of_study'=>$request['field_of_study']
+                'field_of_study' => $request['field_of_study'],
             ]);
+            $education->save();
 
              Post::create([
                 'content'=>'education details updated',
@@ -619,9 +652,12 @@ class ProfileService
     public function uploadProfileImage($request)
     {
          try{
-            $education = Profile::where('user_id',Auth::user()->id)->update([
+            $updatedProfiles = Profile::where('user_id',Auth::user()->id)->update([
                 'profile_image'=>$request['image']
             ]);
+            if ($updatedProfiles === 0 && !Profile::where('user_id', Auth::user()->id)->exists()) {
+                throw new \RuntimeException('Profile not found. Complete your basic profile before uploading a photo.');
+            }
              Post::create([
                 'content'=>'Profile Image changed',
                 'post_image'=>$request['image'],
@@ -649,9 +685,12 @@ class ProfileService
     public function uploadCoverImage($request)
     {
         try{
-            $education = Profile::where('user_id',Auth::user()->id)->update([
+            $updatedProfiles = Profile::where('user_id',Auth::user()->id)->update([
                 'cover_image'=>$request['image']
             ]);
+            if ($updatedProfiles === 0 && !Profile::where('user_id', Auth::user()->id)->exists()) {
+                throw new \RuntimeException('Profile not found. Complete your basic profile before uploading a cover photo.');
+            }
             Post::create([
                 'content'=>'Cover Image changed',
                 'post_image'=>$request['image'],
@@ -696,6 +735,8 @@ class ProfileService
                     'last_name'=>($detail->profile) ? $detail->profile['last_name'] :'',
                     'profile_image'=>($detail->profile) ? $detail->profile['profile_image'] :null,
                     'points'=>$detail->total_points,
+                    'hip_score'=>$detail->hip_score,
+                    'profession'=>$detail->workExperiances->first()?->title ?? '',
                     'profile_url'=> ($detail->profile) ? $detail->profile['slug']."-".$detail->profile['uuid'] : null,
                     'rank'=>$detail->Rank,
                     'full_name'=> ($detail->profile) ? $detail->profile['full_name'] : null,
@@ -748,11 +789,13 @@ class ProfileService
         $Details = $profileDetails->map(function($detail){
 
                 return [
-                    'first_name'=>($detail->profile)? $detail->profile['first_name'] : '',
-                    'last_name'=>($detail->profile) ? $detail->profile['last_name'] :'',
-                    'profile_image'=>($detail->profile) ? $detail->profile['profile_image'] :null,
-                    'points'=>$detail->total_points,
-                    'rank'=>$detail->Rank,
+                'id'=>$detail->id,
+                'first_name'=>($detail->profile)? $detail->profile['first_name'] : '',
+                'last_name'=>($detail->profile) ? $detail->profile['last_name'] :'',
+                'profile_image'=>($detail->profile) ? $detail->profile['profile_image'] :null,
+                'points'=>$detail->total_points,
+                'hip_score'=>$detail->hip_score,
+                'rank'=>$detail->Rank,
                     'profile_url'=> ($detail->profile) ? $detail->profile['slug']." - ".$detail->profile['uuid'] : null,
                     'currently_working'=> $detail->workExperiances->map(function($experiance){
                         return[

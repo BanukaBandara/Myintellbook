@@ -14,20 +14,24 @@ function userDataFormatting($profileDetails)
             //       return [$opt->label]  = $opt->value;
             //   });
               $postService = new \App\Services\PostService();
-              $fetchScore = new \App\Services\ScoreFetchService();
+              $lci = \App\Services\HipRankMatrix::forUser($detail);
+              $hipScore = $lci['lci_score'];
               $format_question = [];
 
               if($detail->question !=null)
               {
-                  $options = $detail->question->QuesOptions->map(function($opt){
-                  return [$opt->label]  = $opt->value;
-              });
+                    $options = $detail->question->options;
+                    if (!is_array($options) || $options === []) {
+                        $options = $detail->question->QuesOptions
+                            ->map(fn ($option) => $option->value)
+                            ->values()
+                            ->all();
+                    }
                     $format_question = [
                         'id' => $detail->question->id,
-                        'category' => $detail->question->profession->name,
+                        'category' => $detail->question->category ?: $detail->question->profession?->name,
                         'question' => $detail->question->question,
                         'options' => $options,
-                        'answer' => $detail->question->answer,
                         'is_used' => $detail->question->is_used,
                         'difficulty_level' => $detail->question->difficulty_level,
                         'post_at'=> Carbon::parse($detail->question->issue_date)->diffForHumans()
@@ -42,7 +46,12 @@ function userDataFormatting($profileDetails)
                     'profile_image'=>($detail->profile['profile_image']) ? $detail->profile['profile_image'] : '',
                     'cover_image'=>($detail->profile['cover_image']) ? $detail->profile['cover_image'] : '',
                     'total_points'=>$detail->total_points,
-                    'Hip'=>$fetchScore->totalScore(),
+                    'hip_score'=>$hipScore,
+                    'Hip'=>$hipScore,
+                    'lci_score'=>$hipScore,
+                    'hip_rank'=>$lci['hip_rank'],
+                    'rank_tier'=>$lci['rank_tier'],
+                    'rank_badge_color'=>$lci['rank_badge_color'],
                     'rank'=>$detail->Rank,
                     'school'=>getSchool($detail->id),
                     'profession'=>getProfession($detail->id),
@@ -60,7 +69,11 @@ function userDataFormatting($profileDetails)
 
 function getProfession($id)
 {
-    $profession = WorkExperiance::where('user_id',$id)->where('currently_working',1)->first();
+    $profession = WorkExperiance::where('user_id', $id)
+        ->orderByDesc('currently_working')
+        ->orderByDesc('updated_at')
+        ->orderByDesc('id')
+        ->first();
 
     if(!$profession)
         return[
@@ -98,6 +111,7 @@ function formatUserInfo($profileDetails)
                         'profile_image'=> ($detail->profile['profile_image']) ? $detail->profile['profile_image'] : '',
                         'cover_image'=>($detail->profile['cover_image']) ? $detail->profile['cover_image'] : '',
                         'total_points'=>$detail->total_points,
+                        'hip_score'=>\App\Services\HipScoreCalculator::recalculate($detail),
                         'rank'=>$detail->Rank,
                         'school'=>getSchool($detail->id),
                         'profession'=>getProfession($detail->id),

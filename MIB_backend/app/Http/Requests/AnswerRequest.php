@@ -23,7 +23,9 @@ class AnswerRequest extends FormRequest
     {
         return [
             'question_id' => 'required|integer|exists:questions,id',
-            'answer' => 'required|max:255',
+            'selected_option_index' => 'required|integer|min:0|max:4',
+            'score' => 'prohibited',
+            'answer' => 'prohibited',
         ];
     }
 }

@@ -3,10 +3,10 @@
 namespace App\Observers;
 
 use App\Models\WorkExperiance;
-use App\Models\Score;
+use App\Models\User;
 use App\Notifications\NewUserNotification;
-use Carbon\Carbon;
 use App\Events\ScoreEvent;
+use App\Services\HipScoreCalculator;
 
 class ExperianceObserver
 {
@@ -15,17 +15,24 @@ class ExperianceObserver
      */
     public function created(WorkExperiance $workExperiance): void
     {
-        $date = Carbon::now();
-        $user = auth()->user();
+        $this->recalculateHipScore($workExperiance);
+
         if($workExperiance->positionType == 'executive')
         {
-            ScoreEvent::dispatch(5,$user->id,WorkExperiance::class,$workExperiance->id,$workExperiance->diffrence);
+            ScoreEvent::dispatch(5,$workExperiance->user_id,WorkExperiance::class,$workExperiance->id,$workExperiance->diffrence);
              
         }else{
-            ScoreEvent::dispatch(6,$user->id,WorkExperiance::class,$workExperiance->id,$workExperiance->diffrence);
+            ScoreEvent::dispatch(6,$workExperiance->user_id,WorkExperiance::class,$workExperiance->id,$workExperiance->diffrence);
         }
         $score = $workExperiance->score;
-        auth()->user()->notify(new NewUserNotification( $user->first_name."You have added an Experiance detail! You have gain a ".$score->calculated_score." score to your  Life Competency Index(LCI) "));
+        $message = 'You have added a work experience detail!';
+        if ($score) {
+            $message .= ' You have gained a '.$score->calculated_score.' score to your Life Competency Index (LCI).';
+        } else {
+            $message .= ' Score calculation is unavailable until the scoring item is configured.';
+        }
+
+        $this->notifyExperienceUser($workExperiance, $message);
        
     }
 
@@ -34,9 +41,8 @@ class ExperianceObserver
      */
     public function updated(WorkExperiance $workExperiance): void
     {
-        $user = auth()->user()->id;
-
-        auth()->user()->notify(new NewUserNotification($user->first_name."You have updated an Experiance detail!"));
+        $this->recalculateHipScore($workExperiance);
+        $this->notifyExperienceUser($workExperiance, 'You have updated a work experience detail.');
     }
 
     /**
@@ -44,8 +50,8 @@ class ExperianceObserver
      */
     public function deleted(WorkExperiance $workExperiance): void
     {
-        $date = Carbon::now();
-       auth()->user()->notify(new NewUserNotification("Your Experiance Deleted!"));
+        $this->recalculateHipScore($workExperiance);
+        $this->notifyExperienceUser($workExperiance, 'Your work experience was deleted.');
     }
 
     /**
@@ -53,7 +59,7 @@ class ExperianceObserver
      */
     public function restored(WorkExperiance $workExperiance): void
     {
-        //
+        $this->recalculateHipScore($workExperiance);
     }
 
     /**
@@ -61,6 +67,22 @@ class ExperianceObserver
      */
     public function forceDeleted(WorkExperiance $workExperiance): void
     {
-        //
+        $this->recalculateHipScore($workExperiance);
+    }
+
+    private function notifyExperienceUser(WorkExperiance $workExperiance, string $message): void
+    {
+        $user = User::query()->find($workExperiance->user_id);
+        if ($user) {
+            $user->notify(new NewUserNotification($message));
+        }
+    }
+
+    private function recalculateHipScore(WorkExperiance $workExperiance): void
+    {
+        $user = User::find($workExperiance->user_id);
+        if ($user !== null) {
+            HipScoreCalculator::recalculate($user);
+        }
     }
 }

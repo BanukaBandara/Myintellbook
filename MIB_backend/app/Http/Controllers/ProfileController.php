@@ -8,7 +8,10 @@ use App\Http\Requests\ProfileRequest;
 use App\Http\Requests\GeneralInfoRequest;
 use App\Http\Requests\WorkExperianceRequest;
 use App\Http\Requests\EducationRequest;
+use App\Models\User;
+use App\Services\HipScoreCalculator;
 use Auth;
+use Illuminate\Support\Facades\Schema;
 
 class ProfileController extends Controller
 {
@@ -26,6 +29,110 @@ class ProfileController extends Controller
     {
         $user = $this->profileService->getUserData(Auth::user()->id);
         return $user;
+    }
+
+    public function userProfile()
+    {
+        $user = Auth::user();
+        $user->load('profile');
+        $user->hip_score = HipScoreCalculator::recalculate($user);
+
+        return response()->json([
+            'user' => $user,
+            'hip_score' => $user->hip_score,
+        ]);
+    }
+
+    public function show(string $id)
+    {
+        $userId = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($userId === false) {
+            return response()->json(['message' => 'User profile not found'], 404);
+        }
+
+        $user = User::with(['profile', 'educations', 'workExperiances', 'skills'])
+            ->whereHas('profile')
+            ->find($userId);
+        if ($user === null) {
+            return response()->json(['message' => 'User profile not found'], 404);
+        }
+
+        $achievements = collect();
+        if (Schema::hasTable('achievements')) {
+            $achievements = $user->achievements()
+                ->where('verification_status', 'verified')
+                ->get(['id', 'title', 'category'])
+                ->map(fn ($achievement) => [
+                    'id' => $achievement->id,
+                    'title' => $achievement->title,
+                    'category' => $achievement->category,
+                ]);
+        }
+
+        $hipScore = HipScoreCalculator::recalculate($user);
+        $profile = $user->profile;
+        $latestExperience = $user->workExperiances
+            ->sortByDesc('currently_working')
+            ->sortByDesc('updated_at')
+            ->first();
+        $visibility = formatvisibility($user->getSettings());
+        $profileDetails = [
+            'id' => $user->id,
+            'first_name' => $profile->first_name,
+            'last_name' => $profile->last_name,
+            'full_name' => $profile->full_name,
+            'gender' => $profile->gender,
+            'profile_image' => $profile->profile_image ?? '',
+            'cover_image' => $profile->cover_image ?? '',
+            'total_points' => $user->total_points,
+            'hip_score' => $hipScore,
+            'rank' => $user->Rank,
+            'school' => $user->educations->first()?->school ?? '',
+            'profession' => [
+                'company' => $latestExperience?->company ?? '',
+                'location' => $latestExperience?->location ?? '',
+                'profession' => $latestExperience?->title ?? '',
+            ],
+            'experiance' => $user->workExperiances->map(fn ($experience) => [
+                'id' => $experience->id,
+                'title' => $experience->title,
+                'company' => $experience->company,
+                'currently_working' => $experience->currently_working,
+                'location' => $experience->location,
+                'selectEmpType' => $experience->selectEmpType,
+                'locationType' => $experience->locationType,
+                'starting_date' => $experience->starting_date,
+                'end_date' => $experience->end_date,
+                'positionType' => $experience->positionType,
+            ]),
+            'education' => $user->educations->map(fn ($education) => [
+                'id' => $education->id,
+                'school' => $education->school,
+                'degree' => $education->degree,
+                'field_of_study' => $education->field_of_study,
+                'category' => $education->category,
+            ]),
+            'completed_exams' => [],
+            'upcomming_exams' => [],
+            'skills' => [
+                'licensed' => $user->skills->where('type', 0)->values()->map(fn ($skill) => [
+                    'id' => $skill->id,
+                    'skill' => $skill->skill,
+                ]),
+                'vocational' => $user->skills->where('type', 1)->values()->map(fn ($skill) => [
+                    'id' => $skill->id,
+                    'skill' => $skill->skill,
+                ]),
+            ],
+            'visibility' => $visibility + ['birth_date' => 'Private'],
+            'profile_url' => $profile->full_url,
+            'achievements' => $achievements,
+        ];
+
+        return response()->json([
+            'status' => 'success',
+            'user' => $profileDetails,
+        ]);
     }
 
     public function editGeneralInfo(GeneralInfoRequest $request)
@@ -120,12 +227,20 @@ class ProfileController extends Controller
 
     public function uploadProfileImage(Request $request)
     {
+        $request->validate([
+            'image' => ['required', 'string', 'starts_with:data:image', 'max:5000000'],
+        ]);
+
         $user = $this->profileService->uploadProfileImage($request);
         return $user;
     }
 
     public function uploadCoverImage(Request $request)
     {
+        $request->validate([
+            'image' => ['required', 'string', 'starts_with:data:image', 'max:5000000'],
+        ]);
+
         $user = $this->profileService->uploadCoverImage($request);
         return $user;
     }

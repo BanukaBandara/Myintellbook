@@ -21,6 +21,10 @@ Route::middleware('throttle:30,1')->post('/tribunal/reports/verify-file', [\App\
  
 Route::middleware('auth.token')->group(function () {
     Route::get('/user', [\App\Http\Controllers\UserController::class, 'userCheck']);
+    Route::get('/user/profile', [\App\Http\Controllers\ProfileController::class, 'userProfile']);
+    Route::get('/users/{id}', [\App\Http\Controllers\ProfileController::class, 'show'])
+        ->whereNumber('id')
+        ->middleware('throttle:60,1');
     Route::get('/categories', [\App\Http\Controllers\CategoryController::class, 'getCategories']); 
     Route::get('/professions/{category_id}',[\App\Http\Controllers\CategoryController::class, 'getProfessions']);
     Route::post('/insert-profile',[\App\Http\Controllers\ProfileController::class, 'insert']);
@@ -28,16 +32,16 @@ Route::middleware('auth.token')->group(function () {
     Route::post('/edit-general-info',[\App\Http\Controllers\ProfileController::class,'editGeneralInfo']);
     Route::get('/log-out',[\App\Http\Controllers\UserController::class, 'logOut']);
     Route::get('/get-general-info',[\App\Http\Controllers\ProfileController::class,'gtGeneralInfo']);
-    Route::post('/add-work-experiance',[\App\Http\Controllers\ProfileController::class,'addWorkExperiance']);
-    Route::get('/get-work-experiances/{userSlug}',[\App\Http\Controllers\ProfileController::class, 'getExperiances']);
-    Route::get('/get-details-experiance/{id}',[\App\Http\Controllers\ProfileController::class,'getExperianceDetails']);
-    Route::post('edit-details-experiance',[\App\Http\Controllers\ProfileController::class,'editExperianceDetails']);
-    Route::get('/delete-experiance/{id}',[\App\Http\Controllers\ProfileController::class,'deleteExperiance']);
-    Route::post('/add-education-details',[\App\Http\Controllers\ProfileController::class, 'addEducation']);
-    Route::get('/get-education-details/{userSlug}',[\App\Http\Controllers\ProfileController::class, 'getEducationDetails']);
-    Route::get('/get-education-detail/{id}',[\App\Http\Controllers\ProfileController::class,'getEducationDetail']);
-    Route::get('/delete-education/{id}',[\App\Http\Controllers\ProfileController::class,'deleteEducation']);
-    Route::post('/edit-education-detail',[\App\Http\Controllers\ProfileController::class, 'editEducation']);
+    Route::post('/add-work-experiance',[\App\Http\Controllers\ExperienceController::class,'store']);
+    Route::get('/get-work-experiances/{userSlug}',[\App\Http\Controllers\ExperienceController::class, 'index']);
+    Route::get('/get-details-experiance/{id}',[\App\Http\Controllers\ExperienceController::class,'show']);
+    Route::post('edit-details-experiance',[\App\Http\Controllers\ExperienceController::class,'update']);
+    Route::get('/delete-experiance/{id}',[\App\Http\Controllers\ExperienceController::class,'destroy']);
+    Route::post('/add-education-details',[\App\Http\Controllers\EducationController::class, 'store']);
+    Route::get('/get-education-details/{userSlug}',[\App\Http\Controllers\EducationController::class, 'index']);
+    Route::get('/get-education-detail/{id}',[\App\Http\Controllers\EducationController::class,'show']);
+    Route::get('/delete-education/{id}',[\App\Http\Controllers\EducationController::class,'destroy']);
+    Route::post('/edit-education-detail',[\App\Http\Controllers\EducationController::class, 'update']);
     Route::post('/add-skill',[\App\Http\Controllers\ProfileController::class,'addSkill']);
     Route::get('/get-skills',[\App\Http\Controllers\ProfileController::class,'getSkills']);
     Route::get('/delete-skill/{id}',[\App\Http\Controllers\ProfileController::class,'deleteSkill']);
@@ -47,10 +51,65 @@ Route::middleware('auth.token')->group(function () {
     Route::get('/get-user-summary',[\App\Http\Controllers\ProfileController::class,'basicInfo']);
     Route::get('/profile-list',[\App\Http\Controllers\ProfileController::class,'profileList']);
     Route::get('/request-today-question', [\App\Http\Controllers\QuestionController::class, 'getTodaySpecialQuestions']);
+    Route::get('/daily-question/today', [\App\Http\Controllers\DailyQuestionController::class, 'getTodayQuestion'])
+        ->middleware('throttle:60,1');
+
+    Route::post('/submit-daily-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])
+        ->middleware('throttle:10,1');
+
+    Route::post('/daily-questions/answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])
+        ->middleware('throttle:10,1');
+
+    Route::get('/daily-questions/history', [\App\Http\Controllers\DailyQuestionController::class, 'history'])
+        ->middleware('throttle:60,1');
+
+    Route::get('/learn/categories', [\App\Http\Controllers\LearnController::class, 'categories'])
+        ->middleware('throttle:60,1');
+
+    Route::get('/learn/questions/{category}', [\App\Http\Controllers\LearnController::class, 'questions'])
+        ->whereNumber('category')
+        ->middleware('throttle:60,1');
+
+    Route::get('/learn/active', [\App\Http\Controllers\LearnController::class, 'active'])
+        ->middleware('throttle:60,1');
+
+    Route::post('/learn/enroll', [\App\Http\Controllers\LearnController::class, 'enroll'])
+        ->middleware('throttle:10,1');
+
+    Route::post('/learn/next', [\App\Http\Controllers\LearnController::class, 'nextBatch'])
+        ->middleware('throttle:10,1');
+
+    Route::get('/exam/categories', [\App\Http\Controllers\ExamSessionController::class, 'categories'])
+        ->middleware('throttle:60,1');
+
+    Route::post('/exam/start', [\App\Http\Controllers\ExamSessionController::class, 'start'])
+        ->middleware('throttle:10,1');
+
+    Route::post('/exam/submit', [\App\Http\Controllers\ExamSessionController::class, 'submit'])
+        ->middleware('throttle:10,1');
+
     Route::post('/generate-questions', [\App\Http\Controllers\QuestionController::class, 'generateQuestions']);
     Route::post('/set-user-answer', [\App\Http\Controllers\QuestionController::class, 'setUserAnswer']);
     Route::post('/set-comment', [\App\Http\Controllers\CommentController::class, 'setComment']);
     Route::get('/get-scores',[\App\Http\Controllers\ScoreController::class, 'getScores']);
+    Route::get('/scores/lci', [\App\Http\Controllers\UserScoreController::class, 'lci'])
+        ->middleware('throttle:60,1');
+
+    Route::prefix('testament')->middleware('throttle:30,1')->group(function () {
+        Route::get('/notes', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
+        Route::get('/public-feed', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
+        Route::post('/notes', [\App\Http\Controllers\TestamentController::class, 'createResourceNote']);
+        Route::get('/', [\App\Http\Controllers\TestamentController::class, 'show']);
+        Route::put('/', [\App\Http\Controllers\TestamentController::class, 'save']);
+        Route::post('/submit', [\App\Http\Controllers\TestamentController::class, 'submit']);
+        Route::post('/recall', [\App\Http\Controllers\TestamentController::class, 'recall']);
+        Route::post('/withdraw', [\App\Http\Controllers\TestamentController::class, 'withdraw']);
+        Route::get('/witness-requests', [\App\Http\Controllers\TestamentController::class, 'witnessRequests']);
+
+        Route::post('/witness-requests/{testament}/{decision}', [\App\Http\Controllers\TestamentController::class, 'witnessRespond'])
+            ->whereNumber('testament')
+            ->whereIn('decision', ['confirm', 'decline']);
+    });
     Route::get('/get-comments', [\App\Http\Controllers\CommentController::class, 'getComments']);
     Route::get('/notifications',[\App\Http\Controllers\NotificationsController::class,'getNotifications']);
     Route::get('/allNotifications',[\App\Http\Controllers\NotificationsController::class,'getAll']);

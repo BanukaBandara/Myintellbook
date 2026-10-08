@@ -75,6 +75,7 @@ class UserService{
 
             $apiToken = new \App\Models\ApiToken();
             $token = $apiToken->tokenGenerate($user);
+            $user->load('profile');
             return response()->json([
                 'code' => 200,
                 'status' => true,
@@ -84,6 +85,8 @@ class UserService{
                     'email' => $user->email,
                     'is_admin' => (bool) $user->is_admin,
                     'is_jury_panel' => $user->isJuryPanelAccount(),
+                    'is_profile_completed' => $user->isProfileCompleted(),
+                    'profile' => $user->profile,
                 ],
                 'message' => 'User logged in successfully',
             ], 200);
@@ -174,6 +177,7 @@ class UserService{
             if(!$user) {
                 throw new \Exception('User not authenticated');
             }
+            $user->load('profile');
             return response()->json([
                 'code' => 200,
                 'status' => true,
@@ -184,6 +188,8 @@ class UserService{
                     'is_jury_panel' => $user->isJuryPanelAccount(),
                     'Rank' => $user->Rank,
                     'total_points' => $user->total_points,
+                    'is_profile_completed' => $user->isProfileCompleted(),
+                    'profile' => $user->profile,
                 ],
                 'message' => 'User authenticated successfully',
             ], 200);
