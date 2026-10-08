@@ -8,6 +8,11 @@
                 </div>
             </header>
 
+            <div v-if="loadFailed" class="alert alert-warning d-flex align-items-center justify-content-between gap-2 m-0" role="status">
+                <span>Your current details are taking too long to load, so saving is paused to avoid overwriting them.</span>
+                <Button label="Retry" size="small" severity="secondary" @click="getGeneralInfo" />
+            </div>
+
             <div class="pe-grid">
                 <div class="pe-field">
                     <FloatLabel variant="on">
@@ -43,7 +48,7 @@
             </div>
 
             <footer class="pe-actions">
-                <Button id="saveData" class="pe-save" @click="saveGeneralInfo">
+                <Button id="saveData" class="pe-save" :disabled="loadFailed" @click="saveGeneralInfo">
                     <Loader2 v-if="SaveBtnName == 'Please wait .....'" :size="16" class="pe-spin" aria-hidden="true" />
                     <Save v-else :size="16" aria-hidden="true" />
                     <label>{{ SaveBtnName }}</label>
@@ -103,15 +108,18 @@ const userGeneralInfo = ref<userGeneralInfoType>({
  
 });
 const dataSet = ref<Array<{field:string,value:string}>>([]);
+const loadFailed = ref(false);
 
 const getGeneralInfo = async() =>
 {
-    let result = await userProfile.getGeneralInfo();
-    if(result.code == 200)
+    const result = await userProfile.getGeneralInfo();
+    if(result?.code == 200)
    {
-        userGeneralInfo.value = result.data[0];
+        loadFailed.value = false;
+        const info: Record<string, any> = result.data?.[0] ?? {};
+        userGeneralInfo.value = { ...userGeneralInfo.value, ...info, visibility: info.visibility ?? {} };
         SelectedGender.value = genders.value.find((item)=> item.id === userGeneralInfo.value.gender) || {name: '', id: 0 };
-        let birthdate = userGeneralInfo.value.birth_date.split('-');
+        let birthdate = (userGeneralInfo.value.birth_date ?? '').split('-');
         year.value['label']= birthdate[0];
         year.value['code'] = parseInt(birthdate[0]);
         month.value['label']= birthdate[1];
@@ -120,18 +128,10 @@ const getGeneralInfo = async() =>
         day.value['code'] = parseInt(birthdate[2]);
 
         localStorage.setItem('visibility',JSON.stringify(userGeneralInfo.value.visibility))
-                
+
    }else{
-    let config ={
-                    icon:'error',
-                    title:'Error',
-                    text: result.message,
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#a03829',
-                    showConfirmButton:true
-                }
-            
-        let confirm = await showAlert(config);
+        // No modal. Render the form, but block saving: empty fields would overwrite the real details.
+        loadFailed.value = true;
    }
 }
 

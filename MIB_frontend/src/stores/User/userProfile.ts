@@ -5,6 +5,7 @@ import type {workExperianceType} from '../../types/workExperianceType'
 import type {educationType} from '../../types/educationType';
 import type {profileCompleteType} from '../../types/profileCompleteType';
 import instance from '@/assets/axios';
+import { cached } from '@/services/requestCache';
 import { text } from '@primeuix/themes/aura/inlinemessage';
 import axios from 'axios';
 // import {useApiService} from '../apiStore';
@@ -236,22 +237,27 @@ export const useUserProfile = defineStore('userProfile', {
         },
 
         async getGeneralInfo(){
+          // Shared in-flight request + 30s cache: the profile page and the edit form both ask for this,
+          // so a view load triggers at most one call, and quick revisits reuse the result.
+          return cached('get-general-info', 30_000, async () => {
             try{
             let response = await instance.get('get-general-info');
-             if(response.data.code == 200)
+             if(response.data?.code == 200)
                 {
                     return response.data;
                 }else{
-                    new Error('general info getting failed');
+                    throw new Error('General info request was not successful');
                 }
             }catch(e){
-                    console.error("Error in user details submission", e);
+                    console.warn("General info could not be loaded", e);
+                  // Never throw: callers read result.data[0], so hand back an empty profile to render with.
                   return {
                       code: 500,
-                      message: "general info getting fail",
+                      message: "Your profile details couldn't be loaded.",
+                      data: [{}],
                   };
             }
-            
+          }, (result) => (result as { code?: unknown } | undefined)?.code == 200);
         },
 
         async addWorkExperiance(){
