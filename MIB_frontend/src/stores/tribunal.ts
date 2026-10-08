@@ -189,10 +189,7 @@ export const useTribunalStore = defineStore('tribunal', () => {
 
       evidenceList.value.unshift(response.data);
       if (selectedCase.value && selectedCase.value.id === caseId) {
-        if (!selectedCase.value.evidence) {
-          selectedCase.value.evidence = [];
-        }
-        selectedCase.value.evidence.unshift(response.data);
+        selectedCase.value.evidence = evidenceList.value;
       }
 
       return response.data;
