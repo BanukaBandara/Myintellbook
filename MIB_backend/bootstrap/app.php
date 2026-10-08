@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.token' => \App\Http\Middleware\ApiTokenAuthMiddleware::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'jury.panel' => \App\Http\Middleware\EnsureJuryPanel::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\DB;
 class TribunalRespondentService
 {
     public function __construct(
-        private readonly JurySelectionService $jurySelectionService
+        private readonly TribunalJuryPanelAssignmentService $juryPanelAssignmentService,
+        private readonly ?JurySelectionService $jurySelectionService = null
     ) {
     }
 
@@ -107,14 +108,15 @@ class TribunalRespondentService
             $complainantUser = $complainantParty?->user ?? $tribunalCase->creator;
             $complainantUser?->notify(new TribunalCaseResponseSubmittedNotification($tribunalCase));
 
-            // Trigger random jury selection
-            $this->jurySelectionService->assignJurorToCase($tribunalCase);
+            // Automatically assign an active Jury Panel
+            $this->juryPanelAssignmentService->assignCase($tribunalCase);
         });
 
         return $tribunalCase->load([
             'creator.profile',
             'parties.user.profile',
             'response',
+            'currentJuryPanelAssignment.juryPanel',
             'currentJuryAssignment.juror.profile',
         ]);
     }

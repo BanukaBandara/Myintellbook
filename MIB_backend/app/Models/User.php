@@ -252,10 +252,33 @@ class User extends Authenticatable
 
     public function canActAsLegalRepresentative(): bool
     {
+        if ($this->isJuryPanelAccount()) {
+            return false;
+        }
+
         $verification = $this->latestProfessionalVerification;
         return $verification !== null 
             && $verification->isValid() 
             && $verification->profession_type === \App\Enums\ProfessionalType::AttorneyAtLaw;
+    }
+
+    public function juryPanel(): HasOne
+    {
+        return $this->hasOne(TribunalJuryPanel::class, 'login_user_id');
+    }
+
+    public function isJuryPanelAccount(): bool
+    {
+        if ($this->relationLoaded('juryPanel')) {
+            return $this->juryPanel !== null;
+        }
+
+        return $this->juryPanel()->exists();
+    }
+
+    public function createdJuryPanels(): HasMany
+    {
+        return $this->hasMany(TribunalJuryPanel::class, 'created_by');
     }
 
     public function representationRequestsReceived(): HasMany

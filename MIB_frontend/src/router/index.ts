@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Register from '../views/User/Register.vue';
 import EmailConfirmation from '../views/User/EmailConfirmation.vue';
 import Login from '../views/User/Login.vue';
-import { fetchAuthUser, isProfileCompleted } from '../services/auth';
+import { fetchAuthUser, isProfileCompleted, isJuryPanelUser } from '../services/auth';
 import Swal from 'sweetalert2';
 import {useLoadingStore} from '@/stores/loadingStore';
 import CreateTribunalCase from '@/views/tribunal/CreateTribunalCase.vue';
@@ -532,12 +532,71 @@ const router = createRouter({
         title: 'My Represented Cases'
       },
     },
+    {
+      path: '/admin/tribunal/jury-panels',
+      name: 'admin-tribunal-jury-panels',
+      component: () => import('@/views/admin/AdminJuryPanels.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Manage Jury Panels',
+      },
+    },
+    {
+      path: '/tribunal/reports/verify/:verificationCode?',
+      name: 'tribunal-report-verification',
+      component: () => import('@/views/tribunal/TribunalReportVerification.vue'),
+      meta: {
+        title: 'Verify Tribunal Report',
+      },
+    },
+    {
+      path: '/jury',
+      component: () => import('@/layouts/JuryPanelLayout.vue'),
+      meta: {
+        requiresAuth: true,
+        requiresJuryPanel: true,
+      },
+      children: [
+        {
+          path: '',
+          name: 'jury-dashboard',
+          component: () => import('@/views/jury/JuryDashboard.vue'),
+          meta: {
+            title: 'Jury Portal Dashboard',
+            requiresAuth: true,
+            requiresJuryPanel: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'cases',
+          name: 'jury-cases',
+          component: () => import('@/views/jury/JuryAssignedCases.vue'),
+          meta: {
+            title: 'Assigned Cases',
+            requiresAuth: true,
+            requiresJuryPanel: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'cases/:id',
+          name: 'jury-case-details',
+          component: () => import('@/views/jury/JuryCaseDetails.vue'),
+          meta: {
+            title: 'Case Details',
+            requiresAuth: true,
+            requiresJuryPanel: true,
+            hideNavBar: true,
+          },
+        },
+      ],
+    },
   ],
 });
-// Add this after router is created
 router.beforeEach(async(to, from, next) => {
   const loadingStore = useLoadingStore();
-      loadingStore.loadingStart();
+  loadingStore.loadingStart();
   const isAuthRequired = to.meta.requiresAuth;
 
   if (isAuthRequired) {
@@ -545,6 +604,20 @@ router.beforeEach(async(to, from, next) => {
 
     if (authUser) {
       loadingStore.loadingStop();
+      const isJury = isJuryPanelUser() || Boolean(authUser.is_jury_panel);
+
+      // Rule 1: If Jury Panel tries to access non-jury routes, redirect to /jury
+      if (isJury && !to.path.startsWith('/jury')) {
+        next('/jury');
+        return;
+      }
+
+      // Rule 2: If normal user / lawyer / admin tries to access /jury routes, redirect to /home
+      if (!isJury && to.path.startsWith('/jury')) {
+        next('/home');
+        return;
+      }
+
       // Onboarding is only for users without a profile; everyone else goes to the dashboard.
       if (to.name === 'basicDetails-fill' && isProfileCompleted(authUser)) {
         next({ name: 'home' });
@@ -555,20 +628,28 @@ router.beforeEach(async(to, from, next) => {
     } else {
       loadingStore.loadingStop();
       // Redirect to login if not authenticated
-      let confirm =await Swal.fire({
+      let confirm = await Swal.fire({
         icon: 'error',
         title: 'error',
         text: 'You are not authenticated. Please login to continue.',
         showCancelButton: false,
         showConfirmButton: false,
         timer: 3000,
-    });
+      });
 
-        next('/');
-
-
+      next('/');
     }
   } else {
+    // If user is already authenticated as Jury Panel and visits public auth pages (/ or /login), redirect to /jury
+    const isJury = isJuryPanelUser();
+    if (isJury && (to.path === '/' || to.path === '/login' || to.path === '/register')) {
+      const authUser = await fetchAuthUser();
+      if (authUser) {
+        loadingStore.loadingStop();
+        next('/jury');
+        return;
+      }
+    }
     loadingStore.loadingStop();
     next();
   }

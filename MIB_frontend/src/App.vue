@@ -35,9 +35,11 @@ const userGeneralInfo = ref<userGeneralInfoType>({
     slug:''
 });
 
+const isJuryRoute = computed(() => route.path.startsWith('/jury'));
+
 watch(isLoading,async()=>
 {
-  if(isLoading.value)
+  if(isLoading.value && !isJuryRoute.value)
   {
      await BasicInfo();
      await profileCompliation();
@@ -85,14 +87,14 @@ const getProfileList = async() =>{
 
 <template>
   <div class="app-shell">
-    <navBar />
+    <navBar v-if="!isJuryRoute" />
     <div v-if="loadingStore.isLoadingState" class="loader-overlay">
       <div class="spinner"></div>
     </div>
 
     <main class="app-content-scroll">
       <router-view />
-      <FAQ v-if="isLogged"/>
+      <FAQ v-if="isLogged && !isJuryRoute"/>
     </main>
   </div>
 </template>

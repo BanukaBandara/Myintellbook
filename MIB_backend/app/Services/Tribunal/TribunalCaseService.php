@@ -11,6 +11,10 @@ class TribunalCaseService
 {
     public function create(array $data, int $userId): TribunalCase
     {
+        // Revalidate respondent eligibility to prevent forged requests
+        app(\App\Services\Tribunal\TribunalRespondentSearchService::class)
+            ->validateEligibility((int) $data['respondent_id'], $userId);
+
         return DB::transaction(function () use ($data, $userId) {
 
             $case = TribunalCase::create([
