@@ -152,16 +152,14 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="d-flex align-items-center gap-2">
-            <a
+            <router-link
               v-if="selectedUser.profile_url"
-              :href="`/showUserProfile/${selectedUser.profile_url}`"
-              target="_blank"
-              rel="noopener noreferrer"
+              :to="`/showUserProfile/${selectedUser.profile_url}`"
               class="btn btn-outline-secondary btn-sm"
-              title="Open profile in a new tab"
+              title="View public profile"
             >
               <i class="bi bi-person-bounding-box me-1"></i> View Profile
-            </a>
+            </router-link>
             <button
               type="button"
               class="btn btn-outline-danger btn-sm"
@@ -271,16 +269,14 @@ onBeforeUnmount(() => {
 
                 <!-- Action Buttons -->
                 <div class="d-flex align-items-center gap-2 ms-auto">
-                  <a
+                  <router-link
                     v-if="user.profile_url"
-                    :href="`/showUserProfile/${user.profile_url}`"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    :to="`/showUserProfile/${user.profile_url}`"
                     class="btn btn-outline-secondary btn-sm"
-                    title="View public profile in new tab"
+                    title="View public profile"
                   >
                     View Profile
-                  </a>
+                  </router-link>
                   <button
                     type="button"
                     class="btn btn-primary btn-sm"
