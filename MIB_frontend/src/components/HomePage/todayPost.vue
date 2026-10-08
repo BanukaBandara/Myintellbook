@@ -23,9 +23,9 @@
                <p class="text-dark px-3 pt-0 mt-0 fw-semibold" style="font-size:16px;">{{ "Level: "+Level }}</p>
                <p class="w-100 mb-2 px-3 me-0" :class="(!postImage)? 'text-center':''">{{content}}</p>
                <ul v-for="(item, index) in answers" :key="index" class="list-unstyled px-3 pe-3" v-if="answers">
-                   <li v-if="optionText(item) !== ''" class="text-dark fs-6 d-flex align-items-center gap-2" style="font-size:13px;"> 
+                   <li v-if="item.trim() !== ''" class="text-dark fs-6 d-flex align-items-center gap-2" style="font-size:13px;"> 
                     <RadioButton :inputId="index" v-model="answer" name="pizza" :value="index" @change="submitAnswer"/>
-                    <label :for="String(index)">{{ optionText(item) }}</label>
+                    <label for="ingredient1">{{ item.trim() }}</label>
                     </li>
 
                </ul>
@@ -124,13 +124,6 @@ const postImage = computed(()=>props.postImage);
 const answers = computed(()=>props.answers);
 const questionCat = computed(()=>props.questionCat);
 const Level = computed(()=>props.Level);
-const optionText = (item: unknown): string => {
-    if (typeof item === 'string') return item.trim();
-    if (typeof item === 'object' && item !== null && 'text' in item && typeof item.text === 'string') {
-        return item.text.trim();
-    }
-    return '';
-};
 const openCommentBox = ref(false);
 const commentText = ref('');
 const isLike = ref(false);
@@ -158,7 +151,7 @@ const submitAnswer = async() => {
     let questionId = userProfile.getSummaryDetails.tquestion.id;
     userProfile.answer = {
         question_id: questionId,
-        selected_option_index: Number(answer.value)
+        answer: answer.value
     };
     let answerRes = await userProfile.setUserAnswer();
     if(answerRes?.code == 200){

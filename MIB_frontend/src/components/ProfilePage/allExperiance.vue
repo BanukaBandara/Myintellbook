@@ -131,7 +131,7 @@ onMounted(async() => {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--ds-border-strong);
+  background: #dee2e6;
 }
 .timeline-dot {
   position: absolute;

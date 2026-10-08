@@ -1,11 +1,10 @@
 <template>
     <div class="row flex-grow-1 m-0 overflow-auto">
         <div class="col-md-2"></div>
-        <div class="col-md-5 mt-3">
+        <div class="col-md-5">
             <div v-if="loading"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
             <userUpperSection :userGeneralInfo="userGeneralInfo"/>
-            <p v-if="errorMessage" class="text-danger text-center mt-3">{{ errorMessage }}</p>
-            <div class="d-flex flex-row align-items-center menuBar gap-4 mx-4 mt-3">
+            <div class="d-flex flex-row align-items-center menuBar gap-4 mx-4 mt-md-5">
                <!-- <div @click="() => {showTimeLine = true; showProfile = false; }" :class="(showTimeLine) ? 'underline': ''">Timeline</div> -->
                 <div @click="()=>{showProfile = true; showTimeLine = false;}"  :class="(showProfile) ? 'underline': ''">Profile</div>
                  <div @click="()=>{showProfile = false; showTimeLine = true;}"  :class="(showTimeLine) ? 'underline': ''">Exams</div>
@@ -16,8 +15,7 @@
                 :workExperiance="workExperiance"
                 :educationDetails="educationDetails"
                 :skills="skills"
-                :achievements="achievements"
-                :isEditable="isOwnProfile"
+                :isEditable="false"
                
                 />
                 <div v-if="showTimeLine" class="mt-4">
@@ -61,22 +59,9 @@ const loading = ref<boolean>(false);
 const showTimeLine = ref(false);
 const route = useRoute();
 const userProfile = useUserProfile();
-const userUrl = computed(() => String(route.params.id ?? ''));
-const isOwnProfile = computed(() => {
-    const targetUserId = Number(userUrl.value);
-    if (!Number.isSafeInteger(targetUserId) || targetUserId <= 0) return false;
-
-    try {
-        const authUser = JSON.parse(localStorage.getItem('userData') ?? 'null');
-        return Number(authUser?.id) === targetUserId;
-    } catch {
-        return false;
-    }
-});
+const userUrl = computed(()=> route.params.id as String);
 const skills = ref<Array<{skill:'',id:0}>>([]);
 const educationDetails = ref<Array<educationType>>([]);
-const achievements = ref<Array<{ id: number; title: string; category: string }>>([]);
-const errorMessage = ref('');
 const userGeneralInfo = ref<userGeneralInfoType>({
     first_name: '',
     last_name: '',
@@ -85,7 +70,6 @@ const userGeneralInfo = ref<userGeneralInfoType>({
     profile_image:'',
     cover_image:'',
     total_points:0,
-    hip_score:0,
     rank:0,
     school:'',
     visibility:{},
@@ -102,43 +86,33 @@ const upcommingExams = ref<Array<compeletedExamsType>>([]);
 
 const getUserInfomations = async() =>
 {
-    if (!userUrl.value) return;
-    loading.value = true;
-    errorMessage.value = '';
-    try {
-        const isId = /^\d+$/.test(userUrl.value);
-        const result = isId
-            ? await userProfile.getUserById(userUrl.value)
-            : await (async () => {
-                userProfile.slug = userUrl.value;
-                return userProfile.getUserInfomations();
-            })();
-        const details = isId
-            ? result.user
-            : (result.code === 200 ? result.data?.[0] : undefined);
+    userProfile.slug = userUrl.value;
+    let result = await userProfile.getUserInfomations();
+    if(result.code == 200)
+   {
 
-        if (result.code !== 200 || !details) {
-            errorMessage.value = result.message ?? 'Unable to load this profile.';
-            return;
-        }
+        userGeneralInfo.value = result.data[0];
+        userGeneralInfo.value.gender = (userGeneralInfo.value.gender == 1) ? 'Male':'Female';
+        userProfile.profile_image_set =  userGeneralInfo.value.profile_image;
+        userProfile.cover_image_set =  userGeneralInfo.value.cover_image;
+        workExperiance.value = result.data[0].experiance
+        skills.value = result.data[0].skills
+        educationDetails.value = result.data[0].education
+        completedExams.value = result.data[0].completed_exams
+        upcommingExams.value = result.data[0].upcomming_exams
+        
+   }else{
+    let config ={
+                    icon:'error',
+                    title:'Error',
+                    text: result.message,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#a03829',
+                    showConfirmButton:true
+                }
+   }
 
-        userGeneralInfo.value = details;
-        userGeneralInfo.value.gender = details.gender == 1 ? 'Male' : 'Female';
-        userProfile.profile_image_set = details.profile_image;
-        userProfile.cover_image_set = details.cover_image;
-        workExperiance.value = details.experiance ?? [];
-        skills.value = details.skills ?? [];
-        educationDetails.value = details.education ?? [];
-        achievements.value = details.achievements ?? [];
-        completedExams.value = details.completed_exams ?? [];
-        upcommingExams.value = details.upcomming_exams ?? [];
-    } catch (error) {
-        console.error('Unable to load profile details', error);
-        errorMessage.value = 'Unable to load this profile.';
-    } finally {
-        loading.value = false;
-        userProfile.setIsEdit(false);
-    }
+    userProfile.setIsEdit(false);
 }
 
 watch(userUrl,async()=>

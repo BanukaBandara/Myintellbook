@@ -6,8 +6,7 @@
             <div class="w-100">
                 <ProfileImageCropper @imageSelected="setImage"/>
             </div>
-            <p v-if="!profileImage.image" class="text-secondary small mt-2">Select an image and crop it before saving.</p>
-            <Button label="Save" icon="pi pi-save" severity="secondary" size="small" class="fw-semibold col-md-3 mt-4" @click="SaveImageToDataBase" :disabled="!profileImage.image || btnName !== 'Save'">
+            <Button label="Save" icon="pi pi-save" severity="secondary" size="small" class="fw-semibold col-md-3 mt-4" @click="SaveImageToDataBase" >
                 <i class="pi pi-save"  v-if="btnName == 'Save'"/>
                 <i class="pi pi-spin pi-spinner" v-else />
                 <label class="fw-semibold"> {{btnName}}</label>
@@ -39,8 +38,6 @@ const setImage = (image:string) =>
 
 const SaveImageToDataBase = async() =>
 {
-    if (!profileImage.value.image) return;
-
     btnName.value = 'Please wait .....';
     userProfile.profile_image = profileImage.value;
    let result = await userProfile.saveProfileImage();

@@ -9,7 +9,7 @@
                 <label for="School">Current Password</label>
             </FloatLabel>
 
-            <router-link to="/password/reset" style="color:var(--ds-primary-hover);text-decoration: none;" >Forgot Password?</router-link> 
+            <router-link to="/password/reset" style="color:#a03829;text-decoration: none;" >Forgot Password?</router-link> 
 
             <informationShow message="Create a new password that is at least 8 characters long. and Strong one" />
 

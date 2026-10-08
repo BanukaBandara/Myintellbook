@@ -1,5 +1,5 @@
 <template>
-    <Card class="dashboard-card feed-post-card mb-3" :pt="{
+    <Card class="mb-3" :pt="{
         body:'p-0',
         footer:'px-3 pb-2'
     }">

@@ -11,6 +11,10 @@ Route::post('/password/reset/{token}', [\App\Http\Controllers\UserController::cl
 Route::post('auth/google', [\App\Http\Controllers\GoogleController::class, 'callback']);
 Route::get('auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'callback']);
 
+// Public Tribunal Report Authenticity Verification (Rate limited)
+Route::middleware('throttle:60,1')->get('/tribunal/reports/verify/{verificationCode}', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'verifyCode']);
+Route::middleware('throttle:30,1')->post('/tribunal/reports/verify-file', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'verifyFile']);
+
 
  
 
@@ -47,27 +51,50 @@ Route::middleware('auth.token')->group(function () {
     Route::get('/get-user-summary',[\App\Http\Controllers\ProfileController::class,'basicInfo']);
     Route::get('/profile-list',[\App\Http\Controllers\ProfileController::class,'profileList']);
     Route::get('/request-today-question', [\App\Http\Controllers\QuestionController::class, 'getTodaySpecialQuestions']);
-    Route::get('/daily-question/today', [\App\Http\Controllers\DailyQuestionController::class, 'getTodayQuestion'])->middleware('throttle:60,1');
-    Route::post('/submit-daily-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
-    Route::post('/daily-questions/answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
-    Route::get('/daily-questions/history', [\App\Http\Controllers\DailyQuestionController::class, 'history'])->middleware('throttle:60,1');
-    Route::get('/learn/categories', [\App\Http\Controllers\LearnController::class, 'categories'])->middleware('throttle:60,1');
+    Route::get('/daily-question/today', [\App\Http\Controllers\DailyQuestionController::class, 'getTodayQuestion'])
+        ->middleware('throttle:60,1');
+
+    Route::post('/submit-daily-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])
+        ->middleware('throttle:10,1');
+
+    Route::post('/daily-questions/answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])
+        ->middleware('throttle:10,1');
+
+    Route::get('/daily-questions/history', [\App\Http\Controllers\DailyQuestionController::class, 'history'])
+        ->middleware('throttle:60,1');
+
+    Route::get('/learn/categories', [\App\Http\Controllers\LearnController::class, 'categories'])
+        ->middleware('throttle:60,1');
+
     Route::get('/learn/questions/{category}', [\App\Http\Controllers\LearnController::class, 'questions'])
         ->whereNumber('category')
         ->middleware('throttle:60,1');
-    Route::get('/learn/active', [\App\Http\Controllers\LearnController::class, 'active'])->middleware('throttle:60,1');
-    Route::post('/learn/enroll', [\App\Http\Controllers\LearnController::class, 'enroll'])->middleware('throttle:10,1');
-    Route::post('/learn/next', [\App\Http\Controllers\LearnController::class, 'nextBatch'])->middleware('throttle:10,1');
-    Route::get('/exam/categories', [\App\Http\Controllers\ExamSessionController::class, 'categories'])->middleware('throttle:60,1');
-    Route::post('/exam/start', [\App\Http\Controllers\ExamSessionController::class, 'start'])->middleware('throttle:10,1');
-    Route::post('/exam/submit', [\App\Http\Controllers\ExamSessionController::class, 'submit'])->middleware('throttle:10,1');
+
+    Route::get('/learn/active', [\App\Http\Controllers\LearnController::class, 'active'])
+        ->middleware('throttle:60,1');
+
+    Route::post('/learn/enroll', [\App\Http\Controllers\LearnController::class, 'enroll'])
+        ->middleware('throttle:10,1');
+
+    Route::post('/learn/next', [\App\Http\Controllers\LearnController::class, 'nextBatch'])
+        ->middleware('throttle:10,1');
+
+    Route::get('/exam/categories', [\App\Http\Controllers\ExamSessionController::class, 'categories'])
+        ->middleware('throttle:60,1');
+
+    Route::post('/exam/start', [\App\Http\Controllers\ExamSessionController::class, 'start'])
+        ->middleware('throttle:10,1');
+
+    Route::post('/exam/submit', [\App\Http\Controllers\ExamSessionController::class, 'submit'])
+        ->middleware('throttle:10,1');
+
     Route::post('/generate-questions', [\App\Http\Controllers\QuestionController::class, 'generateQuestions']);
-    Route::post('/set-user-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware('throttle:10,1');
+    Route::post('/set-user-answer', [\App\Http\Controllers\QuestionController::class, 'setUserAnswer']);
     Route::post('/set-comment', [\App\Http\Controllers\CommentController::class, 'setComment']);
     Route::get('/get-scores',[\App\Http\Controllers\ScoreController::class, 'getScores']);
-    Route::get('/scores/lci', [\App\Http\Controllers\UserScoreController::class, 'lci'])->middleware('throttle:60,1');
+    Route::get('/scores/lci', [\App\Http\Controllers\UserScoreController::class, 'lci'])
+        ->middleware('throttle:60,1');
 
-    // Fixed Arm for Testament Management (FATM)
     Route::prefix('testament')->middleware('throttle:30,1')->group(function () {
         Route::get('/notes', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
         Route::get('/public-feed', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
@@ -78,6 +105,7 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/recall', [\App\Http\Controllers\TestamentController::class, 'recall']);
         Route::post('/withdraw', [\App\Http\Controllers\TestamentController::class, 'withdraw']);
         Route::get('/witness-requests', [\App\Http\Controllers\TestamentController::class, 'witnessRequests']);
+
         Route::post('/witness-requests/{testament}/{decision}', [\App\Http\Controllers\TestamentController::class, 'witnessRespond'])
             ->whereNumber('testament')
             ->whereIn('decision', ['confirm', 'decline']);
@@ -108,6 +136,10 @@ Route::middleware('auth.token')->group(function () {
 
     Route::prefix('tribunal')->group(function () {
         Route::get('/me', \App\Http\Controllers\Tribunal\TribunalMeController::class);
+
+        // Respondent Search for Case Filing
+        Route::middleware('throttle:30,1')->get('/respondents/search', [\App\Http\Controllers\Tribunal\TribunalRespondentSearchController::class, 'search']);
+
         Route::post('/cases', [TribunalCaseController::class, 'store']);
         Route::get('/cases', [TribunalCaseController::class, 'index']);
         Route::get('/cases/{tribunalCase}', [TribunalCaseController::class, 'show']);
@@ -161,6 +193,24 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/mediations/{mediation}/proposals/{proposal}/counter', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'counterProposal']);
         Route::post('/settlement-proposals/{proposal}/accept', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'acceptProposal']);
         Route::post('/settlement-proposals/{proposal}/reject', [\App\Http\Controllers\Tribunal\TribunalMediationController::class, 'rejectProposal']);
+
+        // Formal Hearing & Witnesses (Step 5)
+        Route::get('/cases/{tribunalCase}/hearings', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'index']);
+        Route::get('/hearings/{hearing}', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'show']);
+        Route::post('/cases/{tribunalCase}/witnesses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'proposeWitness']);
+        Route::get('/cases/{tribunalCase}/witnesses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'witnesses']);
+        Route::post('/hearings/{hearing}/entries', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'addEntry']);
+        Route::post('/hearings/{hearing}/questions/{question}/responses', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'respondToQuestion']);
+        Route::post('/hearings/{hearing}/witnesses/{witness}/testimony', [\App\Http\Controllers\Tribunal\TribunalHearingController::class, 'recordTestimony']);
+
+        // Final Decision & Outcomes (Step 6)
+        Route::get('/cases/{tribunalCase}/decision', [\App\Http\Controllers\Tribunal\TribunalDecisionController::class, 'show']);
+
+        // Official Tribunal Reports & Downloads
+        Route::get('/cases/{tribunalCase}/reports', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'index']);
+        Route::middleware('throttle:10,1')->post('/cases/{tribunalCase}/reports/final', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'generateFinalReport']);
+        Route::get('/reports/{report}', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'show']);
+        Route::get('/reports/{report}/download', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'download']);
     });
 
     // Professional Verifications (User)
@@ -176,4 +226,66 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/{verification}/suspend', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'suspend']);
         Route::get('/{verification}/documents/{documentType}', [\App\Http\Controllers\Admin\AdminProfessionalVerificationController::class, 'downloadDocument']);
     });
+
+    // Jury Panel Management (Super Admin)
+    Route::middleware('admin')->prefix('admin/tribunal/jury-panels')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'store']);
+        Route::get('/{juryPanel}', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'show']);
+        Route::patch('/{juryPanel}', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'update']);
+        Route::post('/{juryPanel}/activate', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'activate']);
+        Route::post('/{juryPanel}/deactivate', [\App\Http\Controllers\Admin\AdminTribunalJuryPanelController::class, 'deactivate']);
+    });
+
+    // Dedicated Jury Panel Portal (Step 2, Step 3, Step 4, Step 5, Step 6)
+    Route::middleware('jury.panel')->prefix('jury')->group(function () {
+        Route::get('/me', [\App\Http\Controllers\Jury\JuryPortalController::class, 'me']);
+        Route::get('/cases', [\App\Http\Controllers\Jury\JuryPortalController::class, 'cases']);
+        Route::get('/cases/{id}', [\App\Http\Controllers\Jury\JuryPortalController::class, 'showCase']);
+
+        // Case Room endpoints for assigned Jury Panel (Step 4)
+        Route::get('/cases/{id}/case-room/messages', [\App\Http\Controllers\Jury\JuryPortalController::class, 'caseRoomMessages']);
+        Route::post('/cases/{id}/case-room/messages', [\App\Http\Controllers\Jury\JuryPortalController::class, 'sendCaseRoomMessage']);
+        Route::post('/cases/{id}/case-room/procedural-notices', [\App\Http\Controllers\Jury\JuryPortalController::class, 'postProceduralNotice']);
+        Route::post('/cases/{id}/case-room/questions', [\App\Http\Controllers\Jury\JuryPortalController::class, 'askQuestion']);
+
+        // Mediation Oversight endpoints for assigned Jury Panel (Step 4)
+        Route::get('/cases/{id}/mediation', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationShow']);
+        Route::post('/cases/{id}/mediation/offer', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationOffer']);
+        Route::post('/cases/{id}/mediation/end', [\App\Http\Controllers\Jury\JuryPortalController::class, 'mediationEnd']);
+
+        // Hearing & Witness Management for assigned Jury Panel (Step 5)
+        Route::get('/cases/{id}/hearings', [\App\Http\Controllers\Jury\JuryHearingController::class, 'index']);
+        Route::post('/cases/{id}/hearings', [\App\Http\Controllers\Jury\JuryHearingController::class, 'schedule']);
+        Route::get('/hearings/{hearing}', [\App\Http\Controllers\Jury\JuryHearingController::class, 'show']);
+        Route::post('/hearings/{hearing}/start', [\App\Http\Controllers\Jury\JuryHearingController::class, 'start']);
+        Route::post('/hearings/{hearing}/recess', [\App\Http\Controllers\Jury\JuryHearingController::class, 'recess']);
+        Route::post('/hearings/{hearing}/resume', [\App\Http\Controllers\Jury\JuryHearingController::class, 'resume']);
+        Route::post('/hearings/{hearing}/close', [\App\Http\Controllers\Jury\JuryHearingController::class, 'close']);
+        Route::get('/cases/{id}/witnesses', [\App\Http\Controllers\Jury\JuryHearingController::class, 'witnesses']);
+        Route::post('/cases/{id}/witnesses/{witness}/approve', [\App\Http\Controllers\Jury\JuryHearingController::class, 'approveWitness']);
+        Route::post('/cases/{id}/witnesses/{witness}/reject', [\App\Http\Controllers\Jury\JuryHearingController::class, 'rejectWitness']);
+        Route::post('/hearings/{hearing}/entries', [\App\Http\Controllers\Jury\JuryHearingController::class, 'addEntry']);
+        Route::post('/hearings/{hearing}/questions', [\App\Http\Controllers\Jury\JuryHearingController::class, 'askQuestion']);
+        Route::post('/hearings/{hearing}/witnesses/{witness}/testimony', [\App\Http\Controllers\Jury\JuryHearingController::class, 'recordTestimony']);
+
+        // Deliberation, Findings & Final Decision for assigned Jury Panel (Step 6)
+        Route::get('/cases/{id}/deliberation', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'show']);
+        Route::post('/cases/{id}/deliberation/notes', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'addNote']);
+        Route::patch('/cases/{id}/deliberation/notes/{note}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateNote']);
+        Route::delete('/cases/{id}/deliberation/notes/{note}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'deleteNote']);
+
+        Route::post('/cases/{id}/findings', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'addFinding']);
+        Route::patch('/cases/{id}/findings/{finding}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateFinding']);
+        Route::delete('/cases/{id}/findings/{finding}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'deleteFinding']);
+
+        Route::get('/cases/{id}/decision', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'getDecision']);
+        Route::post('/cases/{id}/decision', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateDecision']);
+        Route::patch('/cases/{id}/decision', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateDecision']);
+        Route::post('/cases/{id}/decision/orders', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'addOrder']);
+        Route::patch('/cases/{id}/decision/orders/{order}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'updateOrder']);
+        Route::delete('/cases/{id}/decision/orders/{order}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'deleteOrder']);
+        Route::post('/cases/{id}/decision/publish', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'publish']);
+    });
 });
+

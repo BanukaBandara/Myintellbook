@@ -35,7 +35,8 @@ class Question extends Model
     public function scopeOutsideDailyRotation(Builder $query): Builder
     {
         $query->where(function (Builder $query): void {
-            $query->whereNull('scheduled_date')->orWhereDate('scheduled_date', '<', today());
+            $query->whereNull('scheduled_date')
+                ->orWhereDate('scheduled_date', '<', today());
         });
 
         if ($todayId = DailyQuestionResolver::today()?->id) {

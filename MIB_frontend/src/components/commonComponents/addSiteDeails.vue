@@ -1,152 +1,83 @@
 <template>
-  <nav class="side-nav dashboard-card" aria-label="MyIntellibook information">
-    <p class="nav-heading">Resources</p>
-    <ul class="nav-list">
-      <li v-for="link in INFO_LINKS" :key="link.key">
-        <RouterLink
-          :to="link.to"
-          class="nav-link-item"
-          :class="{ active: link.isActive(route) }"
-          :aria-current="link.isActive(route) ? 'page' : undefined"
-        >
-          <span class="nav-icon" aria-hidden="true"><i :class="['bi', link.icon]"></i></span>
-          <span class="nav-label">{{ link.label }}</span>
-          <i class="bi bi-chevron-right nav-chevron" aria-hidden="true"></i>
-        </RouterLink>
-      </li>
-    </ul>
+  <Card :pt="{ body: 'p-0 m-0' }" class="shadow-sm rounded-3">
+    <template #content>
+      <nav class="menu-container">
+        <!-- Main menu items -->
+        <Button label="About" icon="pi pi-info-circle" class="menu-item" @click="() => router.push('/about_site')" />
+        <Button label="Glossary" icon="pi pi-book" class="menu-item" @click="() => router.push('/glossary')" />
+        <Button label="Terms & Conditions" icon="pi pi-file" class="menu-item" @click="() => router.push('/terms_conditions')" />
+        <Button label="See How It Works" icon="pi pi-question-circle" class="menu-item" @click="() => router.push('/how_it_works')" />
+        <Button label="Privacy Policy" icon="pi pi-lock" class="menu-item" @click="() => router.push('/privacy_policy')" />
+        <Button label="Encryption Details" icon="pi pi-shield" class="menu-item" @click="() => router.push('/encription_details')" />
+        <Button label="Data Retention Rule" icon="pi pi-database" class="menu-item" @click="() => router.push('/data_retention_rules')" />
+        <Button label="Scoring Breakdown" icon="pi pi-chart-line" class="menu-item" @click="() => router.push('/scoring_breakdown')" />
 
-    <div class="nav-divider" role="presentation"></div>
+        <!-- Divider -->
+        <hr class="menu-divider" />
 
-    <p class="nav-heading">Trust &amp; Tribunal</p>
-    <div class="nav-actions">
-      <RouterLink
-        v-for="action in INFO_ACTIONS"
-        :key="action.key"
-        :to="action.to"
-        class="nav-cta"
-        :class="[action.variant, { active: action.isActive(route) }]"
-        :aria-current="action.isActive(route) ? 'page' : undefined"
-      >
-        <i :class="['bi', action.icon]" aria-hidden="true"></i>
-        <span>{{ action.label }}</span>
-      </RouterLink>
-    </div>
-  </nav>
+        <!-- Special actions -->
+        <Button label="Verify Identity" icon="pi pi-id-card" class="menu-item" @click="() => router.push('/submit_case')" />
+        <Button label="Submit a Case" icon="pi pi-send" class="menu-item" @click="() => router.push('/submit_case/external')" />
+
+        <!-- Divider -->
+      </nav>
+    </template>
+  </Card>
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router';
-import { INFO_ACTIONS, INFO_LINKS } from '@/components/infoPages/infoLinks';
+import Button from 'primevue/button'
+import Card from 'primevue/card'
+import { useRouter } from 'vue-router'
 
-const route = useRoute();
+const router = useRouter()
 </script>
 
 <style scoped>
-.side-nav {
-  padding: 14px 10px;
-  background: #fff;
-  border: 1px solid var(--ds-border);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
-}
-
-.nav-heading {
-  margin: 4px 10px 8px;
-  color: var(--ds-text-subtle);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.nav-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
-
-.nav-link-item {
-  position: relative;
+.menu-container {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  color: var(--ds-text-secondary);
-  font-size: 13.5px;
+  flex-direction: column;
+  padding: 0.75rem 0.5rem;
+  background-color: #fff;
+}
+
+.menu-item {
+  justify-content: flex-start;
+  width: 100%;
+  text-align: left;
   font-weight: 500;
-  text-decoration: none;
-  border-radius: 12px;
-  transition: background-color .2s ease, color .2s ease;
+  color: #2c3e50;
+  border: none;
+  background: transparent;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-.nav-link-item:hover { color: var(--ds-primary); background: var(--ds-primary-soft); }
-.nav-link-item:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 1px; }
-
-.nav-icon {
-  display: grid;
-  flex: 0 0 30px;
-  width: 30px;
-  height: 30px;
-  color: var(--ds-text-muted);
-  font-size: 14px;
-  place-items: center;
-  background: var(--ds-surface-muted);
-  border-radius: 9px;
-  transition: background-color .2s ease, color .2s ease;
+.menu-item:hover {
+  background-color: #f0f4f8;
+  color: #A03829;
 }
 
-.nav-link-item:hover .nav-icon,
-.nav-link-item.active .nav-icon { color: var(--ds-primary); background: var(--ds-primary-100); }
-
-.nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.nav-chevron { color: var(--ds-primary-300); font-size: 11px; opacity: 0; transform: translateX(-4px); transition: opacity .2s ease, transform .2s ease; }
-.nav-link-item:hover .nav-chevron, .nav-link-item.active .nav-chevron { opacity: 1; transform: none; }
-
-/* Active route: soft pill plus a left accent bar. */
-.nav-link-item.active { color: var(--ds-primary-hover); font-weight: 600; background: var(--ds-primary-soft); }
-.nav-link-item.active::before {
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: -10px;
-  width: 3px;
-  content: '';
-  background: var(--ds-primary);
-  border-radius: 0 3px 3px 0;
+.menu-item .pi {
+  margin-right: 0.5rem;
+  font-size: 1rem;
+  color: #6c757d;
 }
 
-.nav-divider { height: 1px; margin: 12px 10px; background: linear-gradient(90deg, transparent, var(--ds-border) 15%, var(--ds-border) 85%, transparent); }
-
-.nav-actions { display: grid; gap: 8px; padding: 0 2px 2px; }
-
-.nav-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 10px 14px;
-  font-size: 13.5px;
-  font-weight: 700;
-  text-decoration: none;
-  border-radius: 12px;
-  transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease;
+/* Divider styling */
+.menu-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 0.75re
+  m 0;
 }
 
-.nav-cta:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
-
-.nav-cta.primary {
-  color: #fff;
-  background: linear-gradient(135deg, var(--ds-primary), var(--ds-primary-hover));
-  box-shadow: 0 4px 12px rgba(225, 29, 72, .25);
+.p-button-link-color,
+.p-button-link-hover,
+.p-button-link-active {
+  color: #A03829 !important;
 }
 
-.nav-cta.primary:hover { color: #fff; box-shadow: 0 6px 16px rgba(225, 29, 72, .32); transform: translateY(-1px); }
-.nav-cta.primary.active { box-shadow: 0 0 0 3px var(--ds-primary-100), 0 4px 12px rgba(225, 29, 72, .25); }
 
-.nav-cta.secondary { color: var(--ds-primary-hover); background: #fff; border: 1px solid var(--ds-primary-200); }
-.nav-cta.secondary:hover { color: var(--ds-primary); background: var(--ds-primary-soft); }
-.nav-cta.secondary.active { background: var(--ds-primary-soft); border-color: var(--ds-primary); }
-
-@media (prefers-reduced-motion: reduce) {
-  .nav-link-item, .nav-icon, .nav-chevron, .nav-cta { transition: none; }
-}
 </style>

@@ -1,89 +1,32 @@
 <template>
-<form class="w-100" @submit.prevent="submitUserData">
-    <div class="auth-card p-4 p-md-5 rounded-4 bg-white border shadow-sm mx-auto">
-        <div class="text-center mb-4">
-            <router-link to="/" class="d-inline-block mb-2">
-                <img src="@/assets/webIcon.jpeg" alt="MyIntelliBook Logo" class="auth-logo" />
-            </router-link>
-            <h4 class="fw-bold text-dark mb-1">Create Your Account</h4>
-            <p class="text-muted fs-6 mb-0">Join the professional social network today.</p>
-        </div>
-
-        <div class="d-flex flex-column gap-3 mb-3">
-            <div>
-                <label for="userEmail" class="form-label fw-semibold text-dark fs-6 mb-1">Email Address</label>
-                <InputText 
-                    v-model="userRegister.email"  
-                    placeholder="Enter your email" 
-                    size="normal" 
-                    id="userEmail"
-                    class="w-100 luxury-input"
-                />
-            </div>
-
-            <div>
-                <label for="userPassword" class="form-label fw-semibold text-dark fs-6 mb-1">Password</label>
-                <InputGroup class="luxury-input-group">
-                    <InputText 
-                        :type="password" 
-                        v-model="userRegister.password" 
-                        placeholder="Create a password" 
-                        id="userPassword" 
-                        @focus="toggle"
-                        class="luxury-input"
-                    />
-                    <InputGroupAddon class="luxury-addon">
-                        <i :class="iconString" @click="showPassword('password')" id="showPassword" style="cursor: pointer;"></i>
-                    </InputGroupAddon>
+<form class="">
+    <div class="row align-items-center justify-content-center flex-grow-1">
+        <div class="d-flex flex-column gap-4 col-md-6 col-sm-12">
+            <h4 class="fw-bold">Sign Up to Myintelbook</h4>
+            
+                <InputText v-model="userRegister.email"  placeholder="Email" size="normal" id="userEmail"/>
+                <InputGroup>
+                    <InputText :type="password" v-model="userRegister.password" placeholder="Password" id="userPassword" @focus="toggle"/>
+                    <InputGroupAddon><i :class="iconString" @click="showPassword('password')" id="showPassword"></i></InputGroupAddon>
                 </InputGroup>
-            </div>
 
-            <div>
-                <label for="userConfirmPassword" class="form-label fw-semibold text-dark fs-6 mb-1">Confirm Password</label>
-                <InputGroup class="luxury-input-group">
-                    <InputText 
-                        :type="confirmPassword" 
-                        v-model="userRegister.password_confirmation" 
-                        placeholder="Confirm your password" 
-                        id="userConfirmPassword"
-                        class="luxury-input"
-                    />
-                    <InputGroupAddon class="luxury-addon">
-                        <i :class="conIconString" @click="showPassword('con-password')" id="showConfirmPassword" style="cursor: pointer;"></i>
-                    </InputGroupAddon>
+                <InputGroup>
+                    <InputText :type="confirmPassword" v-model="userRegister.password_confirmation" placeholder="Confirm Password" id="userConfirmPassword"/>
+                    <InputGroupAddon><i :class="conIconString" @click="showPassword('con-password')" id="showConfirmPassword"></i></InputGroupAddon>
                 </InputGroup>
-            </div>
-
-            <PasswordValidation :password="userRegister.password" ref="UserRegistration"/>
-        </div>
-
-        <Button 
-            :label="submitButtonLabel" 
-            class="w-100 btn-submit-luxury py-3 mb-3" 
-            size="normal" 
-            @click="submitUserData" 
-            id="register"
-        >
-            <template #icon>
-                <i class="pi pi-spin pi-spinner me-2" style="font-size: 1rem" v-if="submitData"></i>
-            </template>
-        </Button>
-
-        <div class="auth-card-footer text-center border-top pt-3">
-            <p class="text-muted fs-7 mb-2">
-                By clicking Agree and Join, you agree to the MyIntelliBook 
-                <router-link to="/privacy_policy" class="brand-link">Privacy Policy</router-link> and 
-                <router-link to="/terms_conditions" class="brand-link">Cookie Policy</router-link>.
-            </p>
-            <p class="fs-6 mb-0">
-                Already have an account? 
-                <router-link to="/login" class="brand-link fw-bold ms-1">Log in</router-link>
-            </p>
+                <PasswordValidation :password="userRegister.password"  ref="UserRegistration"/>
+                <p style="font-size:14px;">By clicking Agree and Join, you agreed to the Myintelbook <span style="color:#a03829;">Privacy Policy</span> and <span style="color:#a03829;">Cookie Policy.</span></p>
+                <p style="font-size:14px;">Already have an account? <router-link to="/login" style="color:#a03829;">Log in</router-link></p>
+                <Button :label="submitButtonLabel" class="w-100" style="background-color:#a03829;" size="normal" @click="submitUserData" id="register">
+                    <template #icon>
+                    <i class="pi pi-spin pi-spinner" style="font-size: 1rem" v-if="submitData"></i>
+                    </template>
+                </Button>
+                 
         </div>
     </div>
 </form>
 </template>
-
 <script setup lang="ts">
 import { ref, defineEmits, onMounted } from 'vue';
 import type userRegisterType from '@/types/userRegisterType';
@@ -94,13 +37,14 @@ import InputGroupAddon from 'primevue/inputgroupaddon';
 import Button from 'primevue/button';
 import showAlert from '@/composables/showAlert';
 import { useUserStore } from '@/stores/User/userStore';
-import { useRouter } from 'vue-router';
-import PasswordValidation from '@/components/PasswordValidation.vue';
+import { useRouter } from 'vue-router'
+import  PasswordValidation  from '@/components/PasswordValidation.vue';
+
 
 const emits = defineEmits(['submitUserData']);
 const userStore = useUserStore();
 const submitButtonLabel = ref<string>('Agree and Join');
-const router = useRouter();
+const router = useRouter()
 const userRegister = ref<userRegisterType>({
     email: '',
     password: '',
@@ -112,127 +56,66 @@ const confirmPassword = ref<string>('password');
 const iconString = ref<string>('bi bi-eye-slash');
 const conIconString = ref<string>('bi bi-eye-slash');
 const submitData = ref<boolean>(false);
-const UserRegistration = ref<InstanceType<typeof PasswordValidation> | null>(null);
+const UserRegistration = ref< InstanceType<typeof PasswordValidation>| null>(null)
 
 const showPassword = (type: string) => {
-    if (type === 'password') {
+    if(type === 'password'){
         password.value = password.value === 'password' ? 'text' : 'password';
         iconString.value = password.value === 'password' ? 'bi bi-eye-slash' : 'bi bi-eye';
-    } else {
+    }else{
         confirmPassword.value = confirmPassword.value === 'password' ? 'text' : 'password';
         conIconString.value = confirmPassword.value === 'password' ? 'bi bi-eye-slash' : 'bi bi-eye';
     }
 };
 
-const toggle = (event: any) => {
-    if (UserRegistration.value) {
+const toggle = (event:any) => {
+    if(UserRegistration.value)
+    {
         UserRegistration.value.toggle(event);
     }
-};
+}
 
-const submitUserData = async () => {
-    userStore.userData = userRegister.value;
-    submitButtonLabel.value = 'please wait...';
-    submitData.value = true;
-    let result = await userStore.submitUserData();
+const submitUserData = async() => {
 
-    if (result.code === 200) {
-        let config = {
-            icon: 'success',
-            title: 'Success',
-            text: result.message,
-            confirmButtonColor: '#a03829',
-            showConfirmButton: false,
-            timer: 3000
-        }
+userStore.userData =userRegister.value;
+submitButtonLabel.value = 'please wait...';
+submitData.value = true;
+let result = await userStore.submitUserData();
+
+    if(result.code  === 200){
+        let config ={
+                    icon:'success',
+                    title:'Success',
+                    text: result.message,
+                    confirmButtonColor: '#a03829',
+                    showConfirmButton:false,
+                    timer:3000
+                }
         let confirm = await showAlert(config);
 
-        submitButtonLabel.value = 'Agree and Join';
-        router.push({ name: 'EmailConfirmation' });
-        submitData.value = false;
-    } else {
-        let config = {
-            icon: 'error',
-            title: 'Error',
-            text: result.message,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#a03829',
-            showConfirmButton: true
-        }
-
+        // if(confirm.isConfirmed){
+           submitButtonLabel.value = 'Agree and Join';
+           router.push({ name: 'EmailConfirmation' })
+           submitData.value = false;
+        // }
+        
+    }else{
+        let config ={
+                    icon:'error',
+                    title:'Error',
+                    text: result.message,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#a03829',
+                    showConfirmButton:true
+                }
+            
         let confirm = await showAlert(config);
 
-        if (confirm.isConfirmed) {
-            submitButtonLabel.value = 'Agree and Join';
-            submitData.value = false;
+        if(confirm.isConfirmed){
+           submitButtonLabel.value = 'Agree and Join';
+           submitData.value = false;
         }
     }
-};
+}
+
 </script>
-
-<style scoped>
-.auth-card {
-    max-width: 470px;
-    border-color: var(--ds-border) !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05) !important;
-}
-
-.auth-logo {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(160, 56, 41, 0.2);
-}
-
-.brand-link {
-    color: rgb(160, 56, 41) !important;
-    text-decoration: none;
-    transition: opacity 0.2s ease;
-}
-
-.brand-link:hover {
-    opacity: 0.85;
-    text-decoration: underline;
-}
-
-.btn-submit-luxury {
-    background: rgb(160, 56, 41) !important;
-    border: none !important;
-    color: #ffffff !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    font-size: 1rem !important;
-    box-shadow: 0 4px 14px rgba(160, 56, 41, 0.3) !important;
-    transition: transform 0.2s ease, background-color 0.2s ease !important;
-}
-
-.btn-submit-luxury:hover {
-    transform: translateY(-1px);
-    background: rgb(135, 42, 29) !important;
-}
-
-:deep(.luxury-input) {
-    border-radius: 8px;
-    border-color: var(--ds-border-strong);
-    padding: 10px 14px;
-}
-
-:deep(.luxury-input:focus) {
-    border-color: rgb(160, 56, 41);
-    box-shadow: 0 0 0 3px rgba(160, 56, 41, 0.15);
-}
-
-:deep(.luxury-input-group) {
-    border-radius: 8px;
-}
-
-:deep(.luxury-addon) {
-    background: var(--ds-surface-subtle);
-    border-color: var(--ds-border-strong);
-    color: var(--ds-text-muted);
-}
-
-.fs-7 {
-    font-size: 0.78rem;
-}
-</style>

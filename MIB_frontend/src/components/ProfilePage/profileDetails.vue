@@ -1,7 +1,7 @@
 <template>
     <div>
         <Card class="mt-3">
-           <template #content>
+                <template #content>
                     <div class="d-flex flex-row align-items-center justify-content-between">
                         <h5>General</h5>
                         <Button v-if="isEditable" label="Edit" icon="pi pi-pencil" severity="secondary" size="small" class="fw-semibold" @click="router.push('/profileEdit/generalInfo')"/> 
@@ -43,17 +43,6 @@
                 </template>
                 <template #footer>
                         <Button severity="secondary" class="w-100" v-if="(props.workExperiance.length > 3 || showLength == 6)" @click="()=>{ (showLength == 3) ? showLength = 6 : showLength = 3}">{{ (showLength == 3 ) ? 'Show more Experiences':'Show less Experiences' }}</Button>
-                </template>
-            </Card>
-            <Card class="mt-3">
-                <template #content>
-                    <h5>Achievements</h5>
-                    <Divider />
-                    <p v-if="!props.achievements.length" class="text-secondary mb-0">No verified achievements yet.</p>
-                    <div v-for="achievement in props.achievements" :key="achievement.id" class="d-flex justify-content-between py-2 border-bottom">
-                        <span>{{ achievement.title || achievement.category }}</span>
-                        <small class="text-secondary">{{ achievement.category }}</small>
-                    </div>
                 </template>
             </Card>
              <Card class="mt-3">
@@ -182,10 +171,6 @@ const props = defineProps({
     skills:{
         type: Object,
         default:{}
-    },
-    achievements:{
-        type:Array as PropType<Array<{ id:number; title:string; category:string }>>,
-        default:() => []
     },
     isEditable:{
         type:Boolean,

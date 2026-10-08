@@ -6,9 +6,9 @@
                     <span class="fs-5"> Question Group 01</span>
                     <span style="font-size:12px;" class="text-secondary fw-semibold"> Category : Category 01 
                     <span class="mx-2">
-                            <i class="pi pi-star-fill" style="font-size:12px;color:var(--ds-primary-hover);"/>
-                            <i class="pi pi-star-fill" style="font-size:12px;color:var(--ds-primary-hover);"/>
-                            <i class="pi pi-star-fill" style="font-size:12px;color:var(--ds-primary-hover);"/>
+                            <i class="pi pi-star-fill" style="font-size:12px;color:#a03829;"/>
+                            <i class="pi pi-star-fill" style="font-size:12px;color:#a03829;"/>
+                            <i class="pi pi-star-fill" style="font-size:12px;color:#a03829;"/>
                     </span>
                     </span>
                 </div>

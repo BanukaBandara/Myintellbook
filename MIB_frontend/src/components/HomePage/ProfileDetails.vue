@@ -1,44 +1,56 @@
 <template>
-  <Card :pt="{ body: 'p-0 m-0' }" class="dashboard-card profile-summary-card">
+  <Card :pt="{ body: 'p-0 m-0' }" class="shadow-sm rounded-3">
     <template #content>
+      <!-- Cover + Avatar -->
       <div
-        class="profile-cover"
+        class="w-100 rounded-top background-image d-flex justify-content-center"
         :style="{ backgroundImage: `url(${basicInfo.cover_image || coverImage})` }"
-      >
+        >
         <Avatar
             :image="basicInfo.profile_image || base64Image"
             shape="circle"
-            class="profile-avatar"
+            size="xlarge"
+            class="border border-3 border-light avatar-float"
         />
+        </div>
+
+      <!-- Name + Profession -->
+      <div class="text-center mt-5">
+        <h6 class="mb-1">{{ basicInfo.full_name }}</h6>
+        <p class="m-0 text-secondary small">
+          {{ basicInfo.profession?.profession || "" }}
+        </p>
       </div>
 
-      <section class="profile-summary-body">
-        <h2 class="profile-name">{{ basicInfo.full_name || 'Your profile' }}</h2>
-        <p class="profile-role">{{ basicInfo.profession?.profession || 'Professional profile' }}</p>
-        <p v-if="basicInfo.profession?.location" class="profile-location">
-          <i class="pi pi-map-marker"></i>
-          {{ basicInfo.profession.location }}
-        </p>
-        <RouterLink to="/scores" class="score-link" aria-label="View your LCI and HIP rank">
-          <HipRankBadge
-            :score="basicInfo.lci_score ?? basicInfo.hip_score"
-            :rank="basicInfo.hip_rank"
-            :tier="basicInfo.rank_tier"
-            :color="basicInfo.rank_badge_color"
-          />
-        </RouterLink>
+      <Divider />
 
-        <div class="profile-facts">
-          <div>
-            <span class="profile-fact-label">Company</span>
-            <span class="profile-fact-value">{{ basicInfo.profession?.company || '—' }}</span>
-          </div>
-          <div>
-            <span class="profile-fact-label">Education</span>
-            <span class="profile-fact-value">{{ basicInfo.school || '—' }}</span>
-          </div>
+      <!-- Info Grid -->
+      <div class="row text-center">
+        <div class="col-6 border-end">
+          <p class="fw-semibold text-primary m-0 small">
+            {{ basicInfo.profession?.company || "" }}
+          </p>
+          <p class="m-0 small">{{ basicInfo.profession?.location || "" }}</p>
         </div>
-      </section>
+        <div class="col-6">
+          <p class="fw-semibold text-success m-0 small">
+            {{ basicInfo.school }}
+          </p>
+          <!-- <p class="m-0 small">Rank: {{ basicInfo.rank }}</p> -->
+        </div>
+      </div>
+
+      <Divider />
+
+      <p class="d-flex align-items-center justify-content-center fw-bold ps-4 fs-5" v-tooltip="'Human Intelegence Portfolio'">
+       HIP :-
+      </p>
+
+      <!-- Points -->
+      <!-- <div class="text-center">
+        <h6 class="text-secondary mb-1">Total Points</h6>
+        <h4 class="fw-bold">{{ basicInfo.total_points }}</h4>
+      </div> -->
 
       <Divider v-if="!isCompelete">
         <span class="text-secondary small">Complete your profile</span>
@@ -57,7 +69,6 @@ import { useUserProfile } from "@/stores/User/userProfile";
 import coverImageSet from "@/assets/default-cover-2.jpg";
 import userPng from "@/assets/user.png";
 import compeletedProfile from "@/components/HomePage/compeleteProfile.vue";
-import HipRankBadge from "@/components/commonComponents/HipRankBadge.vue";
 
 const userProfile = useUserProfile();
 const basicInfo = computed(() => userProfile.getSummaryDetails);
@@ -71,96 +82,14 @@ const setVisibility = (value: boolean) => {
 </script>
 
 <style scoped>
-.profile-cover {
-  position: relative;
-  display: flex;
-  justify-content: center;
+.background-image {
   background-size: cover;
-  background-position: center;
-  min-height: 108px;
-  border-radius: 1rem 1rem 0 0;
+  min-height: 60px;
+  margin-bottom: 20px;
 }
 
-.profile-avatar {
-  position: absolute;
-  bottom: -2.3rem;
-  width: 5rem;
-  height: 5rem;
-  border: 4px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 4px 14px rgb(17 24 39 / 14%);
-}
-
-.profile-summary-body {
-  padding: 3rem 1.25rem 1.25rem;
-  text-align: center;
-}
-
-.profile-name {
-  margin: 0;
-  color: #17191d;
-  font-size: 1.1rem;
-  font-weight: 750;
-}
-
-.profile-role,
-.profile-location {
-  margin: 0.35rem 0 0;
-  color: var(--ds-text-muted);
-  font-size: 0.875rem;
-}
-
-.profile-location {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-}
-
-.score-link {
-  display: inline-flex;
-  max-width: 100%;
-  margin-top: 0.9rem;
-  text-decoration: none;
-  border-radius: 999px;
-}
-
-.score-link:focus-visible {
-  outline: 2px solid var(--ds-primary);
-  outline-offset: 2px;
-}
-
-.profile-facts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--ds-border);
-  text-align: left;
-}
-
-.profile-facts > div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.profile-fact-label {
-  color: #9298a2;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.profile-fact-value {
-  overflow: hidden;
-  color: #363a40;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.avatar-float {
+  position: relative;
+  top: 30px; /* keep it slightly overlapping cover */
 }
 </style>

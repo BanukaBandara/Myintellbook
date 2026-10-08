@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "*",
         "google/apiclient": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.0",
@@ -16,6 +17,7 @@
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1",
         "pusher/pusher-php-server": "^7.2",
+        "simplesoftwareio/simple-qrcode": "*",
         "teamtnt/laravel-scout-tntsearch-driver": "^15.0"
     },
     "require-dev": {
