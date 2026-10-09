@@ -1,23 +1,24 @@
 <template>
   <InfoPageShell
-    :icon="isExternal ? 'bi-send' : 'bi-patch-check'"
-    :eyebrow="isExternal ? 'Online Tribunal' : 'Peer verification'"
-    :title="isExternal ? 'Submit a Case' : 'Verify Identity'"
-    :subtitle="isExternal
-      ? 'File a case with the External Tribunal, or follow the cases you are involved in.'
-      : 'Ask a peer juror to verify a member’s claim — a qualification, role or conduct record — and track its progress.'"
+    :icon="heroConfig.icon"
+    :eyebrow="heroConfig.eyebrow"
+    :title="heroConfig.title"
+    :subtitle="heroConfig.subtitle"
   >
     <nav class="mode-switch" aria-label="Trust and Tribunal">
-      <RouterLink to="/submit_case" class="mode-tab" :class="{ active: !isExternal }" :aria-current="!isExternal ? 'page' : undefined">
+      <RouterLink to="/submit_case" class="mode-tab" :class="{ active: activeMode === 'verify' }" :aria-current="activeMode === 'verify' ? 'page' : undefined">
         <i class="bi bi-patch-check" aria-hidden="true"></i> Verify Identity
       </RouterLink>
-      <RouterLink to="/submit_case/external" class="mode-tab" :class="{ active: isExternal }" :aria-current="isExternal ? 'page' : undefined">
+      <RouterLink to="/submit_case/external" class="mode-tab" :class="{ active: activeMode === 'external' }" :aria-current="activeMode === 'external' ? 'page' : undefined">
         <i class="bi bi-send" aria-hidden="true"></i> Submit a Case
+      </RouterLink>
+      <RouterLink to="/submit_case/report-misconduct" class="mode-tab" :class="{ active: activeMode === 'report-misconduct' }" :aria-current="activeMode === 'report-misconduct' ? 'page' : undefined">
+        <i class="bi bi-shield-exclamation" aria-hidden="true"></i> Report Misconduct
       </RouterLink>
     </nav>
 
     <!-- VERIFY IDENTITY: internal peer verification -->
-    <template v-if="!isExternal">
+    <template v-if="activeMode === 'verify'">
       <section class="panel" aria-labelledby="request-title">
         <div class="panel-head">
           <h2 id="request-title" class="panel-title">New verification request</h2>
@@ -113,7 +114,7 @@
     </template>
 
     <!-- SUBMIT A CASE: External Tribunal hub -->
-    <template v-else>
+    <template v-else-if="activeMode === 'external'">
       <section class="panel" aria-labelledby="flow-title">
         <h2 id="flow-title" class="panel-title">How a case works</h2>
         <ol class="flow">
@@ -170,6 +171,26 @@
         </div>
       </template>
     </template>
+
+    <!-- REPORT MISCONDUCT: Internal Tribunal reporting -->
+    <template v-else>
+      <InternalReportWizard />
+
+      <div class="action-grid mt-3">
+        <RouterLink to="/internal-tribunal" class="action-card">
+          <span class="action-icon"><i class="bi bi-folder2-open" aria-hidden="true"></i></span>
+          <span class="action-title">My Misconduct Reports</span>
+          <span class="action-text">View the history, review status, and outcomes of internal reports you submitted.</span>
+          <span class="action-cta">View My Reports <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+        </RouterLink>
+        <div class="action-card confidentiality-card">
+          <span class="action-icon confidential"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+          <span class="action-title">Confidentiality Guarantee</span>
+          <span class="action-text">Internal reports are reviewed exclusively by Super Administrators. The reported member receives zero information about who filed the report.</span>
+          <span class="action-cta text-muted"><i class="bi bi-check-circle" aria-hidden="true"></i> Fully Anonymous & Protected</span>
+        </div>
+      </div>
+    </template>
   </InfoPageShell>
 </template>
 
@@ -181,6 +202,15 @@ import InfoPageShell from '@/components/infoPages/InfoPageShell.vue';
 import { useUserProfile } from '@/stores/User/userProfile';
 import { useTribunalStore } from '@/stores/tribunal';
 import ComplainShows from './ComplainShows.vue';
+import InternalReportWizard from '@/components/internalTribunal/InternalReportWizard.vue';
+
+interface Props {
+  initialMode?: 'verify' | 'external' | 'report-misconduct';
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  initialMode: undefined,
+});
 
 export interface ComplainType {
   user: string;
@@ -198,7 +228,50 @@ const route = useRoute();
 const userProfile = useUserProfile();
 const tribunalStore = useTribunalStore();
 
-const isExternal = computed(() => route.params.slug === 'external');
+const activeMode = computed<'verify' | 'external' | 'report-misconduct'>(() => {
+  if (props.initialMode) return props.initialMode;
+  const slug = route.params.slug;
+  const tab = route.query.tab;
+  if (
+    slug === 'report-misconduct' ||
+    slug === 'internal' ||
+    tab === 'report-misconduct' ||
+    route.path.startsWith('/internal-tribunal')
+  ) {
+    return 'report-misconduct';
+  }
+  if (slug === 'external') {
+    return 'external';
+  }
+  return 'verify';
+});
+
+const isExternal = computed(() => activeMode.value === 'external');
+
+const heroConfig = computed(() => {
+  if (activeMode.value === 'report-misconduct') {
+    return {
+      icon: 'bi-shield-exclamation',
+      eyebrow: 'Confidential Oversight',
+      title: 'Report Misconduct',
+      subtitle: 'Submit a confidential internal report for policy violations, fraud, harassment, or abuse directly to Super Administrators.',
+    };
+  }
+  if (activeMode.value === 'external') {
+    return {
+      icon: 'bi-send',
+      eyebrow: 'Online Tribunal',
+      title: 'Submit a Case',
+      subtitle: 'File a case with the External Tribunal, or follow the cases you are involved in.',
+    };
+  }
+  return {
+    icon: 'bi-patch-check',
+    eyebrow: 'Peer verification',
+    title: 'Verify Identity',
+    subtitle: 'Ask a peer juror to verify a member’s claim — a qualification, role or conduct record — and track its progress.',
+  };
+});
 
 const STEPS = [
   { key: 'member', label: 'Member', icon: 'bi-person' },
@@ -446,6 +519,12 @@ onMounted(async () => {
 .action-text { flex: 1; color: var(--ds-text-muted); font-size: 13px; line-height: 1.55; }
 .action-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--ds-primary); font-size: 13px; font-weight: 700; }
 .count-badge { padding: 1px 8px; color: #fff; font-size: 11px; font-weight: 800; background: var(--ds-primary); border-radius: 999px; }
+
+.mt-3 { margin-top: 14px; }
+.action-card.confidentiality-card { cursor: default; }
+.action-card.confidentiality-card:hover { transform: none; border-color: var(--ds-border); box-shadow: none; }
+.action-icon.confidential { color: #1e40af; background: #eff6ff; }
+.action-cta.text-muted { color: var(--ds-text-muted); cursor: default; }
 
 @media (max-width: 575px) {
   .panel { padding: 16px 14px; }

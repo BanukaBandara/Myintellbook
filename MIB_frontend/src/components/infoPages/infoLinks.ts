@@ -40,4 +40,15 @@ export const INFO_ACTIONS: InfoLink[] = [
         variant: 'secondary',
         isActive: (route) => route.path === '/submit_case/external',
     },
+    {
+        key: 'report',
+        label: 'Report Misconduct',
+        to: '/submit_case/report-misconduct',
+        icon: 'bi-shield-exclamation',
+        variant: 'secondary',
+        isActive: (route) =>
+            route.path === '/submit_case/report-misconduct' ||
+            route.query.tab === 'report-misconduct' ||
+            route.path.startsWith('/internal-tribunal'),
+    },
 ];
