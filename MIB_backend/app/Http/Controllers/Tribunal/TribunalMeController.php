@@ -73,7 +73,8 @@ class TribunalMeController extends Controller
             'active_assignments' => $activeAssignmentsCount,
         ];
 
-        $isRepEligible = $user->canActAsLegalRepresentative();
+        $isRepEligible = $user->canActAsLegalRepresentative()
+            && !app(\App\Services\InternalTribunal\AccountProfessionalDisciplineService::class)->hasActiveEligibilitySuspension($user);
         $pendingRequestsCount = 0;
         $activeRepresentedCasesCount = 0;
 

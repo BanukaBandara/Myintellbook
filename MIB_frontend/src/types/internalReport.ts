@@ -22,7 +22,9 @@ export type InternalPenaltyType =
   | 'Profile Correction Required'
   | 'Temporary Suspension'
   | 'Permanent Suspension'
-  | 'Feature Restriction';
+  | 'Feature Restriction'
+  | 'Verification Revoked'
+  | 'Professional Eligibility Suspension';
 
 export type RestrictedFeature =
   | 'tribunal_participation'

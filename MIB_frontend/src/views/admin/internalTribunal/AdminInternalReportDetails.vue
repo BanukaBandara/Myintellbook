@@ -113,6 +113,11 @@ const handleApplyPenalty = async () => {
       if (penaltyForm.value.restriction_duration_type === 'temporary') {
         payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
       }
+    } else if (penaltyForm.value.action_type === 'Professional Eligibility Suspension') {
+      payload.restriction_duration_type = penaltyForm.value.restriction_duration_type;
+      if (penaltyForm.value.restriction_duration_type === 'temporary') {
+        payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
+      }
     }
 
     const res = await adminInternalReportService.applyPenalty(reportId, payload);
@@ -444,7 +449,7 @@ onMounted(() => {
                 <span v-if="p.starts_at">Starts: {{ new Date(p.starts_at).toLocaleString() }}</span>
                 <span v-if="p.starts_at && p.ends_at">&bull;</span>
                 <span v-if="p.ends_at">Expires: {{ new Date(p.ends_at).toLocaleString() }}</span>
-                <span v-else-if="p.action_type === 'Permanent Suspension' || (p.action_type === 'Feature Restriction' && !p.ends_at)">(Indefinite)</span>
+                <span v-else-if="!p.ends_at">(Indefinite)</span>
               </div>
               <div v-if="p.reversed_at" class="text-amber-700 font-semibold text-[11px]">
                 [Reversed on {{ new Date(p.reversed_at).toLocaleString() }}]
@@ -593,7 +598,66 @@ onMounted(() => {
             <option value="Temporary Suspension">Temporary Suspension</option>
             <option value="Permanent Suspension">Permanent Suspension</option>
             <option value="Feature Restriction">Feature Restriction</option>
+            <option value="Verification Revoked">Verification Revoked</option>
+            <option value="Professional Eligibility Suspension">Professional Eligibility Suspension</option>
           </select>
+        </div>
+
+        <!-- Verification Revoked Warning Notice -->
+        <div
+          v-if="penaltyForm.action_type === 'Verification Revoked'"
+          class="p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-800"
+        >
+          <strong>Notice:</strong> This action suspends the professional's verification, terminates any active legal representation assignments, and deactivates client-lawyer representation chats. Credential re-verification requires formal re-review through the Professional Verifications portal.
+        </div>
+
+        <!-- Professional Eligibility Suspension Configuration -->
+        <div v-if="penaltyForm.action_type === 'Professional Eligibility Suspension'" class="space-y-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Eligibility Suspension Duration Mode <span class="text-red-500">*</span>
+            </label>
+            <div class="flex gap-4">
+              <label class="inline-flex items-center text-xs text-gray-700">
+                <input
+                  type="radio"
+                  v-model="penaltyForm.restriction_duration_type"
+                  value="temporary"
+                  class="mr-1.5 text-indigo-600 focus:ring-indigo-500"
+                />
+                Temporary (Specific days)
+              </label>
+              <label class="inline-flex items-center text-xs text-gray-700">
+                <input
+                  type="radio"
+                  v-model="penaltyForm.restriction_duration_type"
+                  value="permanent"
+                  class="mr-1.5 text-indigo-600 focus:ring-indigo-500"
+                />
+                Permanent (Indefinite)
+              </label>
+            </div>
+          </div>
+
+          <div v-if="penaltyForm.restriction_duration_type === 'temporary'">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Suspension Duration (Days) <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model.number="penaltyForm.duration_days"
+              type="number"
+              min="1"
+              max="365"
+              placeholder="7"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
+            />
+            <p class="text-[11px] text-gray-500 mt-1">
+              Enter 1 to 365 days. The user cannot receive new representation requests during this period. Existing active representations continue undisturbed.
+            </p>
+          </div>
+          <div v-else class="text-[11px] text-indigo-800">
+            <strong>Permanent:</strong> Prevents new representation requests indefinitely until manually reversed by an administrator. Existing active cases continue undisturbed.
+          </div>
         </div>
 
         <!-- Temporary Suspension Duration -->

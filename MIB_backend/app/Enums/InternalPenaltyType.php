@@ -10,4 +10,6 @@ enum InternalPenaltyType: string
     case TemporarySuspension = 'Temporary Suspension';
     case PermanentSuspension = 'Permanent Suspension';
     case FeatureRestriction = 'Feature Restriction';
+    case VerificationRevoked = 'Verification Revoked';
+    case ProfessionalEligibilitySuspension = 'Professional Eligibility Suspension';
 }
