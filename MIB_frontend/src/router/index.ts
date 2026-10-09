@@ -534,6 +534,36 @@ const router = createRouter({
       },
     },
     {
+      path: '/internal-tribunal',
+      name: 'internal-tribunal',
+      component: () => import('@/views/internalTribunal/MyInternalReports.vue'),
+      meta: {
+        requiresAuth: true,
+        hideNavBar: false,
+        title: 'My Misconduct Reports',
+      },
+    },
+    {
+      path: '/internal-tribunal/create',
+      name: 'create-internal-report',
+      component: () => import('@/views/internalTribunal/CreateInternalReport.vue'),
+      meta: {
+        requiresAuth: true,
+        hideNavBar: false,
+        title: 'Report Misconduct',
+      },
+    },
+    {
+      path: '/internal-tribunal/:id',
+      name: 'internal-report-details',
+      component: () => import('@/views/internalTribunal/InternalReportDetails.vue'),
+      meta: {
+        requiresAuth: true,
+        hideNavBar: false,
+        title: 'Report Details',
+      },
+    },
+    {
       path: '/admin/login',
       name: 'admin-login',
       component: () => import('@/views/admin/AdminLogin.vue'),
@@ -580,6 +610,26 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminProfessionalVerifications.vue'),
           meta: {
             title: 'Professional Verifications',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'internal-reports',
+          name: 'admin-internal-reports',
+          component: () => import('@/views/admin/internalTribunal/AdminInternalReports.vue'),
+          meta: {
+            title: 'Internal Misconduct Reports',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'internal-reports/:id',
+          name: 'admin-internal-report-details',
+          component: () => import('@/views/admin/internalTribunal/AdminInternalReportDetails.vue'),
+          meta: {
+            title: 'Misconduct Report Dossier',
             requiresAdmin: true,
             hideNavBar: true,
           },

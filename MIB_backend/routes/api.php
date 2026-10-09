@@ -265,4 +265,23 @@ Route::middleware('auth.token')->group(function () {
         Route::delete('/cases/{id}/decision/orders/{order}', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'deleteOrder']);
         Route::post('/cases/{id}/decision/publish', [\App\Http\Controllers\Jury\JuryDeliberationController::class, 'publish']);
     });
+
+    // Internal Tribunal / Misconduct Reporting (User)
+    Route::prefix('internal-reports')->group(function () {
+        Route::get('/users/search', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'searchUsers']);
+        Route::post('/', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'store']);
+        Route::get('/', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'index']);
+        Route::get('/{report}', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'show']);
+        Route::get('/evidence/{evidence}/download', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'downloadEvidence']);
+    });
+
+    // Internal Tribunal Reports Review (Super Admin)
+    Route::middleware('admin')->prefix('admin/internal-reports')->group(function () {
+        Route::get('/', [\App\Http\Controllers\InternalTribunal\AdminInternalReportController::class, 'index']);
+        Route::get('/{report}', [\App\Http\Controllers\InternalTribunal\AdminInternalReportController::class, 'show']);
+        Route::patch('/{report}/status', [\App\Http\Controllers\InternalTribunal\AdminInternalReportController::class, 'updateStatus']);
+        Route::post('/{report}/penalties', [\App\Http\Controllers\InternalTribunal\AdminInternalReportController::class, 'applyPenalty']);
+        Route::post('/penalties/{penalty}/reverse', [\App\Http\Controllers\InternalTribunal\AdminInternalReportController::class, 'reversePenalty']);
+        Route::get('/evidence/{evidence}/download', [\App\Http\Controllers\InternalTribunal\AdminInternalReportController::class, 'downloadEvidence']);
+    });
 });

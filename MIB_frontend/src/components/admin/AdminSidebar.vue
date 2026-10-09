@@ -49,6 +49,15 @@
         <i class="pi pi-verified nav-icon"></i>
         <span v-if="!isCollapsed" class="nav-text">Professional Verifications</span>
       </router-link>
+
+      <router-link
+        to="/admin/internal-reports"
+        class="nav-link"
+        :class="{ active: currentPath.startsWith('/admin/internal-reports') }"
+      >
+        <i class="pi pi-exclamation-triangle nav-icon"></i>
+        <span v-if="!isCollapsed" class="nav-text">Internal Reports</span>
+      </router-link>
     </nav>
 
     <div class="sidebar-footer">
