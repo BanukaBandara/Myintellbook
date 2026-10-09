@@ -118,6 +118,11 @@ const handleApplyPenalty = async () => {
       if (penaltyForm.value.restriction_duration_type === 'temporary') {
         payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
       }
+    } else if (penaltyForm.value.action_type === 'Jury Panel Deactivation') {
+      payload.restriction_duration_type = penaltyForm.value.restriction_duration_type;
+      if (penaltyForm.value.restriction_duration_type === 'temporary') {
+        payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
+      }
     }
 
     const res = await adminInternalReportService.applyPenalty(reportId, payload);
@@ -594,12 +599,17 @@ onMounted(() => {
           >
             <option value="Warning">Warning</option>
             <option value="Formal Warning">Formal Warning</option>
-            <option value="Profile Correction Required">Profile Correction Required</option>
-            <option value="Temporary Suspension">Temporary Suspension</option>
-            <option value="Permanent Suspension">Permanent Suspension</option>
-            <option value="Feature Restriction">Feature Restriction</option>
-            <option value="Verification Revoked">Verification Revoked</option>
-            <option value="Professional Eligibility Suspension">Professional Eligibility Suspension</option>
+            <template v-if="report?.reported_user?.is_jury_panel">
+              <option value="Jury Panel Deactivation">Jury Panel Deactivation</option>
+            </template>
+            <template v-else>
+              <option value="Profile Correction Required">Profile Correction Required</option>
+              <option value="Temporary Suspension">Temporary Suspension</option>
+              <option value="Permanent Suspension">Permanent Suspension</option>
+              <option value="Feature Restriction">Feature Restriction</option>
+              <option value="Verification Revoked">Verification Revoked</option>
+              <option value="Professional Eligibility Suspension">Professional Eligibility Suspension</option>
+            </template>
           </select>
         </div>
 
@@ -657,6 +667,59 @@ onMounted(() => {
           </div>
           <div v-else class="text-[11px] text-indigo-800">
             <strong>Permanent:</strong> Prevents new representation requests indefinitely until manually reversed by an administrator. Existing active cases continue undisturbed.
+          </div>
+        </div>
+
+        <!-- Jury Panel Deactivation Configuration -->
+        <div v-if="penaltyForm.action_type === 'Jury Panel Deactivation'" class="space-y-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <div class="p-2.5 bg-purple-100/70 border border-purple-200 rounded-lg text-[11px] text-purple-900">
+            <strong>Notice:</strong> Jury Panel Deactivation removes this institutional panel from receiving new case assignments and blocks operational actions on active assigned cases (case room messages, procedural notices, hearings, mediation, deliberation, and decision publication). Historical case records, hearing entries, and judgments remain preserved.
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Deactivation Duration Mode <span class="text-red-500">*</span>
+            </label>
+            <div class="flex gap-4">
+              <label class="inline-flex items-center text-xs text-gray-700">
+                <input
+                  type="radio"
+                  v-model="penaltyForm.restriction_duration_type"
+                  value="temporary"
+                  class="mr-1.5 text-purple-600 focus:ring-purple-500"
+                />
+                Temporary (Specific days)
+              </label>
+              <label class="inline-flex items-center text-xs text-gray-700">
+                <input
+                  type="radio"
+                  v-model="penaltyForm.restriction_duration_type"
+                  value="permanent"
+                  class="mr-1.5 text-purple-600 focus:ring-purple-500"
+                />
+                Permanent (Indefinite)
+              </label>
+            </div>
+          </div>
+
+          <div v-if="penaltyForm.restriction_duration_type === 'temporary'">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Deactivation Duration (Days) <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model.number="penaltyForm.duration_days"
+              type="number"
+              min="1"
+              max="365"
+              placeholder="7"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500"
+            />
+            <p class="text-[11px] text-gray-500 mt-1">
+              Enter 1 to 365 days. The panel cannot receive new cases or operate on assigned cases during this period.
+            </p>
+          </div>
+          <div v-else class="text-[11px] text-purple-800">
+            <strong>Permanent:</strong> The panel will be deactivated from case distribution and case operations indefinitely until reversed by a Super Administrator.
           </div>
         </div>
 

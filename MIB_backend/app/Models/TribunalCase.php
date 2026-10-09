@@ -87,6 +87,10 @@ class TribunalCase extends Model
 
     public function isAssignedJuryPanelUser(int $userId): bool
     {
+        if (app(\App\Services\InternalTribunal\AccountJuryPanelDisciplineService::class)->hasActiveDeactivation($userId)) {
+            return false;
+        }
+
         if ($this->relationLoaded('currentJuryPanelAssignment')) {
             $assignment = $this->currentJuryPanelAssignment;
             if (!$assignment || !$assignment->isActive()) {

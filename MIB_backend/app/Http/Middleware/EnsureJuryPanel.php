@@ -41,6 +41,14 @@ class EnsureJuryPanel
             ], 403);
         }
 
+        if (app(\App\Services\InternalTribunal\AccountJuryPanelDisciplineService::class)->hasActiveDeactivation($panel)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your Jury Panel account is currently deactivated.',
+                'panel_status' => 'deactivated',
+            ], 403);
+        }
+
         $request->attributes->set('jury_panel', $panel);
 
         return $next($request);

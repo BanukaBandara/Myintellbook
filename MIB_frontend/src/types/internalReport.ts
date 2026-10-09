@@ -24,7 +24,8 @@ export type InternalPenaltyType =
   | 'Permanent Suspension'
   | 'Feature Restriction'
   | 'Verification Revoked'
-  | 'Professional Eligibility Suspension';
+  | 'Professional Eligibility Suspension'
+  | 'Jury Panel Deactivation';
 
 export type RestrictedFeature =
   | 'tribunal_participation'

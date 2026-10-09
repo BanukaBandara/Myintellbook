@@ -25,7 +25,14 @@ class TribunalJuryPanelAssignmentService
      */
     public function findActivePanels(): Collection
     {
-        return TribunalJuryPanel::where('status', TribunalJuryPanelStatus::Active)->get();
+        $deactivatedIds = app(\App\Services\InternalTribunal\AccountJuryPanelDisciplineService::class)->getDeactivatedPanelIds();
+
+        $query = TribunalJuryPanel::where('status', TribunalJuryPanelStatus::Active);
+        if (!empty($deactivatedIds)) {
+            $query->whereNotIn('id', $deactivatedIds);
+        }
+
+        return $query->get();
     }
 
     /**
@@ -33,7 +40,14 @@ class TribunalJuryPanelAssignmentService
      */
     public function selectPanelForCase(TribunalCase $tribunalCase): ?TribunalJuryPanel
     {
-        $panels = TribunalJuryPanel::where('status', TribunalJuryPanelStatus::Active)
+        $deactivatedIds = app(\App\Services\InternalTribunal\AccountJuryPanelDisciplineService::class)->getDeactivatedPanelIds();
+
+        $query = TribunalJuryPanel::where('status', TribunalJuryPanelStatus::Active);
+        if (!empty($deactivatedIds)) {
+            $query->whereNotIn('id', $deactivatedIds);
+        }
+
+        $panels = $query
             ->withCount(['activeAssignments'])
             ->withMax('panelAssignments as last_assigned_at', 'assigned_at')
             ->get();

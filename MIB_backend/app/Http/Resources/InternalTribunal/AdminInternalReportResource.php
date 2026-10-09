@@ -36,7 +36,7 @@ class AdminInternalReportResource extends JsonResource
                 'name' => $reportedUserName,
                 'email' => $reportedUser?->email,
                 'username' => $reportedProfile?->slug ? ltrim($reportedProfile->slug, '@') : ($reportedUser ? "user{$reportedUser->id}" : null),
-                'is_jury_panel' => $reportedUser?->juryPanel !== null,
+                'is_jury_panel' => (bool) ($reportedUser?->isJuryPanelAccount()),
             ],
             'category' => $this->category?->value ?? $this->category,
             'subject' => $this->subject,

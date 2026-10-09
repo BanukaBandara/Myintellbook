@@ -11,8 +11,10 @@ use App\Models\InternalPenalty;
 use App\Models\InternalReport;
 use App\Models\TribunalJuryAssignment;
 use App\Models\User;
+use App\Notifications\InternalTribunal\ReportedJuryPanelDeactivationNotification;
 use App\Notifications\InternalTribunal\ReportedUserProfessionalDisciplineNotification;
 use App\Notifications\InternalTribunal\ReportedUserSanitizedActionNotification;
+use App\Services\InternalTribunal\AccountJuryPanelDisciplineService;
 use App\Services\Professional\ProfessionalVerificationService;
 use App\Services\Tribunal\TribunalRepresentationService;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +53,7 @@ class InternalPenaltyService
                 InternalPenaltyType::PermanentSuspension->value,
                 InternalPenaltyType::VerificationRevoked->value,
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
+                InternalPenaltyType::JuryPanelDeactivation->value,
             ]) && $statusVal !== InternalReportStatus::Valid->value) {
                 throw new \DomainException("Penalties, feature restrictions, and professional discipline can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
             }
@@ -148,6 +151,31 @@ class InternalPenaltyService
                 } else {
                     throw new \DomainException("A duration type ('temporary' or 'permanent') is required for professional eligibility suspension.");
                 }
+            } elseif ($actionType === InternalPenaltyType::JuryPanelDeactivation->value) {
+                if ($reportedUser?->isAdmin()) {
+                    throw new \DomainException("Super Administrators cannot receive Jury Panel deactivation.");
+                }
+
+                if (!$reportedUser?->isJuryPanelAccount()) {
+                    throw new \DomainException("Jury Panel Deactivation can only be applied to institutional Jury Panel accounts.");
+                }
+
+                if (app(AccountJuryPanelDisciplineService::class)->hasActiveDeactivation($reportedUser)) {
+                    throw new \DomainException("An active Jury Panel deactivation already exists for this panel.");
+                }
+
+                if ($durationType === 'permanent') {
+                    $startsAt = now();
+                    $endsAt = null;
+                } elseif ($durationType === 'temporary') {
+                    if (!$days) {
+                        throw new \DomainException("Duration days is required for temporary Jury Panel deactivation.");
+                    }
+                    $startsAt = now();
+                    $endsAt = now()->addDays($days);
+                } else {
+                    throw new \DomainException("A duration type ('temporary' or 'permanent') is required for Jury Panel deactivation.");
+                }
             }
 
             $penalty = new InternalPenalty();
@@ -222,9 +250,15 @@ class InternalPenaltyService
             // User notification dispatch via DB::afterCommit:
             // Verification Revoked: user receives single notification from ProfessionalVerificationService::suspend(). We DO NOT send a duplicate.
             // Professional Eligibility Suspension: send single sanitized ReportedUserProfessionalDisciplineNotification.
+            // Jury Panel Deactivation: send single sanitized ReportedJuryPanelDeactivationNotification.
             // Other penalties: send sanitized ReportedUserSanitizedActionNotification.
             if ($reportedUser) {
-                if ($actionType === InternalPenaltyType::ProfessionalEligibilitySuspension->value) {
+                if ($actionType === InternalPenaltyType::JuryPanelDeactivation->value) {
+                    $isTemp = ($durationType === 'temporary');
+                    DB::afterCommit(function () use ($reportedUser, $isTemp, $endsAt) {
+                        $reportedUser->notify(new ReportedJuryPanelDeactivationNotification($isTemp, $endsAt));
+                    });
+                } elseif ($actionType === InternalPenaltyType::ProfessionalEligibilitySuspension->value) {
                     $isTemp = ($durationType === 'temporary');
                     DB::afterCommit(function () use ($reportedUser, $actionType, $isTemp, $endsAt) {
                         $reportedUser->notify(new ReportedUserProfessionalDisciplineNotification($actionType, $isTemp, $endsAt));

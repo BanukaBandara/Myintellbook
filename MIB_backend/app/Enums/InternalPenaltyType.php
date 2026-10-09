@@ -12,4 +12,5 @@ enum InternalPenaltyType: string
     case FeatureRestriction = 'Feature Restriction';
     case VerificationRevoked = 'Verification Revoked';
     case ProfessionalEligibilitySuspension = 'Professional Eligibility Suspension';
+    case JuryPanelDeactivation = 'Jury Panel Deactivation';
 }

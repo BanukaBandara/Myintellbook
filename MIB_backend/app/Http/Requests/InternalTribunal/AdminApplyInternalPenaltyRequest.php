@@ -36,6 +36,7 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
                 Rule::requiredIf(fn () => in_array($this->input('action_type'), [
                     InternalPenaltyType::FeatureRestriction->value,
                     InternalPenaltyType::ProfessionalEligibilitySuspension->value,
+                    InternalPenaltyType::JuryPanelDeactivation->value,
                 ])),
                 Rule::in(['temporary', 'permanent']),
             ],
@@ -49,6 +50,7 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
                     || (in_array($this->input('action_type'), [
                         InternalPenaltyType::FeatureRestriction->value,
                         InternalPenaltyType::ProfessionalEligibilitySuspension->value,
+                        InternalPenaltyType::JuryPanelDeactivation->value,
                     ]) && $this->input('restriction_duration_type') === 'temporary')
                 ),
             ],
@@ -65,13 +67,14 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
             $actionType = $this->input('action_type');
             $targetUser = $report?->reportedUser;
 
-            // Report status safety: feature restrictions, suspensions, and professional discipline require 'Valid' status
+            // Report status safety: feature restrictions, suspensions, professional discipline, and jury panel deactivation require 'Valid' status
             if (in_array($actionType, [
                 InternalPenaltyType::FeatureRestriction->value,
                 InternalPenaltyType::TemporarySuspension->value,
                 InternalPenaltyType::PermanentSuspension->value,
                 InternalPenaltyType::VerificationRevoked->value,
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
+                InternalPenaltyType::JuryPanelDeactivation->value,
             ]) && $statusVal !== InternalReportStatus::Valid->value) {
                 $validator->errors()->add('report', "Penalties, feature restrictions, and professional discipline can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
             }
@@ -136,6 +139,20 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
                     if ($targetUser && app(\App\Services\InternalTribunal\AccountProfessionalDisciplineService::class)->hasActiveEligibilitySuspension($targetUser)) {
                         $validator->errors()->add('action_type', 'This user already has an active professional eligibility suspension.');
                     }
+                }
+            }
+
+            if ($actionType === InternalPenaltyType::JuryPanelDeactivation->value) {
+                if ($targetUser?->isAdmin()) {
+                    $validator->errors()->add('action_type', 'Super Administrators cannot receive Jury Panel deactivation.');
+                }
+
+                if (!$targetUser?->isJuryPanelAccount()) {
+                    $validator->errors()->add('action_type', 'Jury Panel Deactivation can only be applied to institutional Jury Panel accounts.');
+                }
+
+                if ($targetUser && app(\App\Services\InternalTribunal\AccountJuryPanelDisciplineService::class)->hasActiveDeactivation($targetUser)) {
+                    $validator->errors()->add('action_type', 'This Jury Panel already has an active deactivation penalty.');
                 }
             }
         });
