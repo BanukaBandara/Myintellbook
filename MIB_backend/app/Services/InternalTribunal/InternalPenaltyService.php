@@ -14,6 +14,8 @@ use App\Models\User;
 use App\Notifications\InternalTribunal\ReportedJuryPanelDeactivationNotification;
 use App\Notifications\InternalTribunal\ReportedUserProfessionalDisciplineNotification;
 use App\Notifications\InternalTribunal\ReportedUserSanitizedActionNotification;
+use App\Notifications\InternalTribunal\ReportedUserScorePenaltyNotification;
+use App\Services\HipScoreCalculator;
 use App\Services\InternalTribunal\AccountJuryPanelDisciplineService;
 use App\Services\Professional\ProfessionalVerificationService;
 use App\Services\Tribunal\TribunalRepresentationService;
@@ -54,8 +56,9 @@ class InternalPenaltyService
                 InternalPenaltyType::VerificationRevoked->value,
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
                 InternalPenaltyType::JuryPanelDeactivation->value,
+                InternalPenaltyType::HipScorePenalty->value,
             ]) && $statusVal !== InternalReportStatus::Valid->value) {
-                throw new \DomainException("Penalties, feature restrictions, and professional discipline can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
+                throw new \DomainException("Penalties, feature restrictions, professional discipline, and score penalties can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
             }
 
             $reportedUser = $report->reportedUser;
@@ -67,9 +70,10 @@ class InternalPenaltyService
                 InternalPenaltyType::FeatureRestriction->value,
                 InternalPenaltyType::VerificationRevoked->value,
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
+                InternalPenaltyType::HipScorePenalty->value,
             ])) {
                 if ($reportedUser?->isAdmin() || $reportedUser?->isJuryPanelAccount()) {
-                    throw new \DomainException("Administrators and Jury Panel accounts are immune from account suspension, feature restrictions, and professional discipline.");
+                    throw new \DomainException("Administrators and Jury Panel accounts are immune from account suspension, feature restrictions, professional discipline, and score penalties.");
                 }
             }
 
@@ -176,13 +180,33 @@ class InternalPenaltyService
                 } else {
                     throw new \DomainException("A duration type ('temporary' or 'permanent') is required for Jury Panel deactivation.");
                 }
+            } elseif ($actionType === InternalPenaltyType::HipScorePenalty->value) {
+                if (!$featureVal || !is_numeric($featureVal) || (float) $featureVal < 1.00 || (float) $featureVal > 36825.00) {
+                    throw new \DomainException("Penalty points must be a valid number between 1.00 and 36,825.00.");
+                }
+
+                $hasActiveScorePenalty = InternalPenalty::where('internal_report_id', $report->id)
+                    ->where('user_id', $report->reported_user_id)
+                    ->where('action_type', InternalPenaltyType::HipScorePenalty->value)
+                    ->whereNull('reversed_at')
+                    ->exists();
+
+                if ($hasActiveScorePenalty) {
+                    throw new \DomainException("An active HIP / Score Penalty from this report already exists for this user.");
+                }
+
+                $startsAt = now();
+                $endsAt = null;
             }
 
             $penalty = new InternalPenalty();
             $penalty->internal_report_id = $report->id;
             $penalty->user_id = $report->reported_user_id;
             $penalty->action_type = $actionType;
-            $penalty->penalty_value = ($actionType === InternalPenaltyType::FeatureRestriction->value) ? $featureVal : null;
+            $penalty->penalty_value = in_array($actionType, [
+                InternalPenaltyType::FeatureRestriction->value,
+                InternalPenaltyType::HipScorePenalty->value,
+            ]) ? (string) $featureVal : null;
             $penalty->reason = $reason;
             $penalty->notes = $notes;
             $penalty->applied_by = $admin->id;
@@ -190,6 +214,11 @@ class InternalPenaltyService
             $penalty->starts_at = $startsAt;
             $penalty->ends_at = $endsAt;
             $penalty->save();
+
+            // Recalculate HIP score if this is a HIP score penalty
+            if ($actionType === InternalPenaltyType::HipScorePenalty->value && $reportedUser) {
+                HipScoreCalculator::recalculate($reportedUser);
+            }
 
             // Revoke all existing api_tokens ONLY for suspended user (NOT for feature restriction or professional discipline)
             if (in_array($actionType, [
@@ -232,6 +261,9 @@ class InternalPenaltyService
             ];
             if ($penalty->penalty_value) {
                 $auditDetails['penalty_value'] = $penalty->penalty_value;
+                if ($actionType === InternalPenaltyType::HipScorePenalty->value) {
+                    $auditDetails['points_deducted'] = (float) $penalty->penalty_value;
+                }
             }
             if ($startsAt) {
                 $auditDetails['starts_at'] = $startsAt->toIso8601String();
@@ -251,6 +283,7 @@ class InternalPenaltyService
             // Verification Revoked: user receives single notification from ProfessionalVerificationService::suspend(). We DO NOT send a duplicate.
             // Professional Eligibility Suspension: send single sanitized ReportedUserProfessionalDisciplineNotification.
             // Jury Panel Deactivation: send single sanitized ReportedJuryPanelDeactivationNotification.
+            // HIP / Score Penalty: send single sanitized ReportedUserScorePenaltyNotification.
             // Other penalties: send sanitized ReportedUserSanitizedActionNotification.
             if ($reportedUser) {
                 if ($actionType === InternalPenaltyType::JuryPanelDeactivation->value) {
@@ -262,6 +295,11 @@ class InternalPenaltyService
                     $isTemp = ($durationType === 'temporary');
                     DB::afterCommit(function () use ($reportedUser, $actionType, $isTemp, $endsAt) {
                         $reportedUser->notify(new ReportedUserProfessionalDisciplineNotification($actionType, $isTemp, $endsAt));
+                    });
+                } elseif ($actionType === InternalPenaltyType::HipScorePenalty->value) {
+                    $pts = (float) $penalty->penalty_value;
+                    DB::afterCommit(function () use ($reportedUser, $pts) {
+                        $reportedUser->notify(new ReportedUserScorePenaltyNotification($pts));
                     });
                 } elseif ($actionType !== InternalPenaltyType::VerificationRevoked->value) {
                     DB::afterCommit(function () use ($reportedUser, $actionType, $reason) {
@@ -302,6 +340,9 @@ class InternalPenaltyService
                 ];
                 if ($penalty->penalty_value) {
                     $auditDetails['penalty_value'] = $penalty->penalty_value;
+                    if ($actionVal === InternalPenaltyType::HipScorePenalty->value) {
+                        $auditDetails['points_restored'] = (float) $penalty->penalty_value;
+                    }
                 }
 
                 $this->auditService->log(
@@ -312,13 +353,14 @@ class InternalPenaltyService
                 );
             }
 
-            // Conservative strategy for Verification Revoked:
-            // ProfessionalVerification remains Suspended. Adjudicator/representative eligibility is NOT restored.
-            // Super Admin must explicitly re-review and re-approve via AdminProfessionalVerificationController::approve().
+            // Recalculate HIP score if this penalty was a HIP score penalty
+            $actionVal = $penalty->action_type instanceof InternalPenaltyType
+                ? $penalty->action_type->value
+                : (string) $penalty->action_type;
 
-            // For Professional Eligibility Suspension:
-            // Dynamic query in AccountProfessionalDisciplineService immediately ceases matching reversed penalty.
-            // Zero profile mutations were made, so authentic underlying state immediately resumes.
+            if ($actionVal === InternalPenaltyType::HipScorePenalty->value && $penalty->user) {
+                HipScoreCalculator::recalculate($penalty->user);
+            }
 
             return $penalty;
         });

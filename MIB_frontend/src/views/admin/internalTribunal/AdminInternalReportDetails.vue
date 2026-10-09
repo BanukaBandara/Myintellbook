@@ -28,7 +28,7 @@ const isUpdatingStatus = ref(false);
 const showPenaltyModal = ref(false);
 const penaltyForm = ref<{
   action_type: InternalPenaltyType;
-  penalty_value: RestrictedFeature;
+  penalty_value: RestrictedFeature | string;
   restriction_duration_type: 'temporary' | 'permanent';
   duration_days: number;
   reason: string;
@@ -123,6 +123,18 @@ const handleApplyPenalty = async () => {
       if (penaltyForm.value.restriction_duration_type === 'temporary') {
         payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
       }
+    } else if (penaltyForm.value.action_type === 'HIP / Score Penalty') {
+      const pts = Number(penaltyForm.value.penalty_value);
+      if (isNaN(pts) || pts < 1 || pts > 36825) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Invalid Points',
+          text: 'Penalty points must be between 1.00 and 36,825.00 with at most 2 decimal places.',
+        });
+        isApplyingPenalty.value = false;
+        return;
+      }
+      payload.penalty_value = penaltyForm.value.penalty_value;
     }
 
     const res = await adminInternalReportService.applyPenalty(reportId, payload);
@@ -443,7 +455,7 @@ onMounted(() => {
               <div class="flex items-center gap-2">
                 <span class="font-bold text-red-700 uppercase tracking-wider">{{ p.action_type }}</span>
                 <span v-if="p.penalty_value" class="px-2 py-0.5 text-[10px] font-mono bg-amber-100 text-amber-800 rounded border border-amber-300">
-                  {{ p.penalty_value }}
+                  {{ p.action_type === 'HIP / Score Penalty' ? `-${Number(p.penalty_value).toLocaleString()} pts` : p.penalty_value }}
                 </span>
                 <span class="text-gray-400">&bull;</span>
                 <span class="text-gray-500">{{ new Date(p.applied_at).toLocaleString() }} by {{ p.applied_by_name }}</span>
@@ -609,6 +621,7 @@ onMounted(() => {
               <option value="Feature Restriction">Feature Restriction</option>
               <option value="Verification Revoked">Verification Revoked</option>
               <option value="Professional Eligibility Suspension">Professional Eligibility Suspension</option>
+              <option value="HIP / Score Penalty">HIP / Score Penalty</option>
             </template>
           </select>
         </div>
@@ -720,6 +733,47 @@ onMounted(() => {
           </div>
           <div v-else class="text-[11px] text-purple-800">
             <strong>Permanent:</strong> The panel will be deactivated from case distribution and case operations indefinitely until reversed by a Super Administrator.
+          </div>
+        </div>
+
+        <!-- HIP / Score Penalty Configuration -->
+        <div v-if="penaltyForm.action_type === 'HIP / Score Penalty'" class="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div class="flex items-center justify-between text-xs text-amber-900 font-medium pb-2 border-b border-amber-200">
+            <span>Reported User Current HIP:</span>
+            <span class="font-bold text-sm font-mono text-amber-950">
+              {{ Number(report?.reported_user?.hip_score ?? 0).toLocaleString() }}
+            </span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Penalty Points Deduction <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="penaltyForm.penalty_value"
+              type="text"
+              placeholder="e.g. 1000.00"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-amber-500"
+            />
+            <p class="text-[11px] text-gray-500 mt-1">
+              Minimum: 1.00 &bull; Maximum: 36,825.00 &bull; Max 2 decimal places. Permanent deduction until administrative reversal.
+            </p>
+          </div>
+
+          <!-- Quick Presets -->
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-600 mb-1.5">Quick Presets:</label>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="chip in [500, 1000, 2500, 5000, 12275]"
+                :key="chip"
+                type="button"
+                @click="penaltyForm.penalty_value = chip.toString()"
+                class="px-2.5 py-1 text-[11px] rounded bg-white border border-gray-300 hover:bg-amber-100 hover:border-amber-400 font-mono text-gray-700 transition-colors"
+              >
+                -{{ chip.toLocaleString() }}
+              </button>
+            </div>
           </div>
         </div>
 

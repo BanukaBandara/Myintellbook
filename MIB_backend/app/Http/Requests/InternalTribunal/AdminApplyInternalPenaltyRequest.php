@@ -26,9 +26,33 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
             ],
             'penalty_value' => [
                 'nullable',
-                'string',
-                Rule::requiredIf(fn () => $this->input('action_type') === InternalPenaltyType::FeatureRestriction->value),
-                Rule::in(array_map(fn ($f) => $f->value, RestrictedFeature::cases())),
+                Rule::requiredIf(fn () => in_array($this->input('action_type'), [
+                    InternalPenaltyType::FeatureRestriction->value,
+                    InternalPenaltyType::HipScorePenalty->value,
+                ])),
+                function ($attribute, $value, $fail) {
+                    $actionType = $this->input('action_type');
+                    if ($actionType === InternalPenaltyType::FeatureRestriction->value) {
+                        if (!in_array($value, array_map(fn ($f) => $f->value, RestrictedFeature::cases()))) {
+                            $fail("The selected feature restriction key is invalid.");
+                        }
+                    } elseif ($actionType === InternalPenaltyType::HipScorePenalty->value) {
+                        if (!is_numeric($value)) {
+                            $fail("The penalty points must be a valid number.");
+                            return;
+                        }
+                        if (!preg_match('/^\d+(\.\d{1,2})?$/', (string) $value)) {
+                            $fail("The penalty points may not have more than 2 decimal places.");
+                            return;
+                        }
+                        $floatVal = (float) $value;
+                        if ($floatVal < 1.00) {
+                            $fail("The penalty points must be at least 1.00.");
+                        } elseif ($floatVal > 36825.00) {
+                            $fail("The penalty points may not be greater than 36,825.00.");
+                        }
+                    }
+                },
             ],
             'restriction_duration_type' => [
                 'nullable',
@@ -67,7 +91,7 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
             $actionType = $this->input('action_type');
             $targetUser = $report?->reportedUser;
 
-            // Report status safety: feature restrictions, suspensions, professional discipline, and jury panel deactivation require 'Valid' status
+            // Report status safety: feature restrictions, suspensions, professional discipline, jury panel deactivation, and hip score penalty require 'Valid' status
             if (in_array($actionType, [
                 InternalPenaltyType::FeatureRestriction->value,
                 InternalPenaltyType::TemporarySuspension->value,
@@ -75,8 +99,9 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
                 InternalPenaltyType::VerificationRevoked->value,
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
                 InternalPenaltyType::JuryPanelDeactivation->value,
+                InternalPenaltyType::HipScorePenalty->value,
             ]) && $statusVal !== InternalReportStatus::Valid->value) {
-                $validator->errors()->add('report', "Penalties, feature restrictions, and professional discipline can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
+                $validator->errors()->add('report', "Penalties, feature restrictions, professional discipline, and score penalties can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
             }
 
             if (in_array($actionType, [
@@ -153,6 +178,28 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
 
                 if ($targetUser && app(\App\Services\InternalTribunal\AccountJuryPanelDisciplineService::class)->hasActiveDeactivation($targetUser)) {
                     $validator->errors()->add('action_type', 'This Jury Panel already has an active deactivation penalty.');
+                }
+            }
+
+            if ($actionType === InternalPenaltyType::HipScorePenalty->value) {
+                if ($targetUser?->isAdmin()) {
+                    $validator->errors()->add('action_type', 'Super Administrators cannot receive HIP score penalties.');
+                }
+
+                if ($targetUser?->isJuryPanelAccount()) {
+                    $validator->errors()->add('action_type', 'Jury Panel accounts cannot receive HIP score penalties.');
+                }
+
+                if ($report && $targetUser) {
+                    $hasActiveScorePenalty = \App\Models\InternalPenalty::where('internal_report_id', $report->id)
+                        ->where('user_id', $targetUser->id)
+                        ->where('action_type', InternalPenaltyType::HipScorePenalty->value)
+                        ->whereNull('reversed_at')
+                        ->exists();
+
+                    if ($hasActiveScorePenalty) {
+                        $validator->errors()->add('action_type', 'An active HIP / Score Penalty from this report has already been applied to this user.');
+                    }
                 }
             }
         });

@@ -37,6 +37,7 @@ class AdminInternalReportResource extends JsonResource
                 'email' => $reportedUser?->email,
                 'username' => $reportedProfile?->slug ? ltrim($reportedProfile->slug, '@') : ($reportedUser ? "user{$reportedUser->id}" : null),
                 'is_jury_panel' => (bool) ($reportedUser?->isJuryPanelAccount()),
+                'hip_score' => (float) ($reportedUser?->hip_score ?? 0),
             ],
             'category' => $this->category?->value ?? $this->category,
             'subject' => $this->subject,
@@ -68,13 +69,17 @@ class AdminInternalReportResource extends JsonResource
                 return [
                     'id' => $penalty->id,
                     'action_type' => $penalty->action_type?->value ?? $penalty->action_type,
+                    'penalty_value' => $penalty->penalty_value,
                     'reason' => $penalty->reason,
                     'notes' => $penalty->notes,
                     'applied_by' => $penalty->applied_by,
                     'applied_by_name' => $penalty->applier?->profile
                         ? trim("{$penalty->applier->profile->first_name} {$penalty->applier->profile->last_name}")
                         : ($penalty->applier ? "Admin #{$penalty->applier->id}" : null),
-                    'applied_at' => $penalty->applied_at?->toIso8601String(),
+                    'applied_at' => $penalty->applied_at ? \Carbon\Carbon::parse($penalty->applied_at)->toIso8601String() : null,
+                    'starts_at' => $penalty->starts_at ? \Carbon\Carbon::parse($penalty->starts_at)->toIso8601String() : null,
+                    'ends_at' => $penalty->ends_at ? \Carbon\Carbon::parse($penalty->ends_at)->toIso8601String() : null,
+                    'reversed_at' => $penalty->reversed_at ? \Carbon\Carbon::parse($penalty->reversed_at)->toIso8601String() : null,
                 ];
             }),
             'audits' => $this->audits?->map(function ($audit) {

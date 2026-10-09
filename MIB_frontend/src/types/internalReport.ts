@@ -25,7 +25,8 @@ export type InternalPenaltyType =
   | 'Feature Restriction'
   | 'Verification Revoked'
   | 'Professional Eligibility Suspension'
-  | 'Jury Panel Deactivation';
+  | 'Jury Panel Deactivation'
+  | 'HIP / Score Penalty';
 
 export type RestrictedFeature =
   | 'tribunal_participation'
@@ -41,6 +42,7 @@ export interface ReportUserSummary {
   email?: string;
   profile_image?: string | null;
   is_jury_panel?: boolean;
+  hip_score?: number;
 }
 
 export interface InternalReportEvidenceItem {
