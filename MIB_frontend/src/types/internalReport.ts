@@ -21,7 +21,15 @@ export type InternalPenaltyType =
   | 'Formal Warning'
   | 'Profile Correction Required'
   | 'Temporary Suspension'
-  | 'Permanent Suspension';
+  | 'Permanent Suspension'
+  | 'Feature Restriction';
+
+export type RestrictedFeature =
+  | 'tribunal_participation'
+  | 'community_posting'
+  | 'daily_question_access'
+  | 'exam_access'
+  | 'profile_editing';
 
 export interface ReportUserSummary {
   id: number;
@@ -69,6 +77,7 @@ export interface InternalReportReviewItem {
 export interface InternalPenaltyItem {
   id: number;
   action_type: InternalPenaltyType;
+  penalty_value?: RestrictedFeature | string | null;
   reason: string;
   notes?: string | null;
   applied_by?: number | null;

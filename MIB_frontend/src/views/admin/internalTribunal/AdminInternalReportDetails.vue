@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import { adminInternalReportService } from '@/services/adminInternalReportService';
-import type { AdminInternalReportItem, InternalPenaltyType, InternalReportStatus } from '@/types/internalReport';
+import type { AdminInternalReportItem, InternalPenaltyType, InternalReportStatus, RestrictedFeature } from '@/types/internalReport';
 
 const route = useRoute();
 const reportId = Number(route.params.id);
@@ -28,11 +28,15 @@ const isUpdatingStatus = ref(false);
 const showPenaltyModal = ref(false);
 const penaltyForm = ref<{
   action_type: InternalPenaltyType;
+  penalty_value: RestrictedFeature;
+  restriction_duration_type: 'temporary' | 'permanent';
   duration_days: number;
   reason: string;
   notes: string;
 }>({
   action_type: 'Warning',
+  penalty_value: 'community_posting',
+  restriction_duration_type: 'temporary',
   duration_days: 7,
   reason: '',
   notes: '',
@@ -103,6 +107,12 @@ const handleApplyPenalty = async () => {
     };
     if (penaltyForm.value.action_type === 'Temporary Suspension') {
       payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
+    } else if (penaltyForm.value.action_type === 'Feature Restriction') {
+      payload.penalty_value = penaltyForm.value.penalty_value;
+      payload.restriction_duration_type = penaltyForm.value.restriction_duration_type;
+      if (penaltyForm.value.restriction_duration_type === 'temporary') {
+        payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
+      }
     }
 
     const res = await adminInternalReportService.applyPenalty(reportId, payload);
@@ -111,6 +121,8 @@ const handleApplyPenalty = async () => {
     penaltyForm.value.reason = '';
     penaltyForm.value.notes = '';
     penaltyForm.value.duration_days = 7;
+    penaltyForm.value.penalty_value = 'community_posting';
+    penaltyForm.value.restriction_duration_type = 'temporary';
 
     Swal.fire({
       icon: 'success',
@@ -420,6 +432,9 @@ onMounted(() => {
             <div class="space-y-1">
               <div class="flex items-center gap-2">
                 <span class="font-bold text-red-700 uppercase tracking-wider">{{ p.action_type }}</span>
+                <span v-if="p.penalty_value" class="px-2 py-0.5 text-[10px] font-mono bg-amber-100 text-amber-800 rounded border border-amber-300">
+                  {{ p.penalty_value }}
+                </span>
                 <span class="text-gray-400">&bull;</span>
                 <span class="text-gray-500">{{ new Date(p.applied_at).toLocaleString() }} by {{ p.applied_by_name }}</span>
               </div>
@@ -429,7 +444,7 @@ onMounted(() => {
                 <span v-if="p.starts_at">Starts: {{ new Date(p.starts_at).toLocaleString() }}</span>
                 <span v-if="p.starts_at && p.ends_at">&bull;</span>
                 <span v-if="p.ends_at">Expires: {{ new Date(p.ends_at).toLocaleString() }}</span>
-                <span v-else-if="p.action_type === 'Permanent Suspension'">(Indefinite)</span>
+                <span v-else-if="p.action_type === 'Permanent Suspension' || (p.action_type === 'Feature Restriction' && !p.ends_at)">(Indefinite)</span>
               </div>
               <div v-if="p.reversed_at" class="text-amber-700 font-semibold text-[11px]">
                 [Reversed on {{ new Date(p.reversed_at).toLocaleString() }}]
@@ -577,6 +592,7 @@ onMounted(() => {
             <option value="Profile Correction Required">Profile Correction Required</option>
             <option value="Temporary Suspension">Temporary Suspension</option>
             <option value="Permanent Suspension">Permanent Suspension</option>
+            <option value="Feature Restriction">Feature Restriction</option>
           </select>
         </div>
 
@@ -604,6 +620,71 @@ onMounted(() => {
           class="p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-800"
         >
           <strong>Notice:</strong> Permanent suspension revokes all active tokens immediately and prevents login indefinitely until reversed by a Super Administrator.
+        </div>
+
+        <!-- Feature Restriction Configuration -->
+        <div v-if="penaltyForm.action_type === 'Feature Restriction'" class="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Restricted Feature <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="penaltyForm.penalty_value"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="tribunal_participation">Tribunal Participation (Cases, evidence, mediation, hearing)</option>
+              <option value="community_posting">Community Posting (Resource notes, comments)</option>
+              <option value="daily_question_access">Daily Question Access (Answering daily questions)</option>
+              <option value="exam_access">Exam Access (Taking exams & submitting answers)</option>
+              <option value="profile_editing">Profile Editing (General info, experience, education, skills, photos)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Restriction Duration Mode <span class="text-red-500">*</span>
+            </label>
+            <div class="flex gap-4">
+              <label class="inline-flex items-center text-xs text-gray-700">
+                <input
+                  type="radio"
+                  v-model="penaltyForm.restriction_duration_type"
+                  value="temporary"
+                  class="mr-1.5 text-amber-600 focus:ring-amber-500"
+                />
+                Temporary (Specific days)
+              </label>
+              <label class="inline-flex items-center text-xs text-gray-700">
+                <input
+                  type="radio"
+                  v-model="penaltyForm.restriction_duration_type"
+                  value="permanent"
+                  class="mr-1.5 text-amber-600 focus:ring-amber-500"
+                />
+                Permanent (Indefinite)
+              </label>
+            </div>
+          </div>
+
+          <div v-if="penaltyForm.restriction_duration_type === 'temporary'">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Restriction Duration (Days) <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model.number="penaltyForm.duration_days"
+              type="number"
+              min="1"
+              max="365"
+              placeholder="7"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-amber-500"
+            />
+            <p class="text-[11px] text-gray-500 mt-1">
+              Enter 1 to 365 days. The user can still log in and use other platform features, but this specific feature will be blocked until expiry.
+            </p>
+          </div>
+          <div v-else class="text-[11px] text-amber-800">
+            <strong>Permanent:</strong> The user can use all other features, but access to this feature will remain blocked indefinitely until manually reversed by a Super Administrator.
+          </div>
         </div>
 
         <div>

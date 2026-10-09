@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.token' => \App\Http\Middleware\ApiTokenAuthMiddleware::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
             'jury.panel' => \App\Http\Middleware\EnsureJuryPanel::class,
+            'restrict.feature' => \App\Http\Middleware\EnsureFeatureNotRestricted::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {
