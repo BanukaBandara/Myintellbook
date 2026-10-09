@@ -39,6 +39,16 @@ class ApiTokenAuthMiddleware
         // Set the authenticated user
         Auth::setUser($apiToken->user);
 
+        // Account suspension check (defense-in-depth)
+        $user = $apiToken->user;
+        if ($user && !$user->isAdmin() && !$user->isJuryPanelAccount()) {
+            $suspensionService = app(\App\Services\InternalTribunal\AccountSuspensionService::class);
+            $activeSuspension = $suspensionService->getActiveSuspension($user);
+            if ($activeSuspension) {
+                return response()->json($suspensionService->formatSuspensionPayload($activeSuspension), 403);
+            }
+        }
+
         return $next($request);
     }
 }

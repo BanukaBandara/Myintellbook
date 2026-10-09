@@ -82,6 +82,13 @@ class UserService{
                 ], 403);
             }
 
+            // Internal Tribunal Account Suspension Check
+            $suspensionService = app(\App\Services\InternalTribunal\AccountSuspensionService::class);
+            $activeSuspension = $suspensionService->getActiveSuspension($user);
+            if ($activeSuspension) {
+                return response()->json($suspensionService->formatSuspensionPayload($activeSuspension), 403);
+            }
+
             $apiToken = new \App\Models\ApiToken();
             $token = $apiToken->tokenGenerate($user);
             $user->load('profile');

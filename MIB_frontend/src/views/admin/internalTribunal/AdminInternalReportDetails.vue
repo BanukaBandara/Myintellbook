@@ -28,10 +28,12 @@ const isUpdatingStatus = ref(false);
 const showPenaltyModal = ref(false);
 const penaltyForm = ref<{
   action_type: InternalPenaltyType;
+  duration_days: number;
   reason: string;
   notes: string;
 }>({
   action_type: 'Warning',
+  duration_days: 7,
   reason: '',
   notes: '',
 });
@@ -94,15 +96,21 @@ const handleApplyPenalty = async () => {
 
   isApplyingPenalty.value = true;
   try {
-    const res = await adminInternalReportService.applyPenalty(reportId, {
+    const payload: any = {
       action_type: penaltyForm.value.action_type,
       reason: penaltyForm.value.reason.trim(),
       notes: penaltyForm.value.notes.trim() || undefined,
-    });
+    };
+    if (penaltyForm.value.action_type === 'Temporary Suspension') {
+      payload.duration_days = Number(penaltyForm.value.duration_days) || 7;
+    }
+
+    const res = await adminInternalReportService.applyPenalty(reportId, payload);
     report.value = res.report;
     showPenaltyModal.value = false;
     penaltyForm.value.reason = '';
     penaltyForm.value.notes = '';
+    penaltyForm.value.duration_days = 7;
 
     Swal.fire({
       icon: 'success',
@@ -417,8 +425,18 @@ onMounted(() => {
               </div>
               <div class="text-gray-800"><span class="font-semibold">Reason:</span> {{ p.reason }}</div>
               <div v-if="p.notes" class="text-gray-500 italic"><span class="font-semibold">Notes:</span> {{ p.notes }}</div>
+              <div v-if="p.starts_at || p.ends_at" class="text-gray-600 text-[11px] flex items-center gap-2">
+                <span v-if="p.starts_at">Starts: {{ new Date(p.starts_at).toLocaleString() }}</span>
+                <span v-if="p.starts_at && p.ends_at">&bull;</span>
+                <span v-if="p.ends_at">Expires: {{ new Date(p.ends_at).toLocaleString() }}</span>
+                <span v-else-if="p.action_type === 'Permanent Suspension'">(Indefinite)</span>
+              </div>
+              <div v-if="p.reversed_at" class="text-amber-700 font-semibold text-[11px]">
+                [Reversed on {{ new Date(p.reversed_at).toLocaleString() }}]
+              </div>
             </div>
             <button
+              v-if="!p.reversed_at"
               type="button"
               @click="handleReversePenalty(p.id)"
               class="text-xs text-red-600 hover:text-red-800 border border-red-300 hover:bg-red-50 px-2.5 py-1 rounded font-medium whitespace-nowrap self-start sm:self-center"
@@ -557,7 +575,35 @@ onMounted(() => {
             <option value="Warning">Warning</option>
             <option value="Formal Warning">Formal Warning</option>
             <option value="Profile Correction Required">Profile Correction Required</option>
+            <option value="Temporary Suspension">Temporary Suspension</option>
+            <option value="Permanent Suspension">Permanent Suspension</option>
           </select>
+        </div>
+
+        <!-- Temporary Suspension Duration -->
+        <div v-if="penaltyForm.action_type === 'Temporary Suspension'">
+          <label class="block text-xs font-semibold text-gray-700 mb-1">
+            Suspension Duration (Days) <span class="text-red-500">*</span>
+          </label>
+          <input
+            v-model.number="penaltyForm.duration_days"
+            type="number"
+            min="1"
+            max="365"
+            placeholder="7"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-red-500"
+          />
+          <p class="text-[11px] text-gray-500 mt-1">
+            Enter 1 to 365 days. Existing tokens will be revoked immediately and login blocked until expiry.
+          </p>
+        </div>
+
+        <!-- Permanent Suspension Warning Notice -->
+        <div
+          v-if="penaltyForm.action_type === 'Permanent Suspension'"
+          class="p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-800"
+        >
+          <strong>Notice:</strong> Permanent suspension revokes all active tokens immediately and prevents login indefinitely until reversed by a Super Administrator.
         </div>
 
         <div>

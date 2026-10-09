@@ -7,4 +7,6 @@ enum InternalPenaltyType: string
     case Warning = 'Warning';
     case FormalWarning = 'Formal Warning';
     case ProfileCorrectionRequired = 'Profile Correction Required';
+    case TemporarySuspension = 'Temporary Suspension';
+    case PermanentSuspension = 'Permanent Suspension';
 }

@@ -19,7 +19,9 @@ export type InternalReportStatus =
 export type InternalPenaltyType =
   | 'Warning'
   | 'Formal Warning'
-  | 'Profile Correction Required';
+  | 'Profile Correction Required'
+  | 'Temporary Suspension'
+  | 'Permanent Suspension';
 
 export interface ReportUserSummary {
   id: number;
@@ -72,6 +74,9 @@ export interface InternalPenaltyItem {
   applied_by?: number | null;
   applied_by_name?: string | null;
   applied_at: string;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  reversed_at?: string | null;
 }
 
 export interface InternalReportAuditItem {
