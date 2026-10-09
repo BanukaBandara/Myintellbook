@@ -33,6 +33,8 @@ const penaltyForm = ref<{
   duration_days: number;
   reason: string;
   notes: string;
+  content_type: 'testament_note';
+  content_id: number | null;
 }>({
   action_type: 'Warning',
   penalty_value: 'community_posting',
@@ -40,6 +42,8 @@ const penaltyForm = ref<{
   duration_days: 7,
   reason: '',
   notes: '',
+  content_type: 'testament_note',
+  content_id: null,
 });
 const isApplyingPenalty = ref(false);
 
@@ -135,6 +139,19 @@ const handleApplyPenalty = async () => {
         return;
       }
       payload.penalty_value = penaltyForm.value.penalty_value;
+    } else if (penaltyForm.value.action_type === 'Content Removal') {
+      const cid = Number(penaltyForm.value.content_id);
+      if (!cid || cid <= 0 || !Number.isInteger(cid)) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Valid Note ID Required',
+          text: 'Please enter a valid positive integer Note ID for content removal.',
+        });
+        isApplyingPenalty.value = false;
+        return;
+      }
+      payload.content_type = penaltyForm.value.content_type || 'testament_note';
+      payload.content_id = cid;
     }
 
     const res = await adminInternalReportService.applyPenalty(reportId, payload);
@@ -145,6 +162,9 @@ const handleApplyPenalty = async () => {
     penaltyForm.value.duration_days = 7;
     penaltyForm.value.penalty_value = 'community_posting';
     penaltyForm.value.restriction_duration_type = 'temporary';
+    penaltyForm.value.content_type = 'testament_note';
+    penaltyForm.value.content_id = null;
+
 
     Swal.fire({
       icon: 'success',
@@ -455,7 +475,7 @@ onMounted(() => {
               <div class="flex items-center gap-2">
                 <span class="font-bold text-red-700 uppercase tracking-wider">{{ p.action_type }}</span>
                 <span v-if="p.penalty_value" class="px-2 py-0.5 text-[10px] font-mono bg-amber-100 text-amber-800 rounded border border-amber-300">
-                  {{ p.action_type === 'HIP / Score Penalty' ? `-${Number(p.penalty_value).toLocaleString()} pts` : p.penalty_value }}
+                  {{ p.action_type === 'HIP / Score Penalty' ? `-${Number(p.penalty_value).toLocaleString()} pts` : (p.action_type === 'Content Removal' ? `Item: ${p.penalty_value}` : p.penalty_value) }}
                 </span>
                 <span class="text-gray-400">&bull;</span>
                 <span class="text-gray-500">{{ new Date(p.applied_at).toLocaleString() }} by {{ p.applied_by_name }}</span>
@@ -622,6 +642,7 @@ onMounted(() => {
               <option value="Verification Revoked">Verification Revoked</option>
               <option value="Professional Eligibility Suspension">Professional Eligibility Suspension</option>
               <option value="HIP / Score Penalty">HIP / Score Penalty</option>
+              <option value="Content Removal">Content Removal</option>
             </template>
           </select>
         </div>
@@ -865,6 +886,41 @@ onMounted(() => {
           </div>
           <div v-else class="text-[11px] text-amber-800">
             <strong>Permanent:</strong> The user can use all other features, but access to this feature will remain blocked indefinitely until manually reversed by a Super Administrator.
+          </div>
+        </div>
+
+        <!-- Content Removal Configuration -->
+        <div v-if="penaltyForm.action_type === 'Content Removal'" class="space-y-3 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+          <div class="p-2.5 bg-rose-100/70 border border-rose-200 rounded-lg text-[11px] text-rose-900">
+            <strong>Notice:</strong> The selected note must belong to the reported user. Removal hides the note while preserving it for audit. Reversal restores it.
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Content Type <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="penaltyForm.content_type"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="testament_note">Community Resource Note</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Content ID (Note ID) <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model.number="penaltyForm.content_id"
+              type="number"
+              min="1"
+              placeholder="e.g. 12"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-rose-500"
+            />
+            <p class="text-[11px] text-gray-500 mt-1">
+              Enter the numeric ID of the Community Resource Note authored by this user.
+            </p>
           </div>
         </div>
 

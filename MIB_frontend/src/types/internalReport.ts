@@ -26,7 +26,8 @@ export type InternalPenaltyType =
   | 'Verification Revoked'
   | 'Professional Eligibility Suspension'
   | 'Jury Panel Deactivation'
-  | 'HIP / Score Penalty';
+  | 'HIP / Score Penalty'
+  | 'Content Removal';
 
 export type RestrictedFeature =
   | 'tribunal_participation'

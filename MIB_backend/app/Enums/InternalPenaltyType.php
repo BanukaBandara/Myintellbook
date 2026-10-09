@@ -14,4 +14,5 @@ enum InternalPenaltyType: string
     case ProfessionalEligibilitySuspension = 'Professional Eligibility Suspension';
     case JuryPanelDeactivation = 'Jury Panel Deactivation';
     case HipScorePenalty = 'HIP / Score Penalty';
+    case ContentRemoval = 'Content Removal';
 }

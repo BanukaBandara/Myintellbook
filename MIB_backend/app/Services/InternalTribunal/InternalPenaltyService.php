@@ -12,11 +12,13 @@ use App\Models\InternalReport;
 use App\Models\TribunalJuryAssignment;
 use App\Models\User;
 use App\Notifications\InternalTribunal\ReportedJuryPanelDeactivationNotification;
+use App\Notifications\InternalTribunal\ReportedUserContentRemovalNotification;
 use App\Notifications\InternalTribunal\ReportedUserProfessionalDisciplineNotification;
 use App\Notifications\InternalTribunal\ReportedUserSanitizedActionNotification;
 use App\Notifications\InternalTribunal\ReportedUserScorePenaltyNotification;
 use App\Services\HipScoreCalculator;
 use App\Services\InternalTribunal\AccountJuryPanelDisciplineService;
+use App\Services\InternalTribunal\ContentRemovalService;
 use App\Services\Professional\ProfessionalVerificationService;
 use App\Services\Tribunal\TribunalRepresentationService;
 use Illuminate\Support\Facades\DB;
@@ -57,8 +59,9 @@ class InternalPenaltyService
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
                 InternalPenaltyType::JuryPanelDeactivation->value,
                 InternalPenaltyType::HipScorePenalty->value,
+                InternalPenaltyType::ContentRemoval->value,
             ]) && $statusVal !== InternalReportStatus::Valid->value) {
-                throw new \DomainException("Penalties, feature restrictions, professional discipline, and score penalties can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
+                throw new \DomainException("Penalties, feature restrictions, professional discipline, score penalties, and content removals can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
             }
 
             $reportedUser = $report->reportedUser;
@@ -71,9 +74,10 @@ class InternalPenaltyService
                 InternalPenaltyType::VerificationRevoked->value,
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
                 InternalPenaltyType::HipScorePenalty->value,
+                InternalPenaltyType::ContentRemoval->value,
             ])) {
                 if ($reportedUser?->isAdmin() || $reportedUser?->isJuryPanelAccount()) {
-                    throw new \DomainException("Administrators and Jury Panel accounts are immune from account suspension, feature restrictions, professional discipline, and score penalties.");
+                    throw new \DomainException("Administrators and Jury Panel accounts are immune from account suspension, feature restrictions, professional discipline, score penalties, and content removal.");
                 }
             }
 
@@ -199,6 +203,36 @@ class InternalPenaltyService
                 $endsAt = null;
             }
 
+            $contentMetadata = null;
+            if ($actionType === InternalPenaltyType::ContentRemoval->value) {
+                if (!$featureVal) {
+                    throw new \DomainException("A target content identifier ('content_type:content_id') must be specified for Content Removal.");
+                }
+
+                $contentRemovalService = app(ContentRemovalService::class);
+                $parsed = $contentRemovalService->parseIdentifier((string) $featureVal);
+
+                $hasActiveRemoval = InternalPenalty::where('internal_report_id', $report->id)
+                    ->where('user_id', $report->reported_user_id)
+                    ->where('action_type', InternalPenaltyType::ContentRemoval->value)
+                    ->where('penalty_value', (string) $featureVal)
+                    ->whereNull('reversed_at')
+                    ->exists();
+
+                if ($hasActiveRemoval) {
+                    throw new \DomainException("An active Content Removal penalty for this content item already exists for this report.");
+                }
+
+                $contentMetadata = $contentRemovalService->remove(
+                    $parsed['content_type'],
+                    $parsed['content_id'],
+                    $reportedUser
+                );
+
+                $startsAt = now();
+                $endsAt = null;
+            }
+
             $penalty = new InternalPenalty();
             $penalty->internal_report_id = $report->id;
             $penalty->user_id = $report->reported_user_id;
@@ -206,6 +240,7 @@ class InternalPenaltyService
             $penalty->penalty_value = in_array($actionType, [
                 InternalPenaltyType::FeatureRestriction->value,
                 InternalPenaltyType::HipScorePenalty->value,
+                InternalPenaltyType::ContentRemoval->value,
             ]) ? (string) $featureVal : null;
             $penalty->reason = $reason;
             $penalty->notes = $notes;
@@ -265,6 +300,11 @@ class InternalPenaltyService
                     $auditDetails['points_deducted'] = (float) $penalty->penalty_value;
                 }
             }
+            if ($contentMetadata) {
+                $auditDetails['content_type'] = $contentMetadata['content_type'];
+                $auditDetails['content_id'] = $contentMetadata['content_id'];
+                $auditDetails['original_title'] = $contentMetadata['original_title'];
+            }
             if ($startsAt) {
                 $auditDetails['starts_at'] = $startsAt->toIso8601String();
             }
@@ -284,6 +324,7 @@ class InternalPenaltyService
             // Professional Eligibility Suspension: send single sanitized ReportedUserProfessionalDisciplineNotification.
             // Jury Panel Deactivation: send single sanitized ReportedJuryPanelDeactivationNotification.
             // HIP / Score Penalty: send single sanitized ReportedUserScorePenaltyNotification.
+            // Content Removal: send single sanitized ReportedUserContentRemovalNotification.
             // Other penalties: send sanitized ReportedUserSanitizedActionNotification.
             if ($reportedUser) {
                 if ($actionType === InternalPenaltyType::JuryPanelDeactivation->value) {
@@ -301,7 +342,14 @@ class InternalPenaltyService
                     DB::afterCommit(function () use ($reportedUser, $pts) {
                         $reportedUser->notify(new ReportedUserScorePenaltyNotification($pts));
                     });
-                } elseif ($actionType !== InternalPenaltyType::VerificationRevoked->value) {
+                } elseif ($actionType === InternalPenaltyType::ContentRemoval->value) {
+                    DB::afterCommit(function () use ($reportedUser) {
+                        $reportedUser->notify(new ReportedUserContentRemovalNotification());
+                    });
+                } elseif (!in_array($actionType, [
+                    InternalPenaltyType::VerificationRevoked->value,
+                    InternalPenaltyType::ContentRemoval->value,
+                ])) {
                     DB::afterCommit(function () use ($reportedUser, $actionType, $reason) {
                         $reportedUser->notify(new ReportedUserSanitizedActionNotification($actionType, $reason));
                     });
@@ -318,6 +366,24 @@ class InternalPenaltyService
         User $admin
     ): InternalPenalty {
         return DB::transaction(function () use ($penalty, $reversalReason, $admin) {
+            $actionVal = $penalty->action_type instanceof InternalPenaltyType
+                ? $penalty->action_type->value
+                : (string) $penalty->action_type;
+
+            $contentRestoreMeta = null;
+            if ($actionVal === InternalPenaltyType::ContentRemoval->value) {
+                $targetUser = $penalty->user ?? User::find($penalty->user_id);
+                if ($targetUser) {
+                    $contentRemovalService = app(ContentRemovalService::class);
+                    $parsed = $contentRemovalService->parseIdentifier((string) $penalty->penalty_value);
+                    $contentRestoreMeta = $contentRemovalService->restore(
+                        $parsed['content_type'],
+                        $parsed['content_id'],
+                        $targetUser
+                    );
+                }
+            }
+
             $penalty->update([
                 'reversed_at' => now(),
                 'reversed_by' => $admin->id,
@@ -326,10 +392,6 @@ class InternalPenaltyService
 
             $report = $penalty->report;
             if ($report) {
-                $actionVal = $penalty->action_type instanceof InternalPenaltyType
-                    ? $penalty->action_type->value
-                    : (string) $penalty->action_type;
-
                 $actionString = $penalty->penalty_value
                     ? "Penalty Reversed: {$actionVal} ({$penalty->penalty_value})"
                     : "Penalty Reversed: {$actionVal}";
@@ -344,6 +406,11 @@ class InternalPenaltyService
                         $auditDetails['points_restored'] = (float) $penalty->penalty_value;
                     }
                 }
+                if ($contentRestoreMeta) {
+                    $auditDetails['content_type'] = $contentRestoreMeta['content_type'];
+                    $auditDetails['content_id'] = $contentRestoreMeta['content_id'];
+                    $auditDetails['restored'] = true;
+                }
 
                 $this->auditService->log(
                     $report,
@@ -354,10 +421,6 @@ class InternalPenaltyService
             }
 
             // Recalculate HIP score if this penalty was a HIP score penalty
-            $actionVal = $penalty->action_type instanceof InternalPenaltyType
-                ? $penalty->action_type->value
-                : (string) $penalty->action_type;
-
             if ($actionVal === InternalPenaltyType::HipScorePenalty->value && $penalty->user) {
                 HipScoreCalculator::recalculate($penalty->user);
             }

@@ -526,10 +526,10 @@ class TestamentController extends Controller
         ];
     }
 
-    /** 404 for a missing note, 403 when it belongs to someone else; null when the viewer owns it. */
+    /** 404 for a missing or non-active note, 403 when it belongs to someone else; null when the viewer owns it. */
     private function denyNoteAccess(?TestamentResourceNote $note, int $userId): ?JsonResponse
     {
-        if (!$note) {
+        if (!$note || $note->status !== TestamentResourceNote::STATUS_ACTIVE) {
             return response()->json(['success' => false, 'message' => 'This note no longer exists.'], 404);
         }
         if ((int) $note->user_id !== $userId) {

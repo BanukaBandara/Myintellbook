@@ -5,7 +5,9 @@ namespace App\Http\Requests\InternalTribunal;
 use App\Enums\InternalPenaltyType;
 use App\Enums\InternalReportStatus;
 use App\Enums\RestrictedFeature;
+use App\Models\TestamentResourceNote;
 use App\Services\InternalTribunal\AccountFeatureRestrictionService;
+use App\Services\InternalTribunal\ContentRemovalService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +18,23 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
         return $this->user()?->isAdmin() === true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('action_type') === InternalPenaltyType::ContentRemoval->value) {
+            if ($this->filled('content_type') && $this->filled('content_id')) {
+                $this->merge([
+                    'penalty_value' => "{$this->input('content_type')}:{$this->input('content_id')}",
+                ]);
+            } elseif ($this->filled('penalty_value') && str_contains((string) $this->input('penalty_value'), ':')) {
+                $parts = explode(':', (string) $this->input('penalty_value'), 2);
+                $this->merge([
+                    'content_type' => $parts[0] ?? null,
+                    'content_id' => $parts[1] ?? null,
+                ]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -24,11 +43,24 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
                 'string',
                 Rule::in(array_map(fn ($p) => $p->value, InternalPenaltyType::cases())),
             ],
+            'content_type' => [
+                'nullable',
+                Rule::requiredIf(fn () => $this->input('action_type') === InternalPenaltyType::ContentRemoval->value),
+                'string',
+                Rule::in([ContentRemovalService::TYPE_TESTAMENT_NOTE]),
+            ],
+            'content_id' => [
+                'nullable',
+                Rule::requiredIf(fn () => $this->input('action_type') === InternalPenaltyType::ContentRemoval->value),
+                'integer',
+                'min:1',
+            ],
             'penalty_value' => [
                 'nullable',
                 Rule::requiredIf(fn () => in_array($this->input('action_type'), [
                     InternalPenaltyType::FeatureRestriction->value,
                     InternalPenaltyType::HipScorePenalty->value,
+                    InternalPenaltyType::ContentRemoval->value,
                 ])),
                 function ($attribute, $value, $fail) {
                     $actionType = $this->input('action_type');
@@ -50,6 +82,12 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
                             $fail("The penalty points must be at least 1.00.");
                         } elseif ($floatVal > 36825.00) {
                             $fail("The penalty points may not be greater than 36,825.00.");
+                        }
+                    } elseif ($actionType === InternalPenaltyType::ContentRemoval->value) {
+                        try {
+                            app(ContentRemovalService::class)->parseIdentifier((string) $value);
+                        } catch (\DomainException $e) {
+                            $fail($e->getMessage());
                         }
                     }
                 },
@@ -91,7 +129,7 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
             $actionType = $this->input('action_type');
             $targetUser = $report?->reportedUser;
 
-            // Report status safety: feature restrictions, suspensions, professional discipline, jury panel deactivation, and hip score penalty require 'Valid' status
+            // Report status safety: feature restrictions, suspensions, professional discipline, jury panel deactivation, hip score penalty, and content removals require 'Valid' status
             if (in_array($actionType, [
                 InternalPenaltyType::FeatureRestriction->value,
                 InternalPenaltyType::TemporarySuspension->value,
@@ -100,6 +138,7 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
                 InternalPenaltyType::ProfessionalEligibilitySuspension->value,
                 InternalPenaltyType::JuryPanelDeactivation->value,
                 InternalPenaltyType::HipScorePenalty->value,
+                InternalPenaltyType::ContentRemoval->value,
             ]) && $statusVal !== InternalReportStatus::Valid->value) {
                 $validator->errors()->add('report', "Penalties, feature restrictions, professional discipline, and score penalties can only be applied to reports with 'Valid' status. Current status is '{$statusVal}'.");
             }
@@ -199,6 +238,42 @@ class AdminApplyInternalPenaltyRequest extends FormRequest
 
                     if ($hasActiveScorePenalty) {
                         $validator->errors()->add('action_type', 'An active HIP / Score Penalty from this report has already been applied to this user.');
+                    }
+                }
+            }
+
+            if ($actionType === InternalPenaltyType::ContentRemoval->value) {
+                if ($targetUser?->isAdmin()) {
+                    $validator->errors()->add('action_type', 'Super Administrators cannot receive content removal sanctions.');
+                }
+
+                if ($targetUser?->isJuryPanelAccount()) {
+                    $validator->errors()->add('action_type', 'Jury Panel accounts cannot receive content removal sanctions.');
+                }
+
+                $contentType = $this->input('content_type');
+                $contentId = $this->input('content_id');
+
+                if ($contentType && is_numeric($contentId) && (int) $contentId > 0 && $targetUser) {
+                    try {
+                        app(ContentRemovalService::class)->validateCanRemove($contentType, (int) $contentId, $targetUser);
+                    } catch (\DomainException $e) {
+                        $validator->errors()->add('content_id', $e->getMessage());
+                    }
+
+                    // Prevent duplicate active penalty for the same report and content
+                    if ($report && $targetUser) {
+                        $penaltyVal = "{$contentType}:{$contentId}";
+                        $hasActiveRemoval = \App\Models\InternalPenalty::where('internal_report_id', $report->id)
+                            ->where('user_id', $targetUser->id)
+                            ->where('action_type', InternalPenaltyType::ContentRemoval->value)
+                            ->where('penalty_value', $penaltyVal)
+                            ->whereNull('reversed_at')
+                            ->exists();
+
+                        if ($hasActiveRemoval) {
+                            $validator->errors()->add('action_type', 'An active Content Removal penalty for this content item already exists for this report.');
+                        }
                     }
                 }
             }
