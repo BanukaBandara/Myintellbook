@@ -1,11 +1,6 @@
 <template>
-        <main class="dashboard-page flex-grow-1">
-        <div class="row g-3 align-items-start">
-            <div class="col-md-4 col-xl-3 d-none d-md-block">
-                <ProfileDetails />
-                <addSiteDeails class="mt-4 w-100"/>
-            </div>
-            <div class="col-12 col-md-8 col-xl-6">
+        <!-- Middle-column feed only: the sidebars come from layouts/DashboardLayout.vue. -->
+        <div class="home-feed">
                 <!-- <NewPost /> -->
                 <!-- <SortingMenu /> -->
                 <DailyQuestionCard class="dashboard-card mb-3" @day-changed="refreshHistoryAfterMidnight" />
@@ -26,35 +21,17 @@
                     </div>
                
                 <!-- <userProfiles /> -->
-            </div>
-
-            <div class="col-xl-3 d-none d-xl-block">
-                
-                <latestUpdates class="dashboard-card" />
-                <Divider class="w-100"/>
-                <!-- <myExams  @createExam="showExamCreate" :visible="examsCreateShow"/> -->
-                <Divider class="w-100" />
-                <!-- <categoriesShow /> -->
-                <Divider class="w-100" />
-                <ProfileList />
-            </div> 
         </div>
-        </main>
-        
+
 </template>
 <script setup lang="ts">
 import { ref , computed, onMounted, onBeforeUnmount} from 'vue';
-import ProfileDetails from '@/components/HomePage/ProfileDetails.vue';
-import Divider from 'primevue/divider';
-import ProfileList from '@/components/HomePage/ProfileList.vue';
 import PostActivity from '@/components/HomePage/PostActivity.vue';
-import latestUpdates from '@/components/commonComponents/latestUpdates.vue';
 import myExams from '@/components/HomePage/MyExams.vue';
 import { useUserProfile} from '../../stores/User/userProfile';
 import userPng from '../../assets/user.png';
 import createExam from '@/components/commonComponents/createExam.vue';
 import DailyQuestionCard from '@/components/DailyQuestionCard.vue';
-import addSiteDeails from '@/components/commonComponents/addSiteDeails.vue';
 import DailyQuestionHistory from '@/components/DailyQuestionHistory.vue';
 
 const userProfile = useUserProfile();

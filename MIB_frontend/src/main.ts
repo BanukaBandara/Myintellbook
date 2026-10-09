@@ -17,6 +17,7 @@ import 'primeicons/primeicons.css';
 import './assets/design-system.css';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
+import { vStickySidebar } from './directives/stickySidebar';
 // import Echo from "laravel-echo";
 // import Pusher from "pusher-js";
 
@@ -68,6 +69,7 @@ app.use(router)
 app.use(PrimeVue);
 
 app.directive('tooltip', Tooltip);
+app.directive('sticky-sidebar', vStickySidebar);
 app.use(ToastService);
 
 app.mount('#app')

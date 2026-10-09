@@ -42,6 +42,19 @@ body,
   padding: 1.25rem clamp(0.75rem, 2vw, 2rem) 2rem;
 }
 
+/*
+ * Two-way sticky sidebar (see directives/stickySidebar.ts, applied with v-sticky-sidebar).
+ * It scrolls with the feed, locks to the viewport bottom once its end is visible, and on the way
+ * back up locks to the top. It sticks inside .app-content-scroll (App.vue), so no ancestor between
+ * it and that container may set overflow, and its row must use align-items-start.
+ * The top value here is only the fallback until the directive takes over.
+ */
+.sticky-sidebar {
+  position: sticky;
+  top: 1.25rem;
+  align-self: flex-start;
+}
+
 .dashboard-card,
 .dashboard-widget-card {
   background: #fff;

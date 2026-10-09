@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
 import Register from '../views/User/Register.vue';
 import EmailConfirmation from '../views/User/EmailConfirmation.vue';
 import Login from '../views/User/Login.vue';
@@ -92,6 +92,7 @@ const router = createRouter({
       component: () => import('../views/User/Home.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title: 'Home'
       }
@@ -348,6 +349,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/testament.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Testament Management'
       }
@@ -358,6 +360,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/AboutSite.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'About Site'
       }
@@ -368,6 +371,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/Glossary.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Glossary'
       }
@@ -388,6 +392,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/court.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Submit Case'
       }
@@ -398,6 +403,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/TermsConditions.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Terms & Conditions'
       }
@@ -408,6 +414,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/HowItWorks.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'How It Works'
       }
@@ -418,6 +425,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/PrivacyPolicy.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Privacy Policy'
       }
@@ -428,6 +436,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/EncryptionDetails.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Encryption Details'
       }
@@ -438,6 +447,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/ScoringBreakDown.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Scoring Breakdown'
       }
@@ -448,6 +458,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/dataRetentionRules.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Scoring Breakdown'
       }
@@ -458,6 +469,7 @@ const router = createRouter({
       component: CreateTribunalCase,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Submit Tribunal Case'
       },
@@ -468,6 +480,7 @@ const router = createRouter({
       component: TribunalCases,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'My Tribunal Cases'
       },
@@ -478,6 +491,7 @@ const router = createRouter({
       component: TribunalCaseDetails,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Tribunal Case Details'
       },
@@ -488,6 +502,7 @@ const router = createRouter({
       component: TribunalJuryCases,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Tribunal Adjudicator Portal'
       },
@@ -498,6 +513,7 @@ const router = createRouter({
       component: ProfessionalVerification,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Professional Verification'
       },
@@ -518,6 +534,7 @@ const router = createRouter({
       component: TribunalRepresentationRequests,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Representation Requests Inbox'
       },
@@ -528,6 +545,7 @@ const router = createRouter({
       component: TribunalRepresentedCases,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'My Represented Cases'
       },

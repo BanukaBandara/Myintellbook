@@ -1,5 +1,6 @@
 <template>
-    <div class="row flex-grow-1 m-0 overflow-auto">
+    <!-- No overflow on this row: it would become the sidebar's scroll container and sticky would never engage. -->
+    <div class="row flex-grow-1 m-0 align-items-start">
         <div class="col-md-2"></div>
         <div class="col-md-5 mt-3">
             <div v-if="loading"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
@@ -28,7 +29,7 @@
             </div>
 
         </div>
-         <div class="col-md-3 mt-3 d-none d-md-block">
+         <div class="col-md-3 mt-3 d-none d-md-block sticky-sidebar" v-sticky-sidebar>
                 
                 <!-- <myExams />
                 <Divider /> -->

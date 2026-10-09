@@ -8,6 +8,7 @@ import { useUserProfile} from '@/stores/User/userProfile';
 import type {userGeneralInfoType} from '@/types/userGeneralInfoType'
 import { useUserStore } from '@/stores/User/userStore';
 import FAQ from '@/components/commonComponents/FAQ.vue';
+import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
 const loadingStore = useLoadingStore();
 const route = useRoute();
@@ -15,6 +16,14 @@ const userStore = useUserStore();
 const isLoading = computed(()=>loadingStore.isLoadingState);
 const userProfile = useUserProfile();
 const isLogged = computed(()=> (route.path !== '/login' && route.path !== '/register' && route.path !== '/' && route.path !== '/examForm'));
+const useDashboardLayout = computed(() => route.meta.layout === 'dashboard');
+
+// .app-content-scroll is the page's scroller and persists across routes, so start each new page
+// at the top. The sticky sidebars see that scroll and re-lock to their top position.
+const contentScroll = ref<HTMLElement | null>(null);
+watch(() => route.path, () => {
+  contentScroll.value?.scrollTo({ top: 0 });
+});
 const userGeneralInfo = ref<userGeneralInfoType>({
     first_name: '',
     last_name: '',
@@ -84,14 +93,20 @@ const getProfileList = async() =>{
 </script>
 
 <template>
+  <!-- Only .app-content-scroll scrolls; the navbar sits above it, so it never moves. -->
   <div class="app-shell">
-    <navBar />
+    <div class="app-nav"><navBar /></div>
     <div v-if="loadingStore.isLoadingState" class="loader-overlay">
       <div class="spinner"></div>
     </div>
 
-    <main class="app-content-scroll">
-      <router-view />
+    <main ref="contentScroll" class="app-content-scroll">
+      <!-- Routes with meta.layout 'dashboard' share one persistent 3-column shell; only the middle
+           column changes between them, so the sticky sidebars aren't torn down on navigation. -->
+      <DashboardLayout v-if="useDashboardLayout">
+        <router-view />
+      </DashboardLayout>
+      <router-view v-else />
       <FAQ v-if="isLogged"/>
     </main>
   </div>
@@ -104,6 +119,9 @@ const getProfileList = async() =>{
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+}
+.app-nav {
+  flex: 0 0 auto;
 }
 .app-content-scroll {
   flex: 1 1 auto;
