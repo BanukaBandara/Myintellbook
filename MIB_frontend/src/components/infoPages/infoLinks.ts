@@ -25,12 +25,17 @@ export const INFO_LINKS: InfoLink[] = [
 
 export const INFO_ACTIONS: InfoLink[] = [
     {
-        key: 'verify',
-        label: 'Verify Identity',
+        key: 'report',
+        label: 'Report Misconduct',
         to: '/submit_case',
-        icon: 'bi-patch-check',
+        icon: 'bi-shield-exclamation',
         variant: 'primary',
-        isActive: (route) => route.path === '/submit_case' || route.path === '/submit_case/',
+        isActive: (route) =>
+            route.path === '/submit_case' ||
+            route.path === '/submit_case/' ||
+            route.path === '/submit_case/report-misconduct' ||
+            route.query.tab === 'report-misconduct' ||
+            route.path.startsWith('/internal-tribunal'),
     },
     {
         key: 'case',
@@ -38,17 +43,8 @@ export const INFO_ACTIONS: InfoLink[] = [
         to: '/submit_case/external',
         icon: 'bi-send',
         variant: 'secondary',
-        isActive: (route) => route.path === '/submit_case/external',
-    },
-    {
-        key: 'report',
-        label: 'Report Misconduct',
-        to: '/submit_case/report-misconduct',
-        icon: 'bi-shield-exclamation',
-        variant: 'secondary',
         isActive: (route) =>
-            route.path === '/submit_case/report-misconduct' ||
-            route.query.tab === 'report-misconduct' ||
-            route.path.startsWith('/internal-tribunal'),
+            route.path === '/submit_case/external' ||
+            route.query.tab === 'external',
     },
 ];

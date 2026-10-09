@@ -375,13 +375,7 @@ const router = createRouter({
     },
     {
       path:'/verify_idnetity',
-      name:'verify_idnetity',
-      component: () => import('@/components/commonComponents/VerifyIdentity.vue'),
-      meta: {
-        requiresAuth: true,
-        hideNavBar:false,
-        title:'Verify Identity'
-      }
+      redirect: '/submit_case',
     },
     {
       path:'/submit_case/:slug?',
