@@ -3,14 +3,14 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Tribunal\TribunalCaseController;
 
-Route::post('/register', [\App\Http\Controllers\UserController::class, 'userRegister']);
-Route::post('/verify-email', [\App\Http\Controllers\UserController::class, 'verifyEmail']);
-Route::post('/login', [\App\Http\Controllers\UserController::class, 'userLogin']);
+Route::middleware('throttle:10,1')->post('/register', [\App\Http\Controllers\UserController::class, 'userRegister']);
+Route::middleware('throttle:10,1')->post('/verify-email', [\App\Http\Controllers\UserController::class, 'verifyEmail']);
+Route::middleware('throttle:10,1')->post('/login', [\App\Http\Controllers\UserController::class, 'userLogin']);
 Route::middleware('throttle:10,1')->post('/admin/login', [\App\Http\Controllers\Admin\AdminAuthController::class, 'login']);
-Route::post('/password/reset', [\App\Http\Controllers\UserController::class, 'passwordResetLink']);
-Route::post('/password/reset/{token}', [\App\Http\Controllers\UserController::class, 'passwordReset']);
-Route::post('auth/google', [\App\Http\Controllers\GoogleController::class, 'callback']);
-Route::get('auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'callback']);
+Route::middleware('throttle:6,1')->post('/password/reset', [\App\Http\Controllers\UserController::class, 'passwordResetLink']);
+Route::middleware('throttle:6,1')->post('/password/reset/{token}', [\App\Http\Controllers\UserController::class, 'passwordReset']);
+Route::middleware('throttle:10,1')->post('auth/google', [\App\Http\Controllers\GoogleController::class, 'callback']);
+Route::middleware('throttle:10,1')->get('auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'callback']);
 
 // Public Tribunal Report Authenticity Verification (Rate limited)
 Route::middleware('throttle:60,1')->get('/tribunal/reports/verify/{verificationCode}', [\App\Http\Controllers\Tribunal\TribunalCaseReportController::class, 'verifyCode']);
