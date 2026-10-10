@@ -125,7 +125,8 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 }
 
 function compressCoverImage(image: HTMLImageElement): string {
-  const maxDataUrlLength = 4_500_000;
+  // Must stay under the server limit (App\Rules\Base64Image: 2 MB decoded, about 2.8M base64 chars).
+  const maxDataUrlLength = 2_600_000;
   const maxDimension = 1920;
   let scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement('canvas');

@@ -28,6 +28,9 @@ class TribunalRepresentationController extends Controller
      */
     public function representatives(Request $request): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['search' => ['sometimes', 'nullable', 'string', 'max:100'], 'case_id' => ['sometimes', 'nullable', 'integer', 'min:1']]);
+
         $case = null;
         if ($request->filled('case_id')) {
             $case = TribunalCase::find($request->input('case_id'));
@@ -72,6 +75,9 @@ class TribunalRepresentationController extends Controller
      */
     public function lawyerRequests(Request $request): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100'], 'status' => ['sometimes', 'nullable', 'string', 'max:40']]);
+
         abort_unless(
             $request->user()->canActAsLegalRepresentative(),
             403,

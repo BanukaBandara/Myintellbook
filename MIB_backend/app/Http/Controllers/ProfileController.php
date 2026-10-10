@@ -8,6 +8,11 @@ use App\Http\Requests\ProfileRequest;
 use App\Http\Requests\GeneralInfoRequest;
 use App\Http\Requests\WorkExperianceRequest;
 use App\Http\Requests\EducationRequest;
+use App\Http\Requests\AddSkillRequest;
+use App\Http\Requests\ProfileSearchRequest;
+use App\Http\Requests\SubmitComplainRequest;
+use App\Rules\Base64Image;
+use App\Support\ProfileVisibility;
 use App\Models\User;
 use App\Services\HipScoreCalculator;
 use Auth;
@@ -129,6 +134,13 @@ class ProfileController extends Controller
             'achievements' => $achievements,
         ];
 
+        // Remove "Only Me" fields unless the viewer owns this profile.
+        $profileDetails = ProfileVisibility::filter(
+            $profileDetails,
+            $profileDetails['visibility'],
+            (int) auth()->id() === (int) $user->id,
+        );
+
         return response()->json([
             'status' => 'success',
             'user' => $profileDetails,
@@ -207,7 +219,7 @@ class ProfileController extends Controller
         return $user;
     }
 
-    public function addSkill(Request $request)
+    public function addSkill(AddSkillRequest $request)
     {
         $user = $this->profileService->addSkill($request);
         return $user;
@@ -228,7 +240,8 @@ class ProfileController extends Controller
     public function uploadProfileImage(Request $request)
     {
         $request->validate([
-            'image' => ['required', 'string', 'starts_with:data:image', 'max:5000000'],
+            // ~2 MB of image data is at most ~2.8 M characters of base64.
+            'image' => ['required', 'string', 'max:2900000', new Base64Image()],
         ]);
 
         $user = $this->profileService->uploadProfileImage($request);
@@ -238,7 +251,7 @@ class ProfileController extends Controller
     public function uploadCoverImage(Request $request)
     {
         $request->validate([
-            'image' => ['required', 'string', 'starts_with:data:image', 'max:5000000'],
+            'image' => ['required', 'string', 'max:2900000', new Base64Image()],
         ]);
 
         $user = $this->profileService->uploadCoverImage($request);
@@ -263,9 +276,9 @@ class ProfileController extends Controller
         return $user;
     }
 
-    public function search(Request $request)
+    public function search(ProfileSearchRequest $request)
     {
-        $user = $this->searchService->searchKey($request->key);
+        $user = $this->searchService->searchKey($request->validated('key'));
         return $user;
     }
 
@@ -281,8 +294,8 @@ class ProfileController extends Controller
         return $user;
     }
 
-    public function submitComplains(Request $request){
-        $user = $this->profileService->submitComplains($request);
+    public function submitComplains(SubmitComplainRequest $request){
+        $user = $this->profileService->submitComplains($request->validated());
         return $user;
     }
 

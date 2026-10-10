@@ -169,10 +169,12 @@ class AdminAuthTest extends TestCase
             'password' => 'Secret123!',
         ]);
 
-        $response->assertStatus(403);
+        // Same answer as a wrong password, so the admin portal can't confirm user passwords.
+        $response->assertStatus(401);
         $response->assertJson([
-            'code' => 403,
+            'code' => 401,
             'status' => false,
+            'message' => 'Invalid admin credentials.',
         ]);
         $this->assertNull($response->json('token'));
     }
@@ -187,10 +189,12 @@ class AdminAuthTest extends TestCase
             'password' => 'JuryPass123!',
         ]);
 
-        $response->assertStatus(403);
+        // Same answer as a wrong password, so the admin portal can't confirm user passwords.
+        $response->assertStatus(401);
         $response->assertJson([
-            'code' => 403,
+            'code' => 401,
             'status' => false,
+            'message' => 'Invalid admin credentials.',
         ]);
         $this->assertNull($response->json('token'));
     }

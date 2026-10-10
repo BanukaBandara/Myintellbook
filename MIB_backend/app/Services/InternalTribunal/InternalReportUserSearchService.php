@@ -43,7 +43,8 @@ class InternalReportUserSearchService
                         ->orWhere('last_name', 'like', "%{$clean}%")
                         ->orWhere('slug', 'like', "%{$clean}%")
                         ->orWhereRaw($concatSql, ["%{$clean}%"]);
-                })->orWhere('users.email', 'like', "%{$clean}%");
+                });
+                // Deliberately no email matching: typing an address would reveal whose account it is.
             })
             ->limit($cappedLimit)
             ->get();

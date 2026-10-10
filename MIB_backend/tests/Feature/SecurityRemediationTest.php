@@ -91,6 +91,7 @@ class SecurityRemediationTest extends TestCase
         $fakeGooglePayload = [
             'sub' => 'google-admin-12345',
             'email' => 'admin_oauth_test@example.com',
+            'email_verified' => true,
             'name' => 'Super Admin',
         ];
 
@@ -126,22 +127,22 @@ class SecurityRemediationTest extends TestCase
             'is_admin' => false,
         ]);
 
-        // Perform 10 failed login attempts
-        for ($i = 0; $i < 10; $i++) {
-            $response = $this->postJson('/api/login', [
+        // 5 wrong passwords are rejected normally
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/login', [
                 'email' => 'ratelimit_user@example.com',
                 'password' => 'WrongPassword!',
-            ]);
-            $this->assertContains($response->status(), [401, 500]);
+            ])->assertStatus(401);
         }
 
-        // 11th request must receive HTTP 429 Too Many Requests
+        // Then the account is locked: even the correct password is refused with 429
         $rateLimitedResponse = $this->postJson('/api/login', [
             'email' => 'ratelimit_user@example.com',
-            'password' => 'WrongPassword!',
+            'password' => 'CorrectPassword123!',
         ]);
 
         $rateLimitedResponse->assertStatus(429);
+        $this->assertStringContainsString('Too many failed sign-in attempts', $rateLimitedResponse->json('message'));
     }
 
     #[Test]
@@ -169,14 +170,14 @@ class SecurityRemediationTest extends TestCase
     #[Test]
     public function case_c3_excessive_password_reset_requests_trigger_rate_limiting_429(): void
     {
-        for ($i = 0; $i < 6; $i++) {
-            $response = $this->postJson('/api/password/reset', [
+        // 5 requests per email per hour; unknown emails get the same 200 as real ones
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/password/reset', [
                 'email' => 'nonexistent@example.com',
-            ]);
-            $this->assertContains($response->status(), [200, 422, 500]);
+            ])->assertStatus(200);
         }
 
-        // 7th request must receive HTTP 429
+        // 6th request must receive HTTP 429
         $rateLimitedResponse = $this->postJson('/api/password/reset', [
             'email' => 'nonexistent@example.com',
         ]);

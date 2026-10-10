@@ -41,6 +41,9 @@ class TribunalConversationController extends Controller
      */
     public function messages(Request $request, TribunalConversation $conversation): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100']]);
+
         $messages = $this->conversationService->getMessages(
             $conversation,
             $request->user()->id,

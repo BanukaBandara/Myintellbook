@@ -54,6 +54,9 @@ class JuryPortalController extends Controller
      */
     public function cases(Request $request): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100']]);
+
         $user = $request->user() ?: auth()->user();
         $panel = $user->juryPanel;
 
@@ -317,6 +320,9 @@ class JuryPortalController extends Controller
      */
     public function caseRoomMessages(Request $request, $id): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100']]);
+
         $case = $this->getAuthorizedAssignedCase($id);
         $user = $request->user() ?: auth()->user();
 

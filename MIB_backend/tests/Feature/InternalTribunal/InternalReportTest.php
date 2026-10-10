@@ -303,11 +303,17 @@ class InternalReportTest extends TestCase
         $resShort->assertStatus(200);
         $this->assertCount(0, $resShort->json('data'));
 
-        // Search returns target user
-        $resTarget = $this->getJson('/api/internal-reports/users/search?q=target', $this->authHeaders($currentUser));
+        // Search returns target user by name
+        $targetName = $targetUser->profile->first_name;
+        $resTarget = $this->getJson('/api/internal-reports/users/search?q='.urlencode($targetName), $this->authHeaders($currentUser));
         $resTarget->assertStatus(200);
         $this->assertCount(1, $resTarget->json('data'));
         $this->assertEquals($targetUser->id, $resTarget->json('data.0.id'));
+
+        // Email addresses are not searchable: that would reveal who owns an address
+        $resEmail = $this->getJson('/api/internal-reports/users/search?q=target%40example.com', $this->authHeaders($currentUser));
+        $resEmail->assertStatus(200);
+        $this->assertCount(0, $resEmail->json('data'));
 
         // Search does NOT return admin
         $resAdmin = $this->getJson('/api/internal-reports/users/search?q=admin', $this->authHeaders($currentUser));

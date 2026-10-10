@@ -5,10 +5,11 @@ use App\Http\Controllers\Tribunal\TribunalCaseController;
 
 Route::middleware('throttle:10,1')->post('/register', [\App\Http\Controllers\UserController::class, 'userRegister']);
 Route::middleware('throttle:10,1')->post('/verify-email', [\App\Http\Controllers\UserController::class, 'verifyEmail']);
-Route::middleware('throttle:10,1')->post('/login', [\App\Http\Controllers\UserController::class, 'userLogin']);
-Route::middleware('throttle:10,1')->post('/admin/login', [\App\Http\Controllers\Admin\AdminAuthController::class, 'login']);
-Route::middleware('throttle:6,1')->post('/password/reset', [\App\Http\Controllers\UserController::class, 'passwordResetLink']);
-Route::middleware('throttle:6,1')->post('/password/reset/{token}', [\App\Http\Controllers\UserController::class, 'passwordReset']);
+// Named limiters are defined in AppServiceProvider::configureRateLimiting().
+Route::middleware('throttle:login')->post('/login', [\App\Http\Controllers\UserController::class, 'userLogin']);
+Route::middleware('throttle:login')->post('/admin/login', [\App\Http\Controllers\Admin\AdminAuthController::class, 'login']);
+Route::middleware('throttle:password-reset')->post('/password/reset', [\App\Http\Controllers\UserController::class, 'passwordResetLink']);
+Route::middleware('throttle:password-reset')->post('/password/reset/{token}', [\App\Http\Controllers\UserController::class, 'passwordReset']);
 Route::middleware('throttle:10,1')->post('auth/google', [\App\Http\Controllers\GoogleController::class, 'callback']);
 Route::middleware('throttle:10,1')->get('auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'callback']);
 
@@ -20,8 +21,12 @@ Route::middleware('throttle:30,1')->post('/tribunal/reports/verify-file', [\App\
  
 
  
-Route::middleware('auth.token')->group(function () {
+// Every authenticated endpoint gets the default 'api' ceiling; individual routes add tighter
+// limits ('search', 'writes') and 'verified.email' for actions that need a confirmed address.
+Route::middleware(['auth.token', 'throttle:api'])->group(function () {
     Route::get('/user', [\App\Http\Controllers\UserController::class, 'userCheck']);
+    Route::post('/email/verification-notification', [\App\Http\Controllers\UserController::class, 'resendVerificationEmail'])
+        ->middleware('throttle:verification-email');
     Route::get('/user/profile', [\App\Http\Controllers\ProfileController::class, 'userProfile']);
     Route::get('/users/{id}', [\App\Http\Controllers\ProfileController::class, 'show'])
         ->whereNumber('id')
@@ -43,7 +48,7 @@ Route::middleware('auth.token')->group(function () {
     Route::get('/get-education-detail/{id}',[\App\Http\Controllers\EducationController::class,'show']);
     Route::get('/delete-education/{id}',[\App\Http\Controllers\EducationController::class,'destroy'])->middleware('restrict.feature:profile_editing');
     Route::post('/edit-education-detail',[\App\Http\Controllers\EducationController::class, 'update'])->middleware('restrict.feature:profile_editing');
-    Route::post('/add-skill',[\App\Http\Controllers\ProfileController::class,'addSkill'])->middleware('restrict.feature:profile_editing');
+    Route::post('/add-skill',[\App\Http\Controllers\ProfileController::class,'addSkill'])->middleware(['throttle:writes', 'restrict.feature:profile_editing']);
     Route::get('/get-skills',[\App\Http\Controllers\ProfileController::class,'getSkills']);
     Route::get('/delete-skill/{id}',[\App\Http\Controllers\ProfileController::class,'deleteSkill'])->middleware('restrict.feature:profile_editing');
     Route::post('/upload-profile-image',[\App\Http\Controllers\ProfileController::class,'uploadProfileImage'])->middleware('restrict.feature:profile_editing');
@@ -68,7 +73,7 @@ Route::middleware('auth.token')->group(function () {
     Route::post('/exam/submit', [\App\Http\Controllers\ExamSessionController::class, 'submit'])->middleware(['throttle:10,1', 'restrict.feature:exam_access']);
     Route::post('/generate-questions', [\App\Http\Controllers\QuestionController::class, 'generateQuestions']);
     Route::post('/set-user-answer', [\App\Http\Controllers\DailyQuestionController::class, 'submitDailyAnswer'])->middleware(['throttle:10,1', 'restrict.feature:daily_question_access']);
-    Route::post('/set-comment', [\App\Http\Controllers\CommentController::class, 'setComment'])->middleware('restrict.feature:community_posting');
+    Route::post('/set-comment', [\App\Http\Controllers\CommentController::class, 'setComment'])->middleware(['throttle:writes', 'restrict.feature:community_posting']);
     Route::get('/get-scores',[\App\Http\Controllers\ScoreController::class, 'getScores']);
     Route::get('/scores/lci', [\App\Http\Controllers\UserScoreController::class, 'lci'])->middleware('throttle:60,1');
 
@@ -76,13 +81,13 @@ Route::middleware('auth.token')->group(function () {
     Route::prefix('testament')->middleware('throttle:30,1')->group(function () {
         Route::get('/notes', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
         Route::get('/public-feed', [\App\Http\Controllers\TestamentController::class, 'publicFeed']);
-        Route::post('/notes', [\App\Http\Controllers\TestamentController::class, 'createResourceNote'])->middleware('restrict.feature:community_posting');
+        Route::post('/notes', [\App\Http\Controllers\TestamentController::class, 'createResourceNote'])->middleware(['throttle:writes', 'restrict.feature:community_posting']);
         Route::get('/my-notes', [\App\Http\Controllers\TestamentController::class, 'myNotes']);
         Route::put('/notes/{id}', [\App\Http\Controllers\TestamentController::class, 'updateResourceNote'])->whereNumber('id')->middleware('restrict.feature:community_posting');
         Route::delete('/notes/{id}', [\App\Http\Controllers\TestamentController::class, 'deleteResourceNote'])->whereNumber('id')->middleware('restrict.feature:community_posting');
         Route::get('/', [\App\Http\Controllers\TestamentController::class, 'show']);
         Route::put('/', [\App\Http\Controllers\TestamentController::class, 'save']);
-        Route::post('/submit', [\App\Http\Controllers\TestamentController::class, 'submit']);
+        Route::post('/submit', [\App\Http\Controllers\TestamentController::class, 'submit'])->middleware('verified.email');
         Route::post('/recall', [\App\Http\Controllers\TestamentController::class, 'recall']);
         Route::post('/withdraw', [\App\Http\Controllers\TestamentController::class, 'withdraw']);
         Route::get('/witness-requests', [\App\Http\Controllers\TestamentController::class, 'witnessRequests']);
@@ -94,10 +99,10 @@ Route::middleware('auth.token')->group(function () {
     Route::get('/notifications',[\App\Http\Controllers\NotificationsController::class,'getNotifications']);
     Route::get('/allNotifications',[\App\Http\Controllers\NotificationsController::class,'getAll']);
     Route::get('/topScores',[\App\Http\Controllers\ScoreController::class, 'topScores']);
-    Route::post('/search',[\App\Http\Controllers\ProfileController::class, 'search']);
-    Route::get('/profile-list-paginated/{page}',[\App\Http\Controllers\ProfileController::class,'profileListPaginated']);
-    Route::get('/get-user-infomations/{slug}',[\App\Http\Controllers\ProfileController::class,'getOtherProfileInfomations']);
-    Route::post('/create_exam',[\App\Http\Controllers\ExamController::class,'create'])->middleware('restrict.feature:exam_access');
+    Route::post('/search',[\App\Http\Controllers\ProfileController::class, 'search'])->middleware('throttle:search');
+    Route::get('/profile-list-paginated/{page}',[\App\Http\Controllers\ProfileController::class,'profileListPaginated'])->whereNumber('page')->middleware('throttle:search');
+    Route::get('/get-user-infomations/{slug}',[\App\Http\Controllers\ProfileController::class,'getOtherProfileInfomations'])->middleware('throttle:search');
+    Route::post('/create_exam',[\App\Http\Controllers\ExamController::class,'create'])->middleware(['throttle:writes', 'restrict.feature:exam_access']);
     Route::get('/get_exams',[\App\Http\Controllers\ExamController::class,'getExams']);
     Route::get('/categories_with_professions',[\App\Http\Controllers\CategoryController::class,'getformated']);
     Route::post('/save_exam',[\App\Http\Controllers\ExamController::class,'saveExam'])->middleware('restrict.feature:exam_access');
@@ -109,16 +114,16 @@ Route::middleware('auth.token')->group(function () {
     Route::get('/get-exam-summary/{examId}',[\App\Http\Controllers\ExamController::class,'getSummary']);
     Route::get('/add-category-user/{categoryId}',[\App\Http\Controllers\CategoryController::class,'addUserCategory']);
     Route::get('/delete-account',[\App\Http\Controllers\UserController::class,'DeleteUser']);
-    Route::post('/set_settings',[\App\Http\Controllers\UserSettingsController::class,'setSettings']);
+    Route::post('/set_settings',[\App\Http\Controllers\UserSettingsController::class,'setSettings'])->middleware('throttle:writes');
     Route::get('/get_settings',[\App\Http\Controllers\UserSettingsController::class,'getSettings']);
-    Route::post('/submit-complains',[\App\Http\Controllers\ProfileController::class,'submitComplains']);
-    Route::get('/get-complains/{status}',[\App\Http\Controllers\ProfileController::class,'getComplains']);
+    Route::post('/submit-complains',[\App\Http\Controllers\ProfileController::class,'submitComplains'])->middleware(['throttle:writes', 'verified.email']);
+    Route::get('/get-complains/{status}',[\App\Http\Controllers\ProfileController::class,'getComplains'])->whereNumber('status');
 
     Route::prefix('tribunal')->group(function () {
         Route::get('/me', \App\Http\Controllers\Tribunal\TribunalMeController::class);
         // Respondent Candidate Search (Case Filing Flow)
-        Route::get('/respondents/search', [\App\Http\Controllers\Tribunal\TribunalRespondentSearchController::class, 'search']);
-        Route::post('/cases', [TribunalCaseController::class, 'store'])->middleware('restrict.feature:tribunal_participation');
+        Route::get('/respondents/search', [\App\Http\Controllers\Tribunal\TribunalRespondentSearchController::class, 'search'])->middleware('throttle:search');
+        Route::post('/cases', [TribunalCaseController::class, 'store'])->middleware(['throttle:writes', 'verified.email', 'restrict.feature:tribunal_participation']);
         Route::get('/cases', [TribunalCaseController::class, 'index']);
         Route::get('/cases/{tribunalCase}', [TribunalCaseController::class, 'show']);
         Route::post('/cases/{tribunalCase}/acknowledge', [TribunalCaseController::class, 'acknowledge'])->middleware('restrict.feature:tribunal_participation');
@@ -126,7 +131,7 @@ Route::middleware('auth.token')->group(function () {
 
         // Evidence Management
         Route::get('/cases/{tribunalCase}/evidence', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'index']);
-        Route::post('/cases/{tribunalCase}/evidence', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'store'])->middleware('restrict.feature:tribunal_participation');
+        Route::post('/cases/{tribunalCase}/evidence', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'store'])->middleware(['throttle:writes', 'verified.email', 'restrict.feature:tribunal_participation']);
         Route::get('/cases/{tribunalCase}/evidence/{evidence}', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'show']);
         Route::get('/cases/{tribunalCase}/evidence/{evidence}/download', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'download']);
         Route::post('/cases/{tribunalCase}/evidence/{evidence}/challenge', [\App\Http\Controllers\Tribunal\TribunalEvidenceController::class, 'challenge'])->middleware('restrict.feature:tribunal_participation');
@@ -139,8 +144,8 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/cases/{tribunalCase}/jury/recuse', [\App\Http\Controllers\Tribunal\TribunalJuryController::class, 'recuse']);
 
         // Legal Representation & Verified Representatives
-        Route::get('/representatives', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'representatives']);
-        Route::post('/cases/{tribunalCase}/representation-requests', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'storeRequest'])->middleware('restrict.feature:tribunal_participation');
+        Route::get('/representatives', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'representatives'])->middleware('throttle:search');
+        Route::post('/cases/{tribunalCase}/representation-requests', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'storeRequest'])->middleware(['throttle:writes', 'verified.email', 'restrict.feature:tribunal_participation']);
         Route::get('/representation-requests', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'lawyerRequests']);
         Route::post('/representation-requests/{representationRequest}/accept', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'accept'])->middleware('restrict.feature:tribunal_participation');
         Route::post('/representation-requests/{representationRequest}/decline', [\App\Http\Controllers\Tribunal\TribunalRepresentationController::class, 'decline'])->middleware('restrict.feature:tribunal_participation');
@@ -189,7 +194,7 @@ Route::middleware('auth.token')->group(function () {
     });
 
     // Professional Verifications (User)
-    Route::post('/professional-verifications', [\App\Http\Controllers\Professional\ProfessionalVerificationController::class, 'apply']);
+    Route::post('/professional-verifications', [\App\Http\Controllers\Professional\ProfessionalVerificationController::class, 'apply'])->middleware(['throttle:writes', 'verified.email']);
     Route::get('/professional-verifications/me', [\App\Http\Controllers\Professional\ProfessionalVerificationController::class, 'myVerification']);
 
     // Professional Verifications (Admin / Reviewer)
@@ -268,8 +273,8 @@ Route::middleware('auth.token')->group(function () {
 
     // Internal Tribunal / Misconduct Reporting (User)
     Route::prefix('internal-reports')->group(function () {
-        Route::get('/users/search', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'searchUsers']);
-        Route::post('/', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'store']);
+        Route::get('/users/search', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'searchUsers'])->middleware('throttle:search');
+        Route::post('/', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'store'])->middleware(['throttle:writes', 'verified.email']);
         Route::get('/', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'index']);
         Route::get('/{report}', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'show']);
         Route::get('/evidence/{evidence}/download', [\App\Http\Controllers\InternalTribunal\InternalReportController::class, 'downloadEvidence']);

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 use App\Models\Profile;
+use App\Support\ProfileVisibility;
 use App\Models\WorkExperiance;
 use App\Models\Education;
 use App\Models\Skill;
@@ -77,7 +78,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
        }
     }
@@ -109,7 +110,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -144,7 +145,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -179,7 +180,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -205,7 +206,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -251,7 +252,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -276,7 +277,12 @@ class ProfileService
              return response()->json([
                 'code' => 200,
                 'status' => true,
-                'data'=>$experiance,
+                // Remove "Only Me" fields unless the viewer owns this profile.
+                'data'=>ProfileVisibility::filterExperiences(
+                    $experiance,
+                    formatvisibility($profileDetails[0]->getSettings()),
+                    (int) Auth::id() === (int) $profileDetails[0]->id,
+                ),
             ], 200);
 
         }catch(\Exception $e){
@@ -284,7 +290,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -314,7 +320,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -369,7 +375,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -403,7 +409,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -437,7 +443,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -459,7 +465,12 @@ class ProfileService
             return response()->json([
                 'code' => 200,
                 'status' => true,
-                'data'=>$education,
+                // Remove "Only Me" fields unless the viewer owns this profile.
+                'data'=>ProfileVisibility::filterEducation(
+                    $education,
+                    formatvisibility($profileDetails[0]->getSettings()),
+                    (int) Auth::id() === (int) $profileDetails[0]->id,
+                ),
             ], 200);
 
         }catch(\Exception $e){
@@ -467,7 +478,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -488,7 +499,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -519,7 +530,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -556,7 +567,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -588,7 +599,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -616,7 +627,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -644,7 +655,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -677,7 +688,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -710,7 +721,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -765,7 +776,7 @@ class ProfileService
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -816,7 +827,7 @@ class ProfileService
                 return response()->json([
                     'code' => 500,
                     'status' => false,
-                    'message' => $e->getMessage(),
+                    'message' => \App\Support\SafeError::message($e),
                 ], 500);
             }
     }
@@ -849,7 +860,7 @@ class ProfileService
                 return response()->json([
                     'code' => 500,
                     'status' => false,
-                    'message' => $e->getMessage(),
+                    'message' => \App\Support\SafeError::message($e),
                 ], 500);
         }
     }
@@ -857,8 +868,10 @@ class ProfileService
     public function submitComplains($request)
     {
         try{
+            // $request is SubmitComplainRequest::validated(): defendant and juror are existing
+            // users other than the complainer, and the juror is not the defendant.
             $complainData =  $request;
-            Complain::create([
+            $complain = Complain::create([
                 'user_id'=>$complainData['defendent'],
                 'complain'=>$complainData['category'],
                 'complainer'=>Auth::user()->id,
@@ -868,7 +881,8 @@ class ProfileService
 
             Jury::create([
                 'user_id'=> $complainData['jury'],
-                'complain_id'=> Complain::latest()->first()->id,
+                // The complaint just created, not "the latest one", which can be someone else's.
+                'complain_id'=> $complain->id,
             ]);
 
           return response()->json([
@@ -881,7 +895,7 @@ class ProfileService
                 return response()->json([
                     'code' => 500,
                     'status' => false,
-                    'message' => $e->getMessage(),
+                    'message' => \App\Support\SafeError::message($e),
                 ], 500);
         }
     }
@@ -922,7 +936,7 @@ class ProfileService
                 return response()->json([
                     'code' => 500,
                     'status' => false,
-                    'message' => $e->getMessage(),
+                    'message' => \App\Support\SafeError::message($e),
                 ], 500);
         }
     }

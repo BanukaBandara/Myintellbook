@@ -1,0 +1,6 @@
+# https://www.myintellibook.com/robots.txt
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /jury

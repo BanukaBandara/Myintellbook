@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+/**
+ * POST /search: free-text profile/exam/category search.
+ */
+class ProfileSearchRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'key' => ['required', 'string', 'min:1', 'max:100'],
+        ];
+    }
+}

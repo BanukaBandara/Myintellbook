@@ -41,6 +41,9 @@ class TribunalCaseRoomController extends Controller
      */
     public function messages(Request $request, TribunalCase $tribunalCase): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100']]);
+
         $messages = $this->caseRoomService->getMessages(
             $tribunalCase,
             $request->user()->id,

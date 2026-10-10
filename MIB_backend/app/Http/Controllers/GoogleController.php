@@ -14,24 +14,60 @@ class GoogleController extends Controller
 {
     public function callback(Request $request): JsonResponse
     {
+        $request->validate([
+            'token' => ['required', 'string', 'max:4096'],
+        ]);
+
         try {
             $client = app()->make(GoogleClient::class);
             $client->setClientId(config('services.google.client_id'));
             $payload = $client->verifyIdToken($request->token);
 
             if ($payload) {
-                $googleId = $payload['sub']; // Google unique ID
-                $email    = $payload['email'];
-                $name     = $payload['name'];
+                $googleId = (string) ($payload['sub'] ?? '');
+                $email    = strtolower((string) ($payload['email'] ?? ''));
 
-                $user = User::firstOrCreate(
-                    ['email' => $email],
-                    [
-                        'name'      => $name,
+                // Only trust the email if Google has verified that this Google account owns it;
+                // otherwise anyone could sign in to an existing account by claiming its address.
+                $emailVerified = filter_var($payload['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                if ($googleId === '' || $email === '' || !$emailVerified) {
+                    return response()->json([
+                        'code' => 401,
+                        'status' => false,
+                        'message' => 'Your Google account email is not verified. Please verify it with Google, or sign in with email and password.',
+                    ], 401);
+                }
+
+                // Prefer the stable Google ID; fall back to email to link existing accounts.
+                $user = User::where('google_id', $googleId)->first()
+                    ?? User::where('email', $email)->first();
+
+                if ($user && $user->google_id && $user->google_id !== $googleId) {
+                    // This email is already linked to a different Google account.
+                    return response()->json([
+                        'code' => 401,
+                        'status' => false,
+                        'message' => 'This account is linked to a different Google account.',
+                    ], 401);
+                }
+
+                if (!$user) {
+                    $user = User::create([
+                        'email'     => $email,
                         'google_id' => $googleId,
-                        'password'  => bcrypt(str()->random(16)),
-                    ]
-                );
+                        'password'  => bcrypt(str()->random(40)),
+                    ]);
+                } elseif (!$user->google_id) {
+                    $user->google_id = $googleId;
+                }
+
+                // Google has verified the address, which is what our own email verification proves.
+                if ($user->email_verified_at === null) {
+                    $user->email_verified_at = now();
+                }
+                if ($user->isDirty()) {
+                    $user->save();
+                }
 
                 // SEC-MED-02: Super Admin isolation check
                 if ($user->isAdmin()) {

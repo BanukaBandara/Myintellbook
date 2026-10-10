@@ -104,7 +104,8 @@ const changePassword = async() => {
             router.push({ name: 'login' });
         }
     }
-    else if(result.message == 'Invalid token')
+    // 422 = the link is invalid or older than 60 minutes: offer to request a new one.
+    else if(result.code == 422)
     {
         let config ={
                     icon:'error',

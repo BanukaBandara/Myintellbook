@@ -28,6 +28,9 @@ class InternalReportController extends Controller
      */
     public function searchUsers(Request $request): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['q' => ['sometimes', 'nullable', 'string', 'max:100']]);
+
         $query = (string) $request->input('q', '');
         $currentUserId = (int) $request->user()->id;
 

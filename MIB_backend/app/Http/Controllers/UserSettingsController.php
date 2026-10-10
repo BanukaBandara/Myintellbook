@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UserSettingsRequest;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 class UserSettingsController extends Controller
 {
-    public function setSettings(Request $request)
+    public function setSettings(UserSettingsRequest $request)
     {
        try{
              $user = auth()->user();
-         foreach ($request->all() as $key => $value) {
+         // Only allowlisted visibility keys with known values (see UserSettingsRequest).
+         foreach ($request->settings() as $key => $value) {
             $user->setSetting($key, $value);
         }
 
@@ -26,7 +28,7 @@ class UserSettingsController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -53,7 +55,7 @@ class UserSettingsController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }

@@ -90,8 +90,8 @@ export const useUserStore = defineStore('user', {
         }catch(e:any){
             console.error("Error in user password reset", e);
               return {
-                  code: 500,
-                  message: e.response.data.message,
+                  code: e?.response?.status ?? 500,
+                  message: e?.response?.data?.message ?? "Couldn't reach the server. Please try again.",
               };
         }
     },
@@ -108,8 +108,9 @@ export const useUserStore = defineStore('user', {
         }catch(e:any){
             console.error("Error in user password change", e);
               return {
-                  code: 500,
-                  message: e.response.data.message,
+                  code: e?.response?.status ?? 500,
+                  // e.g. 422 "This password reset link is invalid or has expired."
+                  message: e?.response?.data?.message ?? "Couldn't reach the server. Please try again.",
               };
         }
     },

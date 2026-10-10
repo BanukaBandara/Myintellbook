@@ -29,3 +29,8 @@ coverage
 
 *.tsbuildinfo
 assets/axios.ts
+
+# Real environment files (examples and .env.development are committed)
+.env
+.env.production
+.env.*.local

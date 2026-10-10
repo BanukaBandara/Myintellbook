@@ -7,7 +7,9 @@ use App\Models\ApiToken;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\UserService;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 
 class AdminAuthController extends Controller
@@ -34,9 +36,18 @@ class AdminAuthController extends Controller
             ], 422);
         }
 
+        $lockoutKey = UserService::loginFailureKey('admin', $request->email);
+        if (RateLimiter::tooManyAttempts($lockoutKey, (int) config('token.login_max_failures', 5))) {
+            return UserService::lockedOutResponse($lockoutKey);
+        }
+
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        // One answer for every failure: a separate "not an admin" reply would confirm that the
+        // password of an ordinary account is correct.
+        if (!$user || !Hash::check($request->password, $user->password) || !$user->isAdmin()) {
+            RateLimiter::hit($lockoutKey, (int) config('token.login_lockout_seconds', 900));
+
             return response()->json([
                 'code' => 401,
                 'status' => false,
@@ -44,21 +55,18 @@ class AdminAuthController extends Controller
             ], 401);
         }
 
-        if (!$user->isAdmin()) {
-            return response()->json([
-                'code' => 403,
-                'status' => false,
-                'message' => 'Access denied. Administrator privileges required.',
-            ], 403);
-        }
+        RateLimiter::clear($lockoutKey);
 
         $apiToken = new ApiToken();
-        $token = $apiToken->tokenGenerate($user);
+        // Admin sessions are short-lived (token.admin_expires_minutes, default 8 hours).
+        $lifetimeMinutes = (int) config('token.admin_expires_minutes', 480);
+        $token = $apiToken->tokenGenerate($user, $lifetimeMinutes);
 
         return response()->json([
             'code' => 200,
             'status' => true,
             'token' => $token,
+            'expires_in_minutes' => $lifetimeMinutes,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name ?? $user->email,

@@ -30,6 +30,9 @@ class AdminInternalReportController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['search' => ['sometimes', 'nullable', 'string', 'max:100'], 'status' => ['sometimes', 'nullable', 'string', 'max:40'], 'category' => ['sometimes', 'nullable', 'string', 'max:60']]);
+
         $filters = [
             'status' => $request->query('status'),
             'category' => $request->query('category'),

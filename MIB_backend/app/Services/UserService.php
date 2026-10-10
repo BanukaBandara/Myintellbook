@@ -8,11 +8,60 @@ use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use App\Jobs\PasswordResetTokenJob;
 use App\Jobs\RemoveVerificationToken;
 
 
 class UserService{
+
+    /** Rate-limiter key for failed sign-ins on one email ('user' or 'admin' portal). */
+    public static function loginFailureKey(string $portal, ?string $email): string
+    {
+        return "login-failures:{$portal}:".sha1(strtolower(trim((string) $email)));
+    }
+
+    public static function lockedOutResponse(string $lockoutKey)
+    {
+        $minutes = max(1, (int) ceil(RateLimiter::availableIn($lockoutKey) / 60));
+
+        return response()->json([
+            'code' => 429,
+            'status' => false,
+            'message' => "Too many failed sign-in attempts for this account. Try again in {$minutes} minute(s), or reset your password.",
+        ], 429);
+    }
+
+    public function resendVerificationEmail(User $user)
+    {
+        if ($user->email_verified_at !== null) {
+            return response()->json([
+                'code' => 200,
+                'status' => true,
+                'message' => 'Your email address is already verified.',
+            ], 200);
+        }
+
+        try {
+            $user->generateVerificationToken();
+            RemoveVerificationToken::dispatch($user->id)->delay(now()->addMinutes(60));
+        } catch (\Throwable $e) {
+            Log::error('UserService @resendVerificationEmail failed', ['user_id' => $user->id, 'exception' => $e]);
+
+            return response()->json([
+                'code' => 500,
+                'status' => false,
+                'message' => 'We could not send the verification email. Please try again later.',
+            ], 500);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'A new verification email has been sent. The link is valid for 60 minutes.',
+        ], 200);
+    }
 
     public function registerUser($user){
         try{
@@ -66,12 +115,25 @@ class UserService{
     }
     public function loginUser($request){
         try{
+            // Lock an email out after repeated wrong passwords, whichever IPs they come from.
+            $lockoutKey = self::loginFailureKey('user', $request['email']);
+            if (RateLimiter::tooManyAttempts($lockoutKey, (int) config('token.login_max_failures', 5))) {
+                return self::lockedOutResponse($lockoutKey);
+            }
 
             $user = User::where('email', $request['email'])->first();
 
             if(!$user || !\Hash::check($request['password'], $user->password)) {
-                throw new \Exception('Invalid credentials');
+                RateLimiter::hit($lockoutKey, (int) config('token.login_lockout_seconds', 900));
+
+                return response()->json([
+                    'code' => 401,
+                    'status' => false,
+                    'message' => 'Invalid email or password.',
+                ], 401);
             }
+
+            RateLimiter::clear($lockoutKey);
 
             if ($user->isAdmin()) {
                 return response()->json([
@@ -119,70 +181,90 @@ class UserService{
     }
 
     public function passwordResetLink($link){
+        // Same answer whether or not the email has an account, so this can't be used
+        // to discover registered emails.
+        $genericResponse = response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'If an account exists for that email, a password reset link has been sent.',
+        ], 200);
+
         try{
             $user = User::where('email', $link['email'])->first();
             if(!$user) {
-                throw new \Exception('User not found');
-            }   
-            $existingToken = PasswordResetToken::where('email', $link['email'])->first();
-            // $existingToken->forceDelete();
-
-            if($existingToken) {
-                $existingToken->forceDelete();
+                return $genericResponse;
             }
+
+            PasswordResetToken::withTrashed()->where('email', $link['email'])->forceDelete();
+
+            // Only a hash is stored; the raw token exists only in the emailed link.
+            $rawToken = Str::random(64);
             $resetLink = PasswordResetToken::create([
                 'email' => $link['email'],
-                'token' => Str::random(60),
+                'token' => hash('sha256', $rawToken),
                 'created_at' => now(),
             ]);
-            $resetLink->sendPasswordResetEmail($link['email'], $resetLink->token);
-            if(!$resetLink) {
-                throw new \Exception('Password reset link failed');
-            }
-            if($resetLink) {
-               
-                PasswordResetTokenJob::dispatch($resetLink->email)->delay(now()->addMinutes(60));
-            }
-           
-            return response()->json([
-                'code' => 200,
-                'status' => true,
-                'message' => 'Password reset link sent successfully',
-            ], 200);
+            $resetLink->sendPasswordResetEmail($link['email'], $rawToken);
+
+            // Clean-up only; expiry is enforced in passwordReset() even if the queue isn't running.
+            PasswordResetTokenJob::dispatch($resetLink->email)
+                ->delay(now()->addMinutes((int) config('token.password_reset_expires_minutes', 60)));
+
+            return $genericResponse;
         }catch(\Exception $e){
             log::error('UserService @passwordResetLink: '.$e->getMessage());
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
     public function passwordReset($request, $token){
 
+        $invalidResponse = response()->json([
+            'code' => 422,
+            'status' => false,
+            'message' => 'This password reset link is invalid or has expired. Please request a new one.',
+        ], 422);
+
         try{
-            $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+            $validFrom = now()->subMinutes((int) config('token.password_reset_expires_minutes', 60));
+            $passwordResetToken = PasswordResetToken::where('token', hash('sha256', (string) $token))
+                ->where('created_at', '>=', $validFrom)
+                ->first();
             if(!$passwordResetToken) {
-                throw new \Exception('Invalid token');
+                return $invalidResponse;
             }
             $user = User::where('email', $passwordResetToken->email)->first();
             if(!$user) {
-                throw new \Exception('User not found');
+                return $invalidResponse;
             }
-            $user->password = $request['password'];
-            $user->save();
-            $passwordResetToken->where('token', $token)->forceDelete();
+
+            DB::transaction(function () use ($user, $request, $passwordResetToken) {
+                $user->password = $request['password'];
+                $user->save();
+
+                // Sign out every existing session: whoever triggered the reset may be
+                // recovering from a stolen password or token.
+                ApiToken::where('user_id', $user->id)->delete();
+
+                PasswordResetToken::withTrashed()->where('email', $passwordResetToken->email)->forceDelete();
+            });
+
+            RateLimiter::clear(self::loginFailureKey('user', $user->email));
+
             return response()->json([
                 'code' => 200,
                 'status' => true,
-                'message' => 'Password reset successfully',
+                'message' => 'Password reset successfully. Please sign in with your new password.',
             ], 200);
         }catch(\Exception $e){
             log::error('UserService @passwordReset: '.$e->getMessage());
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -214,7 +296,7 @@ class UserService{
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -235,7 +317,7 @@ class UserService{
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }

@@ -101,7 +101,10 @@ function formatUserInfo($profileDetails)
 {
    return $profileDetails->map(function($detail){
 
-                    return [
+                    $visibility = formatvisibility($detail->getSettings());
+
+                    // Remove "Only Me" fields unless the viewer owns this profile.
+                    return \App\Support\ProfileVisibility::filter([
                         'id'=>$detail->id,
                         'first_name'=>$detail->profile['first_name'],
                         'last_name'=> $detail->profile['last_name'],
@@ -120,9 +123,9 @@ function formatUserInfo($profileDetails)
                         'completed_exams'=>formatExamInfo($detail->exams()->wherePivotNotNull('score')->get()),
                         'upcomming_exams'=>formatExamInfo($detail->exams()->wherePivotNull('score')->get()),
                         'skills'=> $detail->skills,
-                        'visibility'=>formatvisibility($detail->getSettings()),
+                        'visibility'=>$visibility,
                         'profile_url'=>$detail->profile['full_url']
-                    ];
+                    ], $visibility, (int) auth()->id() === (int) $detail->id);
                 });
 }
 

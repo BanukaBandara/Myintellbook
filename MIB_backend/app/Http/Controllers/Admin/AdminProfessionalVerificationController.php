@@ -31,6 +31,9 @@ class AdminProfessionalVerificationController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['per_page' => ['sometimes', 'integer', 'min:1', 'max:100'], 'search' => ['sometimes', 'nullable', 'string', 'max:100'], 'status' => ['sometimes', 'nullable', 'string', 'max:40'], 'profession_type' => ['sometimes', 'nullable', 'string', 'max:60']]);
+
         $this->authorizeAdmin($request);
 
         $query = ProfessionalVerification::query()

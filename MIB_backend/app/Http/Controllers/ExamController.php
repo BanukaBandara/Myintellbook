@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\ExamCheckAnswerRequest;
+use App\Http\Requests\ExamCreateRequest;
+use App\Http\Requests\ExamDataRequest;
+use App\Http\Requests\ExamListRequest;
+use App\Http\Requests\ExamSaveRequest;
+use App\Http\Requests\ExamSubmitAnswersRequest;
 use App\Models\Exam;
 use App\Models\profession;
 use App\Models\User;
@@ -12,7 +17,7 @@ use App\Notifications\NewUserNotification;
 
 class ExamController extends Controller
 {
-    public function create(Request $request)
+    public function create(ExamCreateRequest $request)
     {
 
         try{
@@ -40,7 +45,7 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -73,7 +78,7 @@ class ExamController extends Controller
             " containing " . $Qcount . " randomly selected questions.";
     }
 
-    public function getExams(Request $request)
+    public function getExams(ExamListRequest $request)
     {
          try{
 
@@ -122,12 +127,12 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
 
-    public function saveExam(Request $request)
+    public function saveExam(ExamSaveRequest $request)
     {
         try{
 
@@ -149,12 +154,12 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
 
-    public function getMyExams(Request $request)
+    public function getMyExams(ExamListRequest $request)
     {
 
         try{
@@ -202,12 +207,12 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
 
-    public function getExamData(Request $request)
+    public function getExamData(ExamDataRequest $request)
     {
         try{
 
@@ -244,12 +249,12 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
 
-    public function submitAnswers(Request $request)
+    public function submitAnswers(ExamSubmitAnswersRequest $request)
     {
         try{
 
@@ -291,12 +296,12 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
 
-    public function checkAnswer(Request $request)
+    public function checkAnswer(ExamCheckAnswerRequest $request)
     {
         try{
 
@@ -314,7 +319,7 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }
@@ -355,7 +360,7 @@ class ExamController extends Controller
             return response()->json([
                 'code' => 500,
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\SafeError::message($e),
             ], 500);
         }
     }

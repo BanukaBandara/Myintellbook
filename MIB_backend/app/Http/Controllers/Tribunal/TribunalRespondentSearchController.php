@@ -22,6 +22,9 @@ class TribunalRespondentSearchController extends Controller
      */
     public function search(Request $request): JsonResponse
     {
+        // Bound list size and search length (pagination/scraping abuse).
+        $request->validate(['q' => ['sometimes', 'nullable', 'string', 'max:100'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
+
         $query = (string) $request->input('q', '');
         $limit = (int) $request->input('limit', TribunalRespondentSearchService::DEFAULT_SEARCH_LIMIT);
 
