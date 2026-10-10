@@ -17,6 +17,7 @@ import 'primeicons/primeicons.css';
 import './assets/design-system.css';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
+import { vStickySidebar } from './directives/stickySidebar';
 // import Echo from "laravel-echo";
 // import Pusher from "pusher-js";
 
@@ -57,11 +58,18 @@ app.use(GoogleLogin, {
 //     enabledTransports: ["ws"],
 // });
 
+// A failed API call inside one component (e.g. a timeout in onMounted) is logged instead of
+// surfacing as an uncaught error that can break rendering or navigation.
+app.config.errorHandler = (error, _instance, info) => {
+  console.error(`Unhandled component error (${info}):`, error);
+};
+
 app.use(createPinia())
 app.use(router)
 app.use(PrimeVue);
 
 app.directive('tooltip', Tooltip);
+app.directive('sticky-sidebar', vStickySidebar);
 app.use(ToastService);
 
 app.mount('#app')

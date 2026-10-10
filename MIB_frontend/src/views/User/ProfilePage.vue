@@ -1,5 +1,6 @@
 <template>
-    <div class="row flex-grow-1 m-0 overflow-auto">
+    <!-- No overflow on this row: it would become the sidebar's scroll container and sticky would never engage. -->
+    <div class="row flex-grow-1 m-0 align-items-start">
         <div class="col-md-2"></div>
         <div class="col-md-5 mt-3">
             <div v-if="loading"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
@@ -28,7 +29,7 @@
             </div>
 
         </div>
-         <div class="col-md-3 mt-3 d-none d-md-block">
+         <div class="col-md-3 mt-3 d-none d-md-block sticky-sidebar" v-sticky-sidebar>
                 
                 <!-- <myExams />
                 <Divider /> -->
@@ -89,31 +90,25 @@ const workExperiance = ref<Array<workExperianceType>>([]);
 
 const getGeneralInfo = async() =>
 {
-    let result = await userProfile.getGeneralInfo();
-    if(result.code == 200)
+    const result = await userProfile.getGeneralInfo();
+
+    if(result?.code != 200)
    {
-       userGeneralInfo.value = result.data[0];
-        userGeneralInfo.value.gender = (userGeneralInfo.value.gender == 1) ? 'Male':'Female';
-        userProfile.profile_image_set =  userGeneralInfo.value.profile_image;
-        userProfile.cover_image_set =  userGeneralInfo.value.cover_image;
-        workExperiance.value = result.data[0].experiance
-        skills.value = result.data[0].skills
-        educationDetails.value = result.data[0].education
-        completedExams.value = result.data[0].completed_exams
-        upcommingExams.value = result.data[0].upcomming_exams
-        
-   }else{
-    let config ={
-                    icon:'error',
-                    title:'Error',
-                    text: result.message,
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#a03829',
-                    showConfirmButton:true
-                }
-            
-        let confirm = await showAlert(config);
+        // Slow or failed (e.g. timeout): no blocking modal. The page renders with its empty defaults.
+        console.warn('General info unavailable, showing empty profile:', result?.message);
+        return;
    }
+
+    const info: Record<string, any> = result.data?.[0] ?? {};
+    userGeneralInfo.value = { ...userGeneralInfo.value, ...info, visibility: info.visibility ?? {} };
+    userGeneralInfo.value.gender = (userGeneralInfo.value.gender == 1) ? 'Male':'Female';
+    userProfile.profile_image_set =  userGeneralInfo.value.profile_image;
+    userProfile.cover_image_set =  userGeneralInfo.value.cover_image;
+    workExperiance.value = info.experiance ?? [];
+    skills.value = info.skills ?? [];
+    educationDetails.value = info.education ?? [];
+    completedExams.value = info.completed_exams ?? [];
+    upcommingExams.value = info.upcomming_exams ?? [];
 }
 
 const getSkills = async() =>

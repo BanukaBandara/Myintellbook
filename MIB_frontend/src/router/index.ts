@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Register from '../views/User/Register.vue';
 import EmailConfirmation from '../views/User/EmailConfirmation.vue';
 import Login from '../views/User/Login.vue';
-import { fetchAuthUser, isProfileCompleted, isJuryPanelUser } from '../services/auth';
+import { clearSession, getAuthState, isProfileCompleted, isJuryPanelUser } from '../services/auth';
 import { adminAuth } from '@/services/adminAuth';
 import Swal from 'sweetalert2';
 import {useLoadingStore} from '@/stores/loadingStore';
@@ -93,6 +93,7 @@ const router = createRouter({
       component: () => import('../views/User/Home.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title: 'Home'
       }
@@ -349,6 +350,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/testament.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Testament Management'
       }
@@ -359,6 +361,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/AboutSite.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'About Site'
       }
@@ -369,6 +372,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/Glossary.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Glossary'
       }
@@ -383,6 +387,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/court.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Submit Case'
       }
@@ -393,6 +398,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/TermsConditions.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Terms & Conditions'
       }
@@ -403,6 +409,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/HowItWorks.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'How It Works'
       }
@@ -413,6 +420,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/PrivacyPolicy.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Privacy Policy'
       }
@@ -423,6 +431,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/EncryptionDetails.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Encryption Details'
       }
@@ -433,6 +442,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/ScoringBreakDown.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Scoring Breakdown'
       }
@@ -443,6 +453,7 @@ const router = createRouter({
       component: () => import('@/components/commonComponents/dataRetentionRules.vue'),
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar:false,
         title:'Scoring Breakdown'
       }
@@ -453,6 +464,7 @@ const router = createRouter({
       component: CreateTribunalCase,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Submit Tribunal Case'
       },
@@ -463,6 +475,7 @@ const router = createRouter({
       component: TribunalCases,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'My Tribunal Cases'
       },
@@ -473,6 +486,7 @@ const router = createRouter({
       component: TribunalCaseDetails,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Tribunal Case Details'
       },
@@ -483,6 +497,7 @@ const router = createRouter({
       component: TribunalJuryCases,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Tribunal Adjudicator Portal'
       },
@@ -493,6 +508,7 @@ const router = createRouter({
       component: ProfessionalVerification,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Professional Verification'
       },
@@ -513,6 +529,7 @@ const router = createRouter({
       component: TribunalRepresentationRequests,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'Representation Requests Inbox'
       },
@@ -523,6 +540,7 @@ const router = createRouter({
       component: TribunalRepresentedCases,
       meta: {
         requiresAuth: true,
+        layout: 'dashboard', // shared 3-column layout with sticky sidebars (App.vue)
         hideNavBar: false,
         title: 'My Represented Cases'
       },
@@ -683,100 +701,161 @@ const router = createRouter({
     },
   ],
 });
-router.beforeEach(async(to, from, next) => {
+// Shown at most once per 30s so a flaky connection doesn't stack warnings on every navigation.
+let lastConnectionWarning = 0;
+
+const warnConnection = () => {
+  if (Date.now() - lastConnectionWarning < 30_000) return;
+
+  lastConnectionWarning = Date.now();
+
+  void Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'warning',
+    title: "Couldn't reach the server. Some data may not load.",
+    showConfirmButton: false,
+    timer: 4000,
+  });
+};
+
+router.beforeEach(async (to) => {
   const loadingStore = useLoadingStore();
+
+  // Dedicated Super Admin route protection and portal isolation.
+  if (to.path.startsWith('/admin')) {
+    loadingStore.loadingStart();
+
+    try {
+      if (to.path === '/admin/login') {
+        if (adminAuth.isAuthenticated()) {
+          return { path: '/admin/dashboard' };
+        }
+
+        return true;
+      }
+
+      if (!adminAuth.isAuthenticated()) {
+        return { path: '/admin/login' };
+      }
+
+      return true;
+    } finally {
+      loadingStore.loadingStop();
+    }
+  }
+
+  // If the browser is authenticated only as Super Admin, keep it inside
+  // the dedicated admin portal instead of entering the consumer application.
+  if (adminAuth.isAuthenticated()) {
+    const hasConsumerToken = Boolean(localStorage.getItem('userToken'));
+
+    if (!hasConsumerToken) {
+      return { path: '/admin/dashboard' };
+    }
+  }
+
+  // Jury Panel accounts that already have a known Jury session should not
+  // enter the normal public login/register flow.
+  if (!to.meta.requiresAuth) {
+    const isJuryHint = isJuryPanelUser();
+
+    if (
+      isJuryHint &&
+      (to.path === '/' || to.path === '/login' || to.path === '/register')
+    ) {
+      loadingStore.loadingStart();
+
+      try {
+        const auth = await getAuthState();
+
+        if (
+          auth.status === 'authenticated' &&
+          Boolean(auth.user.is_jury_panel)
+        ) {
+          return { path: '/jury' };
+        }
+
+        if (auth.status === 'unauthenticated') {
+          clearSession();
+        }
+
+        if (auth.status === 'unknown') {
+          console.warn(
+            'Could not verify the Jury Panel session; continuing.',
+            auth.error
+          );
+          warnConnection();
+        }
+      } finally {
+        loadingStore.loadingStop();
+      }
+    }
+
+    return true;
+  }
+
   loadingStore.loadingStart();
 
-  // Dedicated Super Admin Route Protection & Isolation
-  if (to.path.startsWith('/admin')) {
-    if (to.path === '/admin/login') {
-      if (adminAuth.isAuthenticated()) {
-        loadingStore.loadingStop();
-        next('/admin/dashboard');
-        return;
-      }
-      loadingStore.loadingStop();
-      next();
-      return;
-    }
+  try {
+    const auth = await getAuthState();
 
-    if (!adminAuth.isAuthenticated()) {
-      loadingStore.loadingStop();
-      next('/admin/login');
-      return;
-    }
+    if (auth.status === 'unauthenticated') {
+      // Only a missing token or an explicit 401 ends the consumer session.
+      clearSession();
 
-    loadingStore.loadingStop();
-    next();
-    return;
-  }
-
-  // If user is exclusively authenticated as Super Admin, prevent entering consumer app
-  if (adminAuth.isAuthenticated() && !to.path.startsWith('/admin')) {
-    const hasConsumerToken = Boolean(localStorage.getItem('userToken'));
-    if (!hasConsumerToken) {
-      loadingStore.loadingStop();
-      next('/admin/dashboard');
-      return;
-    }
-  }
-
-  const isAuthRequired = to.meta.requiresAuth;
-
-  if (isAuthRequired) {
-    const authUser = await fetchAuthUser();
-
-    if (authUser) {
-      loadingStore.loadingStop();
-      const isJury = isJuryPanelUser() || Boolean(authUser.is_jury_panel);
-
-      // Rule 1: If Jury Panel tries to access non-jury routes, redirect to /jury
-      if (isJury && !to.path.startsWith('/jury')) {
-        next('/jury');
-        return;
-      }
-
-      // Rule 2: If normal user / lawyer / admin tries to access /jury routes, redirect to /home
-      if (!isJury && to.path.startsWith('/jury')) {
-        next('/home');
-        return;
-      }
-
-      // Onboarding is only for users without a profile; everyone else goes to the dashboard.
-      if (to.name === 'basicDetails-fill' && isProfileCompleted(authUser)) {
-        next({ name: 'home' });
-      } else {
-        next();
-      }
-
-    } else {
-      loadingStore.loadingStop();
-      // Redirect to login if not authenticated
-      let confirm = await Swal.fire({
-        icon: 'error',
-        title: 'error',
-        text: 'You are not authenticated. Please login to continue.',
-        showCancelButton: false,
+      void Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Please log in to continue.',
         showConfirmButton: false,
         timer: 3000,
       });
 
-      next('/');
+      return { path: '/login' };
     }
-  } else {
-    // If user is already authenticated as Jury Panel and visits public auth pages (/ or /login), redirect to /jury
-    const isJury = isJuryPanelUser();
-    if (isJury && (to.path === '/' || to.path === '/login' || to.path === '/register')) {
-      const authUser = await fetchAuthUser();
-      if (authUser) {
-        loadingStore.loadingStop();
-        next('/jury');
-        return;
-      }
+
+    if (auth.status === 'unknown') {
+      // Timeout / offline / 5xx must not log the user out or create a redirect loop.
+      // Backend authorization remains authoritative.
+      console.warn('Could not verify the session; continuing.', auth.error);
+      warnConnection();
+
+      return true;
     }
+
+    const isJury =
+      Boolean(auth.user.is_jury_panel) || isJuryPanelUser();
+
+    // Institutional Jury Panel accounts stay inside the Jury portal.
+    if (isJury && !to.path.startsWith('/jury')) {
+      return { path: '/jury' };
+    }
+
+    // Normal consumer/professional accounts cannot enter Jury routes.
+    if (!isJury && to.path.startsWith('/jury')) {
+      return { path: '/home' };
+    }
+
+    // Completed users should not return to profile onboarding.
+    if (
+      to.name === 'basicDetails-fill' &&
+      isProfileCompleted(auth.user)
+    ) {
+      return { name: 'home' };
+    }
+
+    return true;
+  } finally {
     loadingStore.loadingStop();
-    next();
   }
+});
+
+// A lazy route chunk that fails to download (e.g. the connection dropped) shouldn't leave a dead page.
+router.onError((error) => {
+  console.error('Navigation failed:', error);
+  warnConnection();
 });
 
 router.afterEach((to) => {

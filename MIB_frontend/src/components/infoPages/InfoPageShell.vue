@@ -1,12 +1,6 @@
 <template>
-  <main class="dashboard-page info-page flex-grow-1">
-    <div class="row g-3 align-items-start">
-      <aside class="col-md-4 col-xl-3 d-none d-md-block no-print">
-        <ProfileDetails />
-        <addSiteDeails class="mt-3" />
-      </aside>
-
-      <div class="col-12 col-md-8 col-xl-6">
+  <!-- Middle-column content only: the sidebars come from layouts/DashboardLayout.vue. -->
+  <div class="info-page">
         <!-- On phones the sidebar is hidden, so offer the same links as a scrollable chip row. -->
         <nav class="mobile-nav d-md-none no-print" aria-label="MyIntellibook information">
           <RouterLink
@@ -42,25 +36,13 @@
 
           <slot />
         </article>
-      </div>
-
-      <aside class="col-xl-3 d-none d-xl-block no-print">
-        <latestUpdates class="dashboard-card" />
-        <ProfileList class="mt-3" />
-      </aside>
-    </div>
-  </main>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue';
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import ProfileDetails from '@/components/HomePage/ProfileDetails.vue';
-import addSiteDeails from '@/components/commonComponents/addSiteDeails.vue';
 import { INFO_ACTIONS, INFO_LINKS } from './infoLinks';
-
-const latestUpdates = defineAsyncComponent(() => import('@/components/commonComponents/latestUpdates.vue'));
-const ProfileList = defineAsyncComponent(() => import('@/components/HomePage/ProfileList.vue'));
 
 withDefaults(defineProps<{
   icon: string;
@@ -81,7 +63,6 @@ function downloadPdf(): void {
 </script>
 
 <style scoped>
-.info-page { padding-bottom: 32px; }
 
 .mobile-nav {
   display: flex;
