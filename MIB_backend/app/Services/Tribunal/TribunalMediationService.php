@@ -109,13 +109,13 @@ class TribunalMediationService
     }
 
     /**
-     * Offer mediation (Active Adjudicator only).
+     * Offer mediation (Active Adjudicator or Jury Panel only).
      */
     public function offerMediation(TribunalCase $case, int $userId): TribunalMediation
     {
         $role = $case->getUserCaseRole($userId);
-        if ($role !== 'adjudicator') {
-            abort(403, 'Only the assigned Tribunal Adjudicator can offer mediation.');
+        if ($role !== 'adjudicator' && $role !== 'jury_panel') {
+            abort(403, 'Only the assigned Tribunal Jury Panel or Adjudicator can offer mediation.');
         }
 
         $existing = $case->mediations()
@@ -137,7 +137,7 @@ class TribunalMediationService
             abort(422, 'Cannot offer mediation: both complainant and respondent must be registered.');
         }
 
-        return DB::transaction(function () use ($case, $userId, $complainant, $respondent) {
+        return DB::transaction(function () use ($case, $userId, $role, $complainant, $respondent) {
             $mediation = TribunalMediation::create([
                 'tribunal_case_id' => $case->id,
                 'initiated_by' => $userId,
@@ -164,12 +164,26 @@ class TribunalMediationService
                 'responded_at' => null,
             ]);
 
-            TribunalCaseEventService::log(
-                $case,
-                'mediation_offered',
-                $userId,
-                ['mediation_id' => $mediation->id]
-            );
+            if ($role === 'jury_panel') {
+                $panel = User::find($userId)?->juryPanel;
+                TribunalCaseEventService::log(
+                    $case,
+                    'jury_panel_mediation_offered',
+                    $userId,
+                    [
+                        'jury_panel_id' => $panel?->id,
+                        'panel_code' => $panel?->panel_code,
+                        'mediation_id' => $mediation->id,
+                    ]
+                );
+            } else {
+                TribunalCaseEventService::log(
+                    $case,
+                    'mediation_offered',
+                    $userId,
+                    ['mediation_id' => $mediation->id]
+                );
+            }
 
             $adjudicator = User::find($userId);
             $recipients = $this->roomService->getCaseParticipants($case, $userId);
@@ -587,22 +601,22 @@ class TribunalMediationService
     }
 
     /**
-     * End mediation as failed (Adjudicator or principal party).
+     * End mediation as failed (Adjudicator, Jury Panel, or principal party).
      */
     public function endMediation(TribunalMediation $mediation, int $userId, string $reason): TribunalMediation
     {
         $case = $mediation->tribunalCase;
         $role = $case->getUserCaseRole($userId);
 
-        if ($role !== 'complainant' && $role !== 'respondent' && $role !== 'adjudicator') {
-            abort(403, 'Only the active adjudicator or a principal party can conclude mediation.');
+        if ($role !== 'complainant' && $role !== 'respondent' && $role !== 'adjudicator' && $role !== 'jury_panel') {
+            abort(403, 'Only the active adjudicator, jury panel, or a principal party can conclude mediation.');
         }
 
         if (!in_array($mediation->status, [TribunalMediationStatus::Active, TribunalMediationStatus::AwaitingConsent, TribunalMediationStatus::Offered])) {
             abort(422, 'Cannot end mediation that is already settled, failed, or cancelled.');
         }
 
-        return DB::transaction(function () use ($mediation, $case, $userId, $reason) {
+        return DB::transaction(function () use ($mediation, $case, $userId, $role, $reason) {
             $mediation->update([
                 'status' => TribunalMediationStatus::Failed,
                 'failure_reason' => $reason,
@@ -617,15 +631,30 @@ class TribunalMediationService
                 ]);
             }
 
-            TribunalCaseEventService::log(
-                $case,
-                'mediation_failed',
-                $userId,
-                [
-                    'mediation_id' => $mediation->id,
-                    'reason' => $reason,
-                ]
-            );
+            if ($role === 'jury_panel') {
+                $panel = User::find($userId)?->juryPanel;
+                TribunalCaseEventService::log(
+                    $case,
+                    'jury_panel_mediation_failed',
+                    $userId,
+                    [
+                        'jury_panel_id' => $panel?->id,
+                        'panel_code' => $panel?->panel_code,
+                        'mediation_id' => $mediation->id,
+                        'reason' => $reason,
+                    ]
+                );
+            } else {
+                TribunalCaseEventService::log(
+                    $case,
+                    'mediation_failed',
+                    $userId,
+                    [
+                        'mediation_id' => $mediation->id,
+                        'reason' => $reason,
+                    ]
+                );
+            }
 
             $recipients = $this->roomService->getCaseParticipants($case, $userId);
             if (!empty($recipients)) {

@@ -165,6 +165,8 @@ export interface TribunalCase {
     agreement_number: string;
     finalized_at: string;
   } | null;
+  decision?: Record<string, any> | null;
+  reports?: TribunalCaseReport[];
 }
 
 export interface CreateTribunalCasePayload {
@@ -350,6 +352,7 @@ export interface TribunalCapabilities {
   has_cases_as_complainant: boolean;
   has_cases_as_respondent: boolean;
   is_admin_reviewer: boolean;
+  is_jury_panel?: boolean;
   can_act_as_representative: boolean;
   professional_verification: {
     id: number;
@@ -593,5 +596,574 @@ export interface TribunalMediation {
   updated_at: string;
 }
 
+export type TribunalJuryPanelStatus = 'active' | 'inactive' | 'suspended';
 
+export interface TribunalJuryPanelEvent {
+  id: number;
+  event_type: string;
+  actor_id: number | null;
+  metadata: Record<string, any> | null;
+  created_at: string;
+}
 
+export interface TribunalJuryPanel {
+  id: number;
+  panel_code: string;
+  panel_name: string;
+  status: TribunalJuryPanelStatus;
+  login_user_id: number;
+  login_email?: string;
+  created_by: number;
+  creator?: {
+    id: number;
+    email: string;
+    name?: string;
+  };
+  events?: TribunalJuryPanelEvent[];
+  assigned_cases_count?: number;
+  active_cases_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTribunalJuryPanelPayload {
+  panel_name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface UpdateTribunalJuryPanelPayload {
+  panel_name?: string;
+  status?: TribunalJuryPanelStatus;
+}
+
+export interface TribunalJuryPanelListResponse {
+  data: TribunalJuryPanel[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+export interface TribunalJuryPanelResponse {
+  message?: string;
+  data: TribunalJuryPanel;
+}
+
+export interface TribunalJuryAssignedCase {
+  id: number;
+  case_number: string;
+  title: string;
+  category: string;
+  status: string;
+  severity: string;
+  complainant_summary: {
+    id?: number;
+    user_id?: number;
+    name: string;
+  };
+  respondent_summary: {
+    id?: number;
+    user_id?: number;
+    name: string;
+  };
+  assigned_at: string;
+  assignment_status: string;
+  updated_at: string;
+}
+
+export interface TribunalJuryEvidenceChallenge {
+  id: number;
+  reason: string;
+  status: string;
+  challenger_name: string;
+  created_at: string;
+}
+
+export interface TribunalJuryEvidenceItem {
+  id: number;
+  evidence_number: string;
+  title: string;
+  description: string;
+  category: string;
+  original_filename: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_by: {
+    id: number;
+    name: string;
+  };
+  status: string;
+  download_url: string;
+  created_at: string;
+  challenges: TribunalJuryEvidenceChallenge[];
+}
+
+export interface TribunalJuryCaseDetail {
+  id: number;
+  case_number: string;
+  title: string;
+  category: string;
+  description: string;
+  requested_resolution: string;
+  severity: string;
+  status: string;
+  submitted_at: string;
+  assigned_panel: {
+    panel_id: number;
+    panel_code: string;
+    panel_name: string;
+    assigned_at: string;
+    assignment_method: string;
+  };
+  parties: {
+    complainant: {
+      id?: number;
+      user_id?: number;
+      name: string;
+    };
+    respondent: {
+      id?: number;
+      user_id?: number;
+      name: string;
+    };
+  };
+  representation: {
+    complainant_lawyer: {
+      id: number;
+      representative_user_id: number;
+      representative_name: string;
+      assigned_at: string;
+      bar_number?: string;
+      jurisdiction?: string;
+    } | null;
+    respondent_lawyer: {
+      id: number;
+      representative_user_id: number;
+      representative_name: string;
+      assigned_at: string;
+      bar_number?: string;
+      jurisdiction?: string;
+    } | null;
+  };
+  response: {
+    id: number;
+    acknowledgement_at?: string;
+    position: string;
+    response_text: string;
+    submitted_at?: string;
+  } | null;
+  evidence: TribunalJuryEvidenceItem[];
+  timeline: Array<{
+    id: number;
+    event_type: string;
+    actor_name: string;
+    metadata: Record<string, any> | null;
+    created_at: string;
+  }>;
+  mediation_summary: {
+    id: number;
+    status: string;
+    started_at?: string;
+  } | null;
+}
+
+// ==========================================
+// Step 5: Hearing & Witnesses Types
+// ==========================================
+
+export type TribunalHearingType = 'formal' | 'preliminary' | 'continuation';
+export type TribunalHearingStatus = 'scheduled' | 'active' | 'recessed' | 'completed' | 'cancelled';
+export type TribunalHearingLocationType = 'online' | 'physical' | 'hybrid';
+export type TribunalWitnessStatus = 'proposed' | 'approved' | 'rejected' | 'withdrawn' | 'testified';
+export type TribunalHearingParticipantType =
+  | 'complainant'
+  | 'respondent'
+  | 'complainant_representative'
+  | 'respondent_representative'
+  | 'jury_panel'
+  | 'witness';
+
+export type TribunalHearingEntryType =
+  | 'opening_statement'
+  | 'response_statement'
+  | 'jury_question'
+  | 'party_answer'
+  | 'witness_testimony'
+  | 'witness_question'
+  | 'witness_answer'
+  | 'evidence_reference'
+  | 'procedural_direction'
+  | 'closing_statement'
+  | 'system_event';
+
+export interface TribunalHearingParticipant {
+  id: number;
+  tribunal_hearing_id: number;
+  user_id: number | null;
+  participant_type: TribunalHearingParticipantType;
+  side: string | null;
+  display_name: string;
+  invited_by: number | null;
+  attendance_status: string;
+  joined_at: string | null;
+  left_at: string | null;
+  user?: {
+    id: number;
+    name: string;
+    profile?: any;
+  } | null;
+}
+
+export interface TribunalWitness {
+  id: number;
+  tribunal_case_id: number;
+  tribunal_hearing_id: number | null;
+  proposed_by: number;
+  side: 'complainant' | 'respondent' | 'neutral';
+  witness_user_id: number | null;
+  witness_name: string;
+  witness_email: string | null;
+  relationship_to_case: string | null;
+  statement_summary: string | null;
+  status: TribunalWitnessStatus;
+  approved_by_panel_at: string | null;
+  rejected_reason: string | null;
+  created_at: string;
+  updated_at?: string;
+  proposer?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface TribunalHearingEntry {
+  id: number;
+  tribunal_hearing_id: number;
+  sender_id: number | null;
+  participant_type: string;
+  side: string | null;
+  entry_type: TribunalHearingEntryType;
+  body: string;
+  related_witness_id: number | null;
+  related_evidence_id: number | null;
+  sequence_number: number;
+  target_side: string | null;
+  parent_entry_id: number | null;
+  created_at: string;
+  sender?: {
+    id: number;
+    name: string;
+    profile?: any;
+  } | null;
+  relatedWitness?: TribunalWitness | null;
+  relatedEvidence?: {
+    id: number;
+    evidence_number: string;
+    title: string;
+  } | null;
+  responses?: TribunalHearingEntry[];
+}
+
+export interface TribunalHearing {
+  id: number;
+  tribunal_case_id: number;
+  tribunal_jury_panel_id: number;
+  hearing_number: string;
+  hearing_type: TribunalHearingType;
+  status: TribunalHearingStatus;
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  location_type: TribunalHearingLocationType;
+  meeting_link: string | null;
+  notes: string | null;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  juryPanel?: {
+    id: number;
+    panel_name: string;
+    panel_code: string;
+  };
+  participants?: TribunalHearingParticipant[];
+  entries?: TribunalHearingEntry[];
+  witnesses?: TribunalWitness[];
+}
+
+// ==========================================
+// STEP 6: DELIBERATION, FINDINGS & DECISION
+// ==========================================
+
+export type TribunalDeliberationStatus = 'open' | 'completed';
+
+export type TribunalDeliberationNoteType =
+  | 'general'
+  | 'evidence_analysis'
+  | 'witness_analysis'
+  | 'credibility'
+  | 'issue_analysis'
+  | 'remedy_consideration';
+
+export type TribunalFindingType =
+  | 'fact'
+  | 'issue'
+  | 'credibility'
+  | 'evidence'
+  | 'procedural';
+
+export type TribunalFindingConclusion =
+  | 'established'
+  | 'not_established'
+  | 'partially_established'
+  | 'not_applicable';
+
+export type TribunalDecisionStatus = 'draft' | 'final';
+
+export type TribunalDecisionOutcome =
+  | 'complaint_upheld'
+  | 'complaint_partially_upheld'
+  | 'complaint_not_upheld'
+  | 'dismissed';
+
+export type TribunalDecisionOrderType =
+  | 'no_action'
+  | 'warning'
+  | 'corrective_action'
+  | 'content_action'
+  | 'account_action'
+  | 'compensation_recommendation'
+  | 'compliance_requirement'
+  | 'other';
+
+export type TribunalDecisionOrderStatus =
+  | 'pending'
+  | 'active'
+  | 'complied'
+  | 'disputed'
+  | 'waived';
+
+export interface TribunalDeliberationNote {
+  id: number;
+  tribunal_deliberation_id: number;
+  author_user_id: number;
+  note_type: TribunalDeliberationNoteType;
+  body: string;
+  created_at: string;
+  updated_at?: string;
+  author?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface TribunalFinding {
+  id: number;
+  tribunal_case_id: number;
+  tribunal_deliberation_id: number;
+  finding_number: string;
+  finding_type: TribunalFindingType;
+  title: string | null;
+  finding_text: string;
+  conclusion: TribunalFindingConclusion;
+  display_order: number;
+  is_public: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  evidence?: Array<{
+    id: number;
+    evidence_number: string;
+    title: string;
+    type: string;
+  }>;
+  hearing_entries?: Array<{
+    id: number;
+    entry_type: string;
+    body: string;
+    sequence_number: number;
+  }>;
+  witnesses?: Array<{
+    id: number;
+    witness_name: string;
+    side: string;
+  }>;
+}
+
+export interface TribunalDecisionOrder {
+  id: number;
+  tribunal_decision_id: number;
+  order_number: string;
+  order_type: TribunalDecisionOrderType;
+  title: string;
+  description: string;
+  target_side: 'complainant' | 'respondent' | 'both' | null;
+  deadline_at: string | null;
+  status: TribunalDecisionOrderStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TribunalDecision {
+  id: number;
+  tribunal_case_id: number;
+  tribunal_jury_panel_id: number;
+  decision_number: string;
+  status: TribunalDecisionStatus;
+  outcome: TribunalDecisionOutcome | null;
+  summary: string | null;
+  reasoning: string | null;
+  published_at: string | null;
+  appeal_deadline: string | null;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  jury_panel?: {
+    id: number;
+    panel_name: string;
+    panel_code: string;
+  };
+  orders?: TribunalDecisionOrder[];
+  findings?: TribunalFinding[];
+  case?: {
+    id: number;
+    case_number: string;
+    title: string;
+    status: string;
+  };
+}
+
+export interface TribunalDeliberation {
+  id: number;
+  tribunal_case_id: number;
+  tribunal_jury_panel_id: number;
+  status: TribunalDeliberationStatus;
+  opened_at: string;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  notes?: TribunalDeliberationNote[];
+  jury_panel?: {
+    id: number;
+    panel_name: string;
+    panel_code: string;
+  };
+}
+
+export interface JuryDeliberationData {
+  deliberation: TribunalDeliberation;
+  findings: TribunalFinding[];
+  decision: TribunalDecision | null;
+  dossier: {
+    case: {
+      id: number;
+      case_number: string;
+      title: string;
+      category: string;
+      description: string;
+      requested_resolution: string | null;
+      status: string;
+      complainant: { id: number; name: string };
+      respondent: { id: number; name: string };
+    };
+    response: {
+      position: string;
+      response_text: string;
+    } | null;
+    evidence: Array<{
+      id: number;
+      evidence_number: string;
+      title: string;
+      type: string;
+      status: string;
+      challenge_status: string;
+      is_flagged: boolean;
+      created_at: string;
+    }>;
+    witnesses: Array<{
+      id: number;
+      witness_name: string;
+      side: string;
+      relationship_to_case: string | null;
+      statement_summary: string | null;
+      status: string;
+    }>;
+    hearing: {
+      id: number;
+      hearing_number: string;
+      status: string;
+      started_at: string | null;
+      ended_at: string | null;
+    } | null;
+    hearing_entries: Array<{
+      id: number;
+      sequence_number: number;
+      entry_type: string;
+      sender_name: string;
+      side: string | null;
+      body: string;
+      created_at: string;
+    }>;
+  };
+}
+
+export interface TribunalCaseReport {
+  id: number;
+  tribunal_case_id: number;
+  case_number?: string;
+  tribunal_decision_id: number;
+  decision_number?: string;
+  report_number: string;
+  verification_code: string;
+  report_type: string;
+  status: 'generated' | 'superseded' | 'revoked';
+  version: number;
+  file_hash: string;
+  issued_at: string;
+  generated_at: string;
+  last_downloaded_at: string | null;
+  download_count: number;
+  download_url: string;
+  verify_url: string;
+}
+
+export interface TribunalReportListResponse {
+  case_id: number;
+  case_number: string;
+  reports: TribunalCaseReport[];
+  active_report: TribunalCaseReport | null;
+  has_final_decision: boolean;
+}
+
+export interface TribunalReportVerifyResponse {
+  valid: boolean;
+  message: string;
+  details: {
+    report_number: string;
+    case_number: string;
+    report_type: string;
+    issued_at: string;
+    issued_at_formatted?: string;
+    decision_number: string;
+    decision_published_at: string;
+    adjudicated_by?: string;
+    status: string;
+    version: number;
+    file_hash: string;
+    authenticity_confirmed: boolean;
+    confirmation_statement?: string;
+  } | null;
+}
+
+export interface TribunalRespondentSearchResult {
+  id: number;
+  name: string;
+  username: string;
+  profile_photo_url: string | null;
+  public_subtitle: string;
+  profile_url: string | null;
+  is_verified_lawyer: boolean;
+}

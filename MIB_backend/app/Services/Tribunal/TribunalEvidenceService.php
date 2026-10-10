@@ -179,9 +179,10 @@ class TribunalEvidenceService
         $isParty = $tribunalCase->isParticipant($userId);
         $isAcceptedJuror = $tribunalCase->isAcceptedJuror($userId);
         $isAcceptedRepresentative = $tribunalCase->isAcceptedRepresentative($userId);
+        $isAssignedJuryPanel = $tribunalCase->isAssignedJuryPanelUser($userId);
 
         abort_unless(
-            $isParty || $isAcceptedJuror || $isAcceptedRepresentative,
+            $isParty || $isAcceptedJuror || $isAcceptedRepresentative || $isAssignedJuryPanel,
             403,
             'You are not authorized to view evidence for this case.'
         );

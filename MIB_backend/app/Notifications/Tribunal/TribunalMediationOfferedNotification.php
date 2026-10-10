@@ -28,8 +28,10 @@ class TribunalMediationOfferedNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
+        $offeredBy = $this->adjudicator->isJuryPanelAccount() ? 'The Tribunal Jury Panel' : 'The Tribunal Adjudicator';
+
         return [
-            'message' => "The Tribunal Adjudicator offered mediation for Case {$this->tribunalCase->case_number}.",
+            'message' => "{$offeredBy} offered mediation for Case {$this->tribunalCase->case_number}.",
             'case_id' => $this->tribunalCase->id,
             'case_number' => $this->tribunalCase->case_number,
             'mediation_id' => $this->mediation->id,
@@ -51,9 +53,11 @@ class TribunalMediationOfferedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $offeredBy = $this->adjudicator->isJuryPanelAccount() ? 'Tribunal Jury Panel' : 'Tribunal Adjudicator';
+
         return (new MailMessage)
             ->subject("Mediation Offered: Case {$this->tribunalCase->case_number}")
-            ->line("The Tribunal Adjudicator has offered voluntary mediation for Case {$this->tribunalCase->case_number}.")
+            ->line("The {$offeredBy} has offered voluntary mediation for Case {$this->tribunalCase->case_number}.")
             ->action('Review Mediation Offer', url("/tribunal/cases/{$this->tribunalCase->id}"));
     }
 }

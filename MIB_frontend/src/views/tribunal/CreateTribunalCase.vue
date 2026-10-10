@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
 import { useTribunalStore } from '@/stores/tribunal';
-import api from '@/assets/axios';
-
-interface UserOption {
-  id: number;
-  name: string;
-}
+import TribunalRespondentSearch from '@/components/tribunal/TribunalRespondentSearch.vue';
 
 const router = useRouter();
 const tribunalStore = useTribunalStore();
-
-const users = ref<UserOption[]>([]);
-const usersLoading = ref(false);
 
 const respondentId = ref<number | null>(null);
 const title = ref('');
@@ -42,32 +34,6 @@ const canSubmit = computed(() => {
     !tribunalStore.loading
   );
 });
-
-const loadUsers = async () => {
-  usersLoading.value = true;
-
-  try {
-    const response = await api.get('/profile-list');
-
-    users.value = response.data.data.map((user: any) => ({
-      id: user.id,
-      name:
-        user.full_name ??
-        `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() ??
-        `User #${user.id}`,
-    }));
-  } catch (error) {
-    console.error(error);
-
-    await Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Unable to load users.',
-    });
-  } finally {
-    usersLoading.value = false;
-  }
-};
 
 const submitCase = async () => {
   if (!canSubmit.value || respondentId.value === null) {
@@ -103,67 +69,42 @@ const submitCase = async () => {
 
   router.push('/tribunal/cases');
 };
-
-onMounted(() => {
-  loadUsers();
-});
 </script>
 
 <template>
   <div class="container py-4">
     <div class="card shadow-sm">
-      <div class="card-body">
+      <div class="card-body p-4">
         <h2 class="mb-2">
           Submit an External Tribunal Case
         </h2>
 
         <p class="text-muted mb-4">
           Provide the basic details of your dispute.
-          Evidence and representatives will be added later.
+          Evidence and representatives can be added once the case is initialized.
         </p>
 
-        <div class="mb-3">
-          <label class="form-label">
-            Respondent
+        <!-- 1. RESPONDENT SELECTION -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            1. Respondent <span class="text-danger">*</span>
           </label>
-
-          <select
+          <TribunalRespondentSearch
             v-model="respondentId"
-            class="form-select"
-            :disabled="usersLoading"
-          >
-            <option
-              :value="null"
-              disabled
-            >
-              Select respondent
-            </option>
-
-            <option
-              v-for="user in users"
-              :key="user.id"
-              :value="user.id"
-            >
-              {{ user.name }}
-            </option>
-          </select>
-
-          <small
-            v-if="usersLoading"
-            class="text-muted"
-          >
-            Loading users...
-          </small>
+            :disabled="tribunalStore.loading"
+          />
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">
-            Case Category
+        <!-- 2. CASE CATEGORY -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            2. Case Category <span class="text-danger">*</span>
           </label>
 
           <select
             v-model="category"
             class="form-select"
+            :disabled="tribunalStore.loading"
           >
             <option
               value=""
@@ -182,9 +123,10 @@ onMounted(() => {
           </select>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">
-            Case Title
+        <!-- 3. CASE TITLE -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            3. Case Title <span class="text-danger">*</span>
           </label>
 
           <input
@@ -192,13 +134,15 @@ onMounted(() => {
             type="text"
             maxlength="180"
             class="form-control"
-            placeholder="Enter a short title for the case"
+            placeholder="Enter a short, descriptive title for the case"
+            :disabled="tribunalStore.loading"
           />
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">
-            Description
+        <!-- 4. DESCRIPTION -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            4. Description <span class="text-danger">*</span>
           </label>
 
           <textarea
@@ -206,17 +150,24 @@ onMounted(() => {
             rows="6"
             maxlength="10000"
             class="form-control"
-            placeholder="Explain what happened..."
+            placeholder="Explain what happened in detail..."
+            :disabled="tribunalStore.loading"
           />
 
-          <small class="text-muted">
-            Minimum 20 characters.
-          </small>
+          <div class="d-flex justify-content-between align-items-center mt-1">
+            <small :class="description.trim().length >= 20 ? 'text-success' : 'text-muted'">
+              {{ description.trim().length < 20 ? 'Minimum 20 characters required.' : 'Minimum length met.' }}
+            </small>
+            <small class="text-muted">
+              {{ description.trim().length }} / 10000
+            </small>
+          </div>
         </div>
 
+        <!-- 5. REQUESTED RESOLUTION -->
         <div class="mb-4">
-          <label class="form-label">
-            Requested Resolution
+          <label class="form-label fw-semibold">
+            5. Requested Resolution <span class="text-muted fw-normal">(Optional)</span>
           </label>
 
           <textarea
@@ -224,10 +175,12 @@ onMounted(() => {
             rows="3"
             maxlength="3000"
             class="form-control"
-            placeholder="What outcome are you requesting?"
+            placeholder="What outcome or remedy are you seeking from the Tribunal?"
+            :disabled="tribunalStore.loading"
           />
         </div>
 
+        <!-- 6. ERROR & SUBMISSION -->
         <div
           v-if="tribunalStore.error"
           class="alert alert-danger"
@@ -235,23 +188,33 @@ onMounted(() => {
           {{ tribunalStore.error }}
         </div>
 
-        <button
-          type="button"
-          class="btn btn-primary"
-          :disabled="!canSubmit"
-          @click="submitCase"
-        >
-          <span
-            v-if="tribunalStore.loading"
-            class="spinner-border spinner-border-sm me-2"
-          />
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            :disabled="tribunalStore.loading"
+            @click="router.push('/tribunal/cases')"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary px-4"
+            :disabled="!canSubmit"
+            @click="submitCase"
+          >
+            <span
+              v-if="tribunalStore.loading"
+              class="spinner-border spinner-border-sm me-2"
+            />
 
-          {{
-            tribunalStore.loading
-              ? 'Submitting...'
-              : 'Submit Case'
-          }}
-        </button>
+            {{
+              tribunalStore.loading
+                ? 'Submitting...'
+                : 'Submit Case'
+            }}
+          </button>
+        </div>
       </div>
     </div>
   </div>

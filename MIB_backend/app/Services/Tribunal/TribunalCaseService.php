@@ -9,8 +9,17 @@ use Illuminate\Support\Facades\DB;
 
 class TribunalCaseService
 {
+    public function __construct(
+        protected TribunalJuryPanelAssignmentService $juryPanelAssignmentService
+    ) {
+    }
+
     public function create(array $data, int $userId): TribunalCase
     {
+        // Revalidate respondent eligibility to prevent forged requests
+        app(\App\Services\Tribunal\TribunalRespondentSearchService::class)
+            ->validateEligibility((int) $data['respondent_id'], $userId);
+
         return DB::transaction(function () use ($data, $userId) {
 
             $case = TribunalCase::create([
@@ -53,10 +62,14 @@ class TribunalCaseService
                 'category' => $case->category,
             ]);
 
-            return $case->load([
+            // Attempt immediate Jury Panel assignment upon case creation
+            $this->juryPanelAssignmentService->assignCase($case);
+
+            return $case->refresh()->load([
                 'creator.profile',
                 'parties.user.profile',
                 'response',
+                'currentJuryPanelAssignment.juryPanel',
             ]);
         });
     }

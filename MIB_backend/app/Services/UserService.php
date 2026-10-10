@@ -73,6 +73,22 @@ class UserService{
                 throw new \Exception('Invalid credentials');
             }
 
+            if ($user->isAdmin()) {
+                return response()->json([
+                    'code' => 403,
+                    'status' => false,
+                    'requires_admin_portal' => true,
+                    'message' => 'This administrator account must use the admin login portal.',
+                ], 403);
+            }
+
+            // Internal Tribunal Account Suspension Check
+            $suspensionService = app(\App\Services\InternalTribunal\AccountSuspensionService::class);
+            $activeSuspension = $suspensionService->getActiveSuspension($user);
+            if ($activeSuspension) {
+                return response()->json($suspensionService->formatSuspensionPayload($activeSuspension), 403);
+            }
+
             $apiToken = new \App\Models\ApiToken();
             $token = $apiToken->tokenGenerate($user);
             $user->load('profile');
@@ -84,6 +100,7 @@ class UserService{
                     'id' => $user->id,
                     'email' => $user->email,
                     'is_admin' => (bool) $user->is_admin,
+                    'is_jury_panel' => $user->isJuryPanelAccount(),
                     'is_profile_completed' => $user->isProfileCompleted(),
                     'profile' => $user->profile,
                 ],
@@ -184,6 +201,7 @@ class UserService{
                     'id' => $user->id,
                     'email' => $user->email,
                     'is_admin' => (bool) $user->is_admin,
+                    'is_jury_panel' => $user->isJuryPanelAccount(),
                     'Rank' => $user->Rank,
                     'total_points' => $user->total_points,
                     'is_profile_completed' => $user->isProfileCompleted(),

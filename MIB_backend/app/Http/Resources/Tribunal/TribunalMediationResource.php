@@ -14,9 +14,14 @@ class TribunalMediationResource extends JsonResource
         $med = $this->resource;
 
         $initiator = $med->initiator;
-        $initiatorName = $initiator?->profile?->first_name
-            ? "{$initiator->profile->first_name} {$initiator->profile->last_name}"
-            : ($initiator?->email ?? 'Participant');
+        $initiatorPanel = $initiator?->juryPanel;
+        if ($initiatorPanel) {
+            $initiatorName = "{$initiatorPanel->panel_code} — {$initiatorPanel->panel_name}";
+        } else {
+            $initiatorName = $initiator?->profile?->first_name
+                ? "{$initiator->profile->first_name} {$initiator->profile->last_name}"
+                : ($initiator?->email ?? 'Participant');
+        }
 
         $userId = auth()->id();
         $myConsent = $userId ? $med->consents->firstWhere('user_id', $userId) : null;

@@ -190,6 +190,26 @@ class HipScoreCalculator
             }
         }
 
+        if (Schema::hasTable('internal_penalties')) {
+            $activePenalties = \App\Models\InternalPenalty::query()
+                ->where('user_id', $user->id)
+                ->where('action_type', \App\Enums\InternalPenaltyType::HipScorePenalty->value)
+                ->whereNull('reversed_at')
+                ->where(function ($query) {
+                    $query->whereNull('starts_at')
+                        ->orWhere('starts_at', '<=', now());
+                })
+                ->where(function ($query) {
+                    $query->whereNull('ends_at')
+                        ->orWhere('ends_at', '>', now());
+                })
+                ->pluck('penalty_value');
+
+            foreach ($activePenalties as $penaltyValue) {
+                $buckets['others_legal'] += -abs((float) $penaltyValue);
+            }
+        }
+
         return $buckets;
     }
 

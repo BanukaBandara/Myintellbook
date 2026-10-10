@@ -48,12 +48,15 @@ export const useUserStore = defineStore('user', {
                 new Error("User login failed");
             }
             
-        }catch(e){
+        }catch(e: any){
             console.error("Error in user login", e);
-              return {
-                  code: 500,
-                  message: "User login failed",
-              };
+            if (e?.response?.data) {
+                return e.response.data;
+            }
+            return {
+                code: 500,
+                message: "User login failed",
+            };
         }
     },
 

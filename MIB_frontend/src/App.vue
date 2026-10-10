@@ -44,9 +44,12 @@ const userGeneralInfo = ref<userGeneralInfoType>({
     slug:''
 });
 
+const isJuryRoute = computed(() => route.path.startsWith('/jury'));
+const isAdminRoute = computed(() => route.path.startsWith('/admin'));
+
 watch(isLoading,async()=>
 {
-  if(isLoading.value)
+  if(isLoading.value && !isJuryRoute.value && !isAdminRoute.value)
   {
      await BasicInfo();
      await profileCompliation();
@@ -95,7 +98,10 @@ const getProfileList = async() =>{
 <template>
   <!-- Only .app-content-scroll scrolls; the navbar sits above it, so it never moves. -->
   <div class="app-shell">
-    <div class="app-nav"><navBar /></div>
+    <div v-if="!isJuryRoute && !isAdminRoute" class="app-nav">
+      <navBar />
+    </div>
+
     <div v-if="loadingStore.isLoadingState" class="loader-overlay">
       <div class="spinner"></div>
     </div>
@@ -106,8 +112,10 @@ const getProfileList = async() =>{
       <DashboardLayout v-if="useDashboardLayout">
         <router-view />
       </DashboardLayout>
+
       <router-view v-else />
-      <FAQ v-if="isLogged"/>
+
+      <FAQ v-if="isLogged && !isJuryRoute && !isAdminRoute" />
     </main>
   </div>
 </template>

@@ -412,8 +412,18 @@ class AdminVerificationReviewTest extends TestCase
         $adminUser = $this->createUser('login.admin@example.com', isAdmin: true);
         $normalUser = $this->createUser('login.normal@example.com', isAdmin: false);
 
-        // Admin login
-        $adminResponse = $this->postJson('/api/login', [
+        // Admin credentials submitted to normal /api/login must be blocked
+        $adminBlockedResponse = $this->postJson('/api/login', [
+            'email' => 'login.admin@example.com',
+            'password' => 'password123',
+        ]);
+
+        $adminBlockedResponse->assertStatus(403);
+        $adminBlockedResponse->assertJsonPath('requires_admin_portal', true);
+        $this->assertNull($adminBlockedResponse->json('token'));
+
+        // Admin credentials submitted to dedicated /api/admin/login are allowed
+        $adminResponse = $this->postJson('/api/admin/login', [
             'email' => 'login.admin@example.com',
             'password' => 'password123',
         ]);

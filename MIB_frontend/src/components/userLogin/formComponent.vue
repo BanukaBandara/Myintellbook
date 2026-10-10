@@ -113,6 +113,23 @@ const submitUserData = async () => {
         submitButtonLabel.value = 'Sign In';
         submitData.value = false;
         router.push(routeAfterLogin(result.user));
+    } else if (result.requires_admin_portal === true) {
+        submitButtonLabel.value = 'Sign In';
+        submitData.value = false;
+        let config = {
+            icon: 'info',
+            title: 'Administrator Account',
+            text: result.message || 'This administrator account must use the admin login portal.',
+            confirmButtonText: 'Go to Admin Login',
+            confirmButtonColor: '#0f172a',
+            showConfirmButton: true
+        }
+
+        let confirm = await showAlert(config);
+
+        if (confirm.isConfirmed) {
+            router.push('/admin/login');
+        }
     } else {
         let config = {
             icon: 'error',

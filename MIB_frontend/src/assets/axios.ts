@@ -13,20 +13,29 @@ const instance = axios.create({
   });
 
   instance.interceptors.request.use(
-      
     config => {
-        const token = localStorage.getItem('userToken'); // Or from Vuex/Pinia/etc.
-       if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      error =>{
+      const requestUrl = config.url || '';
+      const isAdminApi = requestUrl.startsWith('/admin') || requestUrl.includes('/admin/');
+      const isAdminPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
-        console.error("Request error:", error);
-        return Promise.reject(error);
+      let token: string | null = null;
+
+      if (isAdminApi || isAdminPortal) {
+        token = localStorage.getItem('adminToken');
+      } else {
+        token = localStorage.getItem('userToken');
       }
-  )
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    error => {
+      console.error("Request error:", error);
+      return Promise.reject(error);
+    }
+  );
 
 // Some of this API's writes are GETs (e.g. /delete-experiance/{id}, /log-out).
 const MUTATING_GET = /(delete|remove|log-?out|follow|accept|reject|cancel|mark)/i;

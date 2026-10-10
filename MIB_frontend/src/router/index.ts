@@ -1,8 +1,9 @@
-﻿import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import Register from '../views/User/Register.vue';
 import EmailConfirmation from '../views/User/EmailConfirmation.vue';
 import Login from '../views/User/Login.vue';
-import { clearSession, getAuthState, isProfileCompleted } from '../services/auth';
+import { clearSession, getAuthState, isProfileCompleted, isJuryPanelUser } from '../services/auth';
+import { adminAuth } from '@/services/adminAuth';
 import Swal from 'sweetalert2';
 import {useLoadingStore} from '@/stores/loadingStore';
 import CreateTribunalCase from '@/views/tribunal/CreateTribunalCase.vue';
@@ -378,13 +379,7 @@ const router = createRouter({
     },
     {
       path:'/verify_idnetity',
-      name:'verify_idnetity',
-      component: () => import('@/components/commonComponents/VerifyIdentity.vue'),
-      meta: {
-        requiresAuth: true,
-        hideNavBar:false,
-        title:'Verify Identity'
-      }
+      redirect: '/submit_case',
     },
     {
       path:'/submit_case/:slug?',
@@ -550,14 +545,170 @@ const router = createRouter({
         title: 'My Represented Cases'
       },
     },
+    {
+      path: '/internal-tribunal',
+      name: 'internal-tribunal',
+      component: () => import('@/views/internalTribunal/MyInternalReports.vue'),
+      meta: {
+        requiresAuth: true,
+        hideNavBar: false,
+        title: 'My Misconduct Reports',
+      },
+    },
+    {
+      path: '/internal-tribunal/create',
+      name: 'create-internal-report',
+      component: () => import('@/views/internalTribunal/CreateInternalReport.vue'),
+      meta: {
+        requiresAuth: true,
+        hideNavBar: false,
+        title: 'Report Misconduct',
+      },
+    },
+    {
+      path: '/internal-tribunal/:id',
+      name: 'internal-report-details',
+      component: () => import('@/views/internalTribunal/InternalReportDetails.vue'),
+      meta: {
+        requiresAuth: true,
+        hideNavBar: false,
+        title: 'Report Details',
+      },
+    },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: () => import('@/views/admin/AdminLogin.vue'),
+      meta: {
+        title: 'Super Admin Login',
+        hideNavBar: true,
+      },
+    },
+    {
+      path: '/admin',
+      component: () => import('@/layouts/AdminLayout.vue'),
+      meta: {
+        requiresAdmin: true,
+        hideNavBar: true,
+      },
+      children: [
+        {
+          path: '',
+          redirect: '/admin/dashboard',
+        },
+        {
+          path: 'dashboard',
+          name: 'admin-dashboard',
+          component: () => import('@/views/admin/AdminDashboard.vue'),
+          meta: {
+            title: 'Admin Dashboard',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'tribunal/jury-panels',
+          name: 'admin-tribunal-jury-panels',
+          component: () => import('@/views/admin/AdminJuryPanels.vue'),
+          meta: {
+            title: 'Manage Jury Panels',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'professional-verifications',
+          name: 'admin-professional-verifications',
+          component: () => import('@/views/admin/AdminProfessionalVerifications.vue'),
+          meta: {
+            title: 'Professional Verifications',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'internal-reports',
+          name: 'admin-internal-reports',
+          component: () => import('@/views/admin/internalTribunal/AdminInternalReports.vue'),
+          meta: {
+            title: 'Internal Misconduct Reports',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'internal-reports/:id',
+          name: 'admin-internal-report-details',
+          component: () => import('@/views/admin/internalTribunal/AdminInternalReportDetails.vue'),
+          meta: {
+            title: 'Misconduct Report Dossier',
+            requiresAdmin: true,
+            hideNavBar: true,
+          },
+        },
+      ],
+    },
+    {
+      path: '/tribunal/reports/verify/:verificationCode?',
+      name: 'tribunal-report-verification',
+      component: () => import('@/views/tribunal/TribunalReportVerification.vue'),
+      meta: {
+        title: 'Verify Tribunal Report',
+      },
+    },
+    {
+      path: '/jury',
+      component: () => import('@/layouts/JuryPanelLayout.vue'),
+      meta: {
+        requiresAuth: true,
+        requiresJuryPanel: true,
+      },
+      children: [
+        {
+          path: '',
+          name: 'jury-dashboard',
+          component: () => import('@/views/jury/JuryDashboard.vue'),
+          meta: {
+            title: 'Jury Portal Dashboard',
+            requiresAuth: true,
+            requiresJuryPanel: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'cases',
+          name: 'jury-cases',
+          component: () => import('@/views/jury/JuryAssignedCases.vue'),
+          meta: {
+            title: 'Assigned Cases',
+            requiresAuth: true,
+            requiresJuryPanel: true,
+            hideNavBar: true,
+          },
+        },
+        {
+          path: 'cases/:id',
+          name: 'jury-case-details',
+          component: () => import('@/views/jury/JuryCaseDetails.vue'),
+          meta: {
+            title: 'Case Details',
+            requiresAuth: true,
+            requiresJuryPanel: true,
+            hideNavBar: true,
+          },
+        },
+      ],
+    },
   ],
 });
-// Add this after router is created
 // Shown at most once per 30s so a flaky connection doesn't stack warnings on every navigation.
 let lastConnectionWarning = 0;
+
 const warnConnection = () => {
   if (Date.now() - lastConnectionWarning < 30_000) return;
+
   lastConnectionWarning = Date.now();
+
   void Swal.fire({
     toast: true,
     position: 'top-end',
@@ -568,17 +719,91 @@ const warnConnection = () => {
   });
 };
 
-router.beforeEach(async(to) => {
-  if (!to.meta.requiresAuth) return true;
-
+router.beforeEach(async (to) => {
   const loadingStore = useLoadingStore();
+
+  // Dedicated Super Admin route protection and portal isolation.
+  if (to.path.startsWith('/admin')) {
+    loadingStore.loadingStart();
+
+    try {
+      if (to.path === '/admin/login') {
+        if (adminAuth.isAuthenticated()) {
+          return { path: '/admin/dashboard' };
+        }
+
+        return true;
+      }
+
+      if (!adminAuth.isAuthenticated()) {
+        return { path: '/admin/login' };
+      }
+
+      return true;
+    } finally {
+      loadingStore.loadingStop();
+    }
+  }
+
+  // If the browser is authenticated only as Super Admin, keep it inside
+  // the dedicated admin portal instead of entering the consumer application.
+  if (adminAuth.isAuthenticated()) {
+    const hasConsumerToken = Boolean(localStorage.getItem('userToken'));
+
+    if (!hasConsumerToken) {
+      return { path: '/admin/dashboard' };
+    }
+  }
+
+  // Jury Panel accounts that already have a known Jury session should not
+  // enter the normal public login/register flow.
+  if (!to.meta.requiresAuth) {
+    const isJuryHint = isJuryPanelUser();
+
+    if (
+      isJuryHint &&
+      (to.path === '/' || to.path === '/login' || to.path === '/register')
+    ) {
+      loadingStore.loadingStart();
+
+      try {
+        const auth = await getAuthState();
+
+        if (
+          auth.status === 'authenticated' &&
+          Boolean(auth.user.is_jury_panel)
+        ) {
+          return { path: '/jury' };
+        }
+
+        if (auth.status === 'unauthenticated') {
+          clearSession();
+        }
+
+        if (auth.status === 'unknown') {
+          console.warn(
+            'Could not verify the Jury Panel session; continuing.',
+            auth.error
+          );
+          warnConnection();
+        }
+      } finally {
+        loadingStore.loadingStop();
+      }
+    }
+
+    return true;
+  }
+
   loadingStore.loadingStart();
+
   try {
     const auth = await getAuthState();
 
     if (auth.status === 'unauthenticated') {
-      // Only a missing token or an explicit 401 from /user ends the session.
+      // Only a missing token or an explicit 401 ends the consumer session.
       clearSession();
+
       void Swal.fire({
         toast: true,
         position: 'top-end',
@@ -587,20 +812,40 @@ router.beforeEach(async(to) => {
         showConfirmButton: false,
         timer: 3000,
       });
+
       return { path: '/login' };
     }
 
     if (auth.status === 'unknown') {
-      // Timeout / offline / 5xx: never redirect (that caused the loop). The API still enforces auth.
+      // Timeout / offline / 5xx must not log the user out or create a redirect loop.
+      // Backend authorization remains authoritative.
       console.warn('Could not verify the session; continuing.', auth.error);
       warnConnection();
+
       return true;
     }
 
-    // Onboarding is only for users without a profile; everyone else goes to the dashboard.
-    if (to.name === 'basicDetails-fill' && isProfileCompleted(auth.user)) {
+    const isJury =
+      Boolean(auth.user.is_jury_panel) || isJuryPanelUser();
+
+    // Institutional Jury Panel accounts stay inside the Jury portal.
+    if (isJury && !to.path.startsWith('/jury')) {
+      return { path: '/jury' };
+    }
+
+    // Normal consumer/professional accounts cannot enter Jury routes.
+    if (!isJury && to.path.startsWith('/jury')) {
+      return { path: '/home' };
+    }
+
+    // Completed users should not return to profile onboarding.
+    if (
+      to.name === 'basicDetails-fill' &&
+      isProfileCompleted(auth.user)
+    ) {
       return { name: 'home' };
     }
+
     return true;
   } finally {
     loadingStore.loadingStop();

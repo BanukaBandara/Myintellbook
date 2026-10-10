@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TestamentResourceNote extends Model
 {
     public const STATUS_ACTIVE = 'active';
+    public const STATUS_REMOVED = 'removed';
 
     protected $fillable = [
         'user_id',

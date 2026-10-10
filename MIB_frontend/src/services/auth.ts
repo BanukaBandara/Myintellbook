@@ -6,6 +6,7 @@ export type AuthUser = {
     id: number;
     email: string;
     is_admin?: boolean;
+    is_jury_panel?: boolean;
     is_profile_completed?: boolean;
     profile?: Record<string, unknown> | null;
 };
@@ -13,7 +14,7 @@ export type AuthUser = {
 /**
  * 'unauthenticated' only when there is no token or the server answers 401.
  * 'unknown' covers timeouts, network drops and 5xx: the session may well be valid,
- * so callers must NOT redirect or log out on it (that is what caused the redirect loop).
+ * so callers must NOT redirect or log out on it.
  */
 export type AuthState =
     | { status: 'authenticated'; user: AuthUser }
@@ -32,19 +33,41 @@ export async function getAuthState(): Promise<AuthState> {
     }
 
     try {
-        // Shared and cached briefly: the router guard and the front page ask on the same navigation,
-        // and every page switch would otherwise wait on another /user round trip.
-        const response = await cached('auth-user', 60_000, () => instance.get('/user'),
-            res => (res as { status?: number })?.status === 200);
-        const user = response.data?.data;
-        return user
-            ? { status: 'authenticated', user }
-            : { status: 'unknown', error: new Error('Unexpected /user response') };
+        // Shared and cached briefly: the router guard and the front page may request
+        // the authenticated user during the same navigation.
+        const response = await cached(
+            'auth-user',
+            60_000,
+            () => instance.get('/user'),
+            res => (res as { status?: number })?.status === 200
+        );
+
+        const user = response.data?.data as AuthUser | undefined;
+
+        if (user) {
+            // Keep local user data synchronized because Jury Panel routing and other
+            // existing consumers read this value from localStorage.
+            localStorage.setItem('userData', JSON.stringify(user));
+
+            return {
+                status: 'authenticated',
+                user,
+            };
+        }
+
+        return {
+            status: 'unknown',
+            error: new Error('Unexpected /user response'),
+        };
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             return { status: 'unauthenticated' };
         }
-        return { status: 'unknown', error };
+
+        return {
+            status: 'unknown',
+            error,
+        };
     }
 }
 
@@ -54,11 +77,34 @@ export async function checkAuth(): Promise<number | false> {
     return state.status === 'authenticated' ? 200 : false;
 }
 
-export function isProfileCompleted(user: Partial<AuthUser> | null | undefined): boolean {
-    return user?.is_profile_completed === true || (user?.profile != null && user?.is_profile_completed !== false);
+export function isJuryPanelUser(): boolean {
+    try {
+        const raw = localStorage.getItem('userData');
+        if (!raw) return false;
+
+        const user = JSON.parse(raw);
+        return Boolean(user?.is_jury_panel);
+    } catch {
+        return false;
+    }
+}
+
+export function isProfileCompleted(
+    user: Partial<AuthUser> | null | undefined
+): boolean {
+    return (
+        user?.is_profile_completed === true ||
+        (user?.profile != null && user?.is_profile_completed !== false)
+    );
 }
 
 /** Where to send a user right after login: onboarding only when no profile exists yet. */
-export function routeAfterLogin(user: Partial<AuthUser> | null | undefined): string {
+export function routeAfterLogin(
+    user: Partial<AuthUser> | null | undefined
+): string {
+    if (user?.is_jury_panel) {
+        return '/jury';
+    }
+
     return isProfileCompleted(user) ? '/home' : '/basicDetails-fill';
 }

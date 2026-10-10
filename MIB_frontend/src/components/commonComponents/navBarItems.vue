@@ -119,7 +119,7 @@ const isActive = (label: string): boolean => {
     const path = route.path;
     if (label === 'Home') return path === '/home';
     if (label === 'Profile') return path === '/profile' || path.startsWith('/showUserProfile/');
-    if (label === 'Tribunal' || label === 'Adjudicator Assignments') return path.startsWith('/tribunal') || path === '/submit_case';
+    if (label === 'Tribunal' || label === 'Adjudicator Assignments') return path.startsWith('/tribunal') || path.startsWith('/submit_case') || path.startsWith('/internal-tribunal');
     if (label === 'learn') return path.startsWith('/learn');
     if (label === 'Exam') return path.startsWith('/exam-module') || path.startsWith('/exams') || path.startsWith('/openExamQuestions/');
     if (label === 'Score') return path === '/scores';

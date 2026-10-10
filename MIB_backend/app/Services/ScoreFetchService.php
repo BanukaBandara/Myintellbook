@@ -208,20 +208,47 @@ class ScoreFetchService
 
     private function others(User $user): array
     {
-        if (! Schema::hasTable('tribunal_reports')) {
-            return [];
+        $items = collect();
+
+        if (Schema::hasTable('tribunal_reports')) {
+            $items = $items->concat($user->tribunalReports()->where('status', 'confirmed')->latest('confirmed_at')->get()
+                ->map(fn ($report) => $this->item(
+                    $report->id,
+                    ucfirst((string) $report->violation_type),
+                    'Confirmed tribunal finding',
+                    $report->confirmed_at,
+                    'confirmed',
+                    HipScoreCalculator::penaltyPoints($report->violation_type),
+                )));
         }
 
-        return $user->tribunalReports()->where('status', 'confirmed')->latest('confirmed_at')->get()
-            ->map(fn ($report) => $this->item(
-                $report->id,
-                ucfirst((string) $report->violation_type),
-                'Confirmed tribunal finding',
-                $report->confirmed_at,
+        if (Schema::hasTable('internal_penalties')) {
+            $penalties = \App\Models\InternalPenalty::query()
+                ->where('user_id', $user->id)
+                ->where('action_type', \App\Enums\InternalPenaltyType::HipScorePenalty->value)
+                ->whereNull('reversed_at')
+                ->where(function ($query) {
+                    $query->whereNull('starts_at')
+                        ->orWhere('starts_at', '<=', now());
+                })
+                ->where(function ($query) {
+                    $query->whereNull('ends_at')
+                        ->orWhere('ends_at', '>', now());
+                })
+                ->latest('applied_at')
+                ->get();
+
+            $items = $items->concat($penalties->map(fn ($penalty) => $this->item(
+                'internal-penalty-' . $penalty->id,
+                'Disciplinary Score Deduction',
+                'Administrative tribunal penalty',
+                $penalty->applied_at,
                 'confirmed',
-                HipScoreCalculator::penaltyPoints($report->violation_type),
-            ))
-            ->all();
+                -abs((float) $penalty->penalty_value),
+            )));
+        }
+
+        return $items->sortByDesc('date')->values()->all();
     }
 
     private function item(int|string $id, ?string $title, ?string $subtitle, mixed $date, string $status, float $points): array

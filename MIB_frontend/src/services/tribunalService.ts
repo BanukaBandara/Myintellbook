@@ -12,9 +12,21 @@ import type {
   TribunalEvidenceResponse,
   TribunalJurorCasesResponse,
   TribunalJuryAssignmentResponse,
+  CreateTribunalJuryPanelPayload,
+  UpdateTribunalJuryPanelPayload,
+  TribunalJuryPanelListResponse,
+  TribunalJuryPanelResponse,
+  TribunalRespondentSearchResult,
 } from '@/types/tribunal';
 
 export const tribunalService = {
+  async searchRespondents(query: string): Promise<{ data: TribunalRespondentSearchResult[] }> {
+    const response = await api.get<{ data: TribunalRespondentSearchResult[] }>('/tribunal/respondents/search', {
+      params: { q: query },
+    });
+    return response.data;
+  },
+
   async createCase(
     payload: CreateTribunalCasePayload
   ): Promise<TribunalCaseResponse> {
@@ -253,6 +265,39 @@ export const tribunalService = {
     window.URL.revokeObjectURL(downloadUrl);
   },
 
+  // Admin Jury Panel Methods
+  async adminGetJuryPanels(params?: Record<string, any>): Promise<TribunalJuryPanelListResponse> {
+    const response = await api.get<TribunalJuryPanelListResponse>('/admin/tribunal/jury-panels', {
+      params,
+    });
+    return response.data;
+  },
+
+  async adminCreateJuryPanel(payload: CreateTribunalJuryPanelPayload): Promise<TribunalJuryPanelResponse> {
+    const response = await api.post<TribunalJuryPanelResponse>('/admin/tribunal/jury-panels', payload);
+    return response.data;
+  },
+
+  async adminGetJuryPanel(id: number): Promise<TribunalJuryPanelResponse> {
+    const response = await api.get<TribunalJuryPanelResponse>(`/admin/tribunal/jury-panels/${id}`);
+    return response.data;
+  },
+
+  async adminUpdateJuryPanel(id: number, payload: UpdateTribunalJuryPanelPayload): Promise<TribunalJuryPanelResponse> {
+    const response = await api.patch<TribunalJuryPanelResponse>(`/admin/tribunal/jury-panels/${id}`, payload);
+    return response.data;
+  },
+
+  async adminActivateJuryPanel(id: number): Promise<TribunalJuryPanelResponse> {
+    const response = await api.post<TribunalJuryPanelResponse>(`/admin/tribunal/jury-panels/${id}/activate`);
+    return response.data;
+  },
+
+  async adminDeactivateJuryPanel(id: number): Promise<TribunalJuryPanelResponse> {
+    const response = await api.post<TribunalJuryPanelResponse>(`/admin/tribunal/jury-panels/${id}/deactivate`);
+    return response.data;
+  },
+
   // Batch 4: Legal Representation & Representatives
   async getVerifiedRepresentatives(caseId?: number, search?: string): Promise<any> {
     const params: Record<string, any> = {};
@@ -406,6 +451,337 @@ export const tribunalService = {
 
   async rejectSettlementProposal(proposalId: number): Promise<any> {
     const response = await api.post(`/tribunal/settlement-proposals/${proposalId}/reject`);
+    return response.data;
+  },
+
+  // Jury Panel Portal (Step 2 & 3)
+  async getJuryMe(): Promise<any> {
+    const response = await api.get('/jury/me');
+    return response.data;
+  },
+
+  async getJuryCases(params?: Record<string, any>): Promise<any> {
+    const response = await api.get('/jury/cases', { params });
+    return response.data;
+  },
+
+  async getJuryCaseDetail(caseId: number): Promise<any> {
+    const response = await api.get(`/jury/cases/${caseId}`);
+    return response.data;
+  },
+
+  // Jury Panel Case Room & Mediation (Step 4)
+  async getJuryCaseRoomMessages(caseId: number, params?: Record<string, any>): Promise<any> {
+    const response = await api.get(`/jury/cases/${caseId}/case-room/messages`, { params });
+    return response.data;
+  },
+
+  async sendJuryCaseRoomMessage(caseId: number, data: { body: string; related_evidence_id?: number | null }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/case-room/messages`, data);
+    return response.data;
+  },
+
+  async postJuryProceduralNotice(caseId: number, data: { body: string }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/case-room/procedural-notices`, data);
+    return response.data;
+  },
+
+  async askJuryQuestion(
+    caseId: number,
+    data: { body: string; target_side: 'complainant' | 'respondent' | 'both' }
+  ): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/case-room/questions`, data);
+    return response.data;
+  },
+
+  async getJuryMediation(caseId: number): Promise<any> {
+    const response = await api.get(`/jury/cases/${caseId}/mediation`);
+    return response.data;
+  },
+
+  async offerJuryMediation(caseId: number): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/mediation/offer`);
+    return response.data;
+  },
+
+  async endJuryMediation(caseId: number, data: { reason: string }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/mediation/end`, data);
+    return response.data;
+  },
+
+  // ==========================================
+  // Hearing & Witness Management (Step 5)
+  // ==========================================
+
+  // Jury Portal endpoints
+  async getJuryHearings(caseId: number): Promise<any> {
+    const response = await api.get(`/jury/cases/${caseId}/hearings`);
+    return response.data;
+  },
+
+  async scheduleJuryHearing(caseId: number, data: {
+    hearing_type?: string;
+    scheduled_at?: string;
+    location_type?: string;
+    meeting_link?: string;
+    notes?: string;
+  }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/hearings`, data);
+    return response.data;
+  },
+
+  async getJuryHearing(hearingId: number): Promise<any> {
+    const response = await api.get(`/jury/hearings/${hearingId}`);
+    return response.data;
+  },
+
+  async startJuryHearing(hearingId: number): Promise<any> {
+    const response = await api.post(`/jury/hearings/${hearingId}/start`);
+    return response.data;
+  },
+
+  async recessJuryHearing(hearingId: number): Promise<any> {
+    const response = await api.post(`/jury/hearings/${hearingId}/recess`);
+    return response.data;
+  },
+
+  async resumeJuryHearing(hearingId: number): Promise<any> {
+    const response = await api.post(`/jury/hearings/${hearingId}/resume`);
+    return response.data;
+  },
+
+  async closeJuryHearing(hearingId: number): Promise<any> {
+    const response = await api.post(`/jury/hearings/${hearingId}/close`);
+    return response.data;
+  },
+
+
+  async addJuryHearingEntry(hearingId: number, data: {
+    entry_type: string;
+    body: string;
+    related_evidence_id?: number | null;
+    related_witness_id?: number | null;
+    parent_entry_id?: number | null;
+  }): Promise<any> {
+    const response = await api.post(`/jury/hearings/${hearingId}/entries`, data);
+    return response.data;
+  },
+
+  async askJuryHearingQuestion(hearingId: number, data: {
+    body: string;
+    target_side?: 'complainant' | 'respondent' | 'both' | 'witness';
+    related_witness_id?: number | null;
+    related_evidence_id?: number | null;
+  }): Promise<any> {
+    const response = await api.post(`/jury/hearings/${hearingId}/questions`, data);
+    return response.data;
+  },
+
+
+  // Normal Tribunal endpoints (parties & counsel)
+  async getTribunalHearings(caseId: number): Promise<any> {
+    const response = await api.get(`/tribunal/cases/${caseId}/hearings`);
+    return response.data;
+  },
+
+  async getTribunalHearing(hearingId: number): Promise<any> {
+    const response = await api.get(`/tribunal/hearings/${hearingId}`);
+    return response.data;
+  },
+
+
+  async addTribunalHearingEntry(hearingId: number, data: {
+    entry_type: string;
+    body: string;
+    related_evidence_id?: number | null;
+    related_witness_id?: number | null;
+    parent_entry_id?: number | null;
+  }): Promise<any> {
+    const response = await api.post(`/tribunal/hearings/${hearingId}/entries`, data);
+    return response.data;
+  },
+
+  async respondToTribunalHearingQuestion(hearingId: number, questionId: number, data: {
+    body: string;
+    related_evidence_id?: number | null;
+  }): Promise<any> {
+    const response = await api.post(`/tribunal/hearings/${hearingId}/questions/${questionId}/responses`, data);
+    return response.data;
+  },
+
+
+  // ==========================================
+  // STEP 6: DELIBERATION, FINDINGS & DECISION
+  // ==========================================
+
+  async getJuryDeliberation(caseId: number): Promise<any> {
+    const response = await api.get(`/jury/cases/${caseId}/deliberation`);
+    return response.data;
+  },
+
+  async addJuryDeliberationNote(caseId: number, data: {
+    note_type: string;
+    body: string;
+  }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/deliberation/notes`, data);
+    return response.data;
+  },
+
+  async updateJuryDeliberationNote(caseId: number, noteId: number, data: {
+    note_type?: string;
+    body?: string;
+  }): Promise<any> {
+    const response = await api.patch(`/jury/cases/${caseId}/deliberation/notes/${noteId}`, data);
+    return response.data;
+  },
+
+  async deleteJuryDeliberationNote(caseId: number, noteId: number): Promise<any> {
+    const response = await api.delete(`/jury/cases/${caseId}/deliberation/notes/${noteId}`);
+    return response.data;
+  },
+
+  async addJuryFinding(caseId: number, data: {
+    finding_type: string;
+    title?: string | null;
+    finding_text: string;
+    conclusion: string;
+    is_public?: boolean;
+    display_order?: number;
+    evidence_ids?: number[];
+    hearing_entry_ids?: number[];
+    witness_ids?: number[];
+  }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/findings`, data);
+    return response.data;
+  },
+
+  async updateJuryFinding(caseId: number, findingId: number, data: {
+    finding_type?: string;
+    title?: string | null;
+    finding_text?: string;
+    conclusion?: string;
+    is_public?: boolean;
+    display_order?: number;
+    evidence_ids?: number[];
+    hearing_entry_ids?: number[];
+    witness_ids?: number[];
+  }): Promise<any> {
+    const response = await api.patch(`/jury/cases/${caseId}/findings/${findingId}`, data);
+    return response.data;
+  },
+
+  async deleteJuryFinding(caseId: number, findingId: number): Promise<any> {
+    const response = await api.delete(`/jury/cases/${caseId}/findings/${findingId}`);
+    return response.data;
+  },
+
+  async getJuryDecision(caseId: number): Promise<any> {
+    const response = await api.get(`/jury/cases/${caseId}/decision`);
+    return response.data;
+  },
+
+  async saveJuryDecisionDraft(caseId: number, data: {
+    outcome?: string;
+    summary?: string;
+    reasoning?: string;
+  }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/decision`, data);
+    return response.data;
+  },
+
+  async updateJuryDecisionDraft(caseId: number, data: {
+    outcome?: string;
+    summary?: string;
+    reasoning?: string;
+  }): Promise<any> {
+    const response = await api.patch(`/jury/cases/${caseId}/decision`, data);
+    return response.data;
+  },
+
+  async addJuryDecisionOrder(caseId: number, data: {
+    order_type: string;
+    title: string;
+    description: string;
+    target_side?: string | null;
+    deadline_at?: string | null;
+  }): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/decision/orders`, data);
+    return response.data;
+  },
+
+  async updateJuryDecisionOrder(caseId: number, orderId: number, data: {
+    order_type?: string;
+    title?: string;
+    description?: string;
+    target_side?: string | null;
+    deadline_at?: string | null;
+    status?: string;
+  }): Promise<any> {
+    const response = await api.patch(`/jury/cases/${caseId}/decision/orders/${orderId}`, data);
+    return response.data;
+  },
+
+  async deleteJuryDecisionOrder(caseId: number, orderId: number): Promise<any> {
+    const response = await api.delete(`/jury/cases/${caseId}/decision/orders/${orderId}`);
+    return response.data;
+  },
+
+  async publishJuryDecision(caseId: number): Promise<any> {
+    const response = await api.post(`/jury/cases/${caseId}/decision/publish`);
+    return response.data;
+  },
+
+  // Party / Counsel Decision view
+  async getTribunalDecision(caseId: number): Promise<any> {
+    const response = await api.get(`/tribunal/cases/${caseId}/decision`);
+    return response.data;
+  },
+
+  // Official Tribunal Case Reports & Verification
+  async getCaseReports(caseId: number): Promise<any> {
+    const response = await api.get(`/tribunal/cases/${caseId}/reports`);
+    return response.data;
+  },
+
+  async generateFinalCaseReport(caseId: number, regenerate: boolean = false): Promise<any> {
+    const response = await api.post(`/tribunal/cases/${caseId}/reports/final`, { regenerate });
+    return response.data;
+  },
+
+  async getReportDetails(reportId: number): Promise<any> {
+    const response = await api.get(`/tribunal/reports/${reportId}`);
+    return response.data;
+  },
+
+  async downloadReportPdf(reportId: number, filename?: string): Promise<void> {
+    const response = await api.get(`/tribunal/reports/${reportId}/download`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename || `MIB-RPT-${reportId}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  async verifyReportCode(code: string): Promise<any> {
+    const response = await api.get(`/tribunal/reports/verify/${encodeURIComponent(code)}`);
+    return response.data;
+  },
+
+  async verifyReportFile(file: File, code?: string): Promise<any> {
+    const formData = new FormData();
+    formData.append('report_file', file);
+    if (code) {
+      formData.append('verification_code', code);
+    }
+    const response = await api.post('/tribunal/reports/verify-file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 };

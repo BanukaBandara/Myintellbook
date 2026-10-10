@@ -19,7 +19,18 @@ class StoreTribunalCaseRequest extends FormRequest
                 'required',
                 'integer',
                 'exists:users,id',
-                Rule::notIn([$this->user()->id]),
+                Rule::notIn([$this->user()?->id]),
+                function ($attribute, $value, $fail) {
+                    $searchService = app(\App\Services\Tribunal\TribunalRespondentSearchService::class);
+                    try {
+                        $searchService->validateEligibility((int) $value, (int) ($this->user()?->id ?? 0));
+                    } catch (\Illuminate\Validation\ValidationException $e) {
+                        $messages = $e->errors()['respondent_id'] ?? [];
+                        foreach ($messages as $msg) {
+                            $fail($msg);
+                        }
+                    }
+                },
             ],
 
             'title' => [

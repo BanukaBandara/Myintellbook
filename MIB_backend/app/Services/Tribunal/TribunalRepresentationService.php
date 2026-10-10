@@ -30,6 +30,7 @@ class TribunalRepresentationService
     public function getVerifiedRepresentatives(?TribunalCase $case = null, ?string $search = null): Collection
     {
         $query = User::query()
+            ->whereDoesntHave('juryPanel')
             ->whereHas('latestProfessionalVerification', function ($q) {
                 $q->where('verification_status', ProfessionalVerificationStatus::Verified)
                   ->where('profession_type', ProfessionalType::AttorneyAtLaw)
@@ -38,6 +39,11 @@ class TribunalRepresentationService
                   });
             })
             ->with(['profile', 'latestProfessionalVerification']);
+
+        $suspendedUserIds = app(\App\Services\InternalTribunal\AccountProfessionalDisciplineService::class)->getSuspendedUserIds();
+        if (!empty($suspendedUserIds)) {
+            $query->whereNotIn('id', $suspendedUserIds);
+        }
 
         if ($case) {
             // Exclude complainant and respondent of this case
@@ -102,6 +108,12 @@ class TribunalRepresentationService
             $representative && $representative->canActAsLegalRepresentative(),
             422,
             'The selected user is not an eligible verified Attorney-at-Law.'
+        );
+
+        abort_if(
+            app(\App\Services\InternalTribunal\AccountProfessionalDisciplineService::class)->hasActiveEligibilitySuspension($representativeUserId),
+            422,
+            'The selected Attorney-at-Law is currently not eligible to accept new representation requests.'
         );
 
         // Conflict check: self-representation as separate lawyer
@@ -211,6 +223,12 @@ class TribunalRepresentationService
             $lawyer->canActAsLegalRepresentative(),
             422,
             'Your verified Attorney-at-Law credentials are not active or have expired.'
+        );
+
+        abort_if(
+            app(\App\Services\InternalTribunal\AccountProfessionalDisciplineService::class)->hasActiveEligibilitySuspension($lawyer),
+            422,
+            'Your professional eligibility is currently suspended. You cannot accept representation requests.'
         );
 
         $case = $request->tribunalCase;
@@ -397,5 +415,49 @@ class TribunalRepresentationService
             ])
             ->latest('submitted_at')
             ->get();
+    }
+
+    /**
+     * Safely terminate all active representations when an attorney's credentials are revoked.
+     */
+    public function terminateAssignmentsForRevokedRepresentative(int $lawyerId, User $admin, string $reason): void
+    {
+        $activeAssignments = TribunalRepresentativeAssignment::where('representative_user_id', $lawyerId)
+            ->where('status', TribunalRepresentativeAssignmentStatus::Active)
+            ->get();
+
+        foreach ($activeAssignments as $assignment) {
+            $case = $assignment->tribunalCase;
+
+            $assignment->update([
+                'status' => TribunalRepresentativeAssignmentStatus::Ended,
+                'ended_at' => now(),
+                'ended_by' => $admin->id,
+                'end_reason' => $reason,
+            ]);
+
+            // Deactivate associated conversation
+            TribunalConversation::where('tribunal_case_id', $assignment->tribunal_case_id)
+                ->where('representative_user_id', $lawyerId)
+                ->update(['active' => false]);
+
+            // Audit log
+            TribunalCaseEventService::log($case, 'representation_ended', $admin->id, [
+                'assignment_id' => $assignment->id,
+                'ended_by' => $admin->id,
+                'reason' => $reason,
+            ]);
+
+            // Notify client
+            $assignment->client?->notify(new TribunalRepresentationEndedNotification($case, $assignment, $reason));
+        }
+
+        // Cancel any pending requests
+        TribunalRepresentationRequest::where('representative_user_id', $lawyerId)
+            ->where('status', TribunalRepresentationRequestStatus::Pending)
+            ->update([
+                'status' => TribunalRepresentationRequestStatus::Cancelled,
+                'responded_at' => now(),
+            ]);
     }
 }

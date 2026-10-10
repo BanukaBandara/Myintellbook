@@ -199,8 +199,10 @@ class ProfessionalVerificationService
                 ]);
             }
 
-            // Notify applicant
-            $verification->user?->notify(new ProfessionalVerificationSuspendedNotification($verification));
+            // Notify applicant after outermost commit
+            DB::afterCommit(function () use ($verification) {
+                $verification->user?->notify(new ProfessionalVerificationSuspendedNotification($verification));
+            });
 
             return $verification->load(['user.profile', 'reviewer.profile']);
         });
